@@ -13,16 +13,19 @@ import {
   useMarkNotificationRead,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 import { format } from "date-fns";
 
 export function NotificationBell() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const { isSignedIn } = useAuth();
 
   const { data: countData } = useGetUnreadNotificationCount({
     query: {
       queryKey: ["/api/notifications/unread-count"],
-      refetchInterval: 30_000,
+      refetchInterval: 120_000,
+      enabled: !!isSignedIn,
     },
   });
 
@@ -31,7 +34,7 @@ export function NotificationBell() {
     {
       query: {
         queryKey: ["/api/notifications"],
-        enabled: open,
+        enabled: open && !!isSignedIn,
       },
     }
   );
