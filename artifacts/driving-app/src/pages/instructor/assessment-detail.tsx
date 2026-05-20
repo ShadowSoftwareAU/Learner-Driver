@@ -1,4 +1,4 @@
-import { useGetAssessment, getGetAssessmentQueryKey, useUpdateAssessment } from "@workspace/api-client-react";
+import { useGetAssessment, getGetAssessmentQueryKey } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ChevronLeft, CheckCircle2 } from "lucide-react";

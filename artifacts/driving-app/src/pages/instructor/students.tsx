@@ -1,9 +1,8 @@
 import { useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Plus, Search, ChevronRight } from "lucide-react";
+import { Loader2, Search, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -25,10 +24,9 @@ export default function InstructorStudents() {
             <h1 className="text-3xl font-bold tracking-tight">Students</h1>
             <p className="text-muted-foreground">Manage your assigned learners.</p>
           </div>
-          <Button className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
+          <p className="text-sm text-muted-foreground">
+            Students appear here once they book a lesson with you.
+          </p>
         </div>
 
         <Card>

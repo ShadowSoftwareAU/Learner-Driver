@@ -12,11 +12,32 @@ export default function HandoverView() {
 
   const { data: handover, isLoading } = useGetHandover(studentId, { query: { enabled: !!studentId, queryKey: getGetHandoverQueryKey(studentId) } });
 
-  if (isLoading || !handover) {
+  if (isLoading) {
     return (
       <SidebarLayout>
         <div className="flex items-center justify-center h-[50vh]">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </SidebarLayout>
+    );
+  }
+
+  if (!handover) {
+    return (
+      <SidebarLayout>
+        <div className="space-y-4">
+          <Link href="/instructor/students">
+            <button className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors px-2 py-1">
+              <ArrowLeft className="w-4 h-4" /> Back to Students
+            </button>
+          </Link>
+          <div className="flex flex-col items-center justify-center h-[50vh] text-center gap-3">
+            <FileText className="w-12 h-12 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">No handover data</h2>
+            <p className="text-sm text-muted-foreground max-w-sm">
+              There are no assessments on record linking you to this student yet. Complete an assessment first.
+            </p>
+          </div>
         </div>
       </SidebarLayout>
     );

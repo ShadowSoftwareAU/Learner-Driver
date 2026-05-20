@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
-import { useGetMe, useUpdateMyRole } from "@workspace/api-client-react";
+import { useGetMe, useUpdateMyRole, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Car, GraduationCap, Building2, Loader2 } from "lucide-react";
@@ -8,6 +9,7 @@ import { RoleUpdateRole } from "@/lib/enums";
 export default function Onboarding() {
   const { data: user, isLoading } = useGetMe();
   const updateRole = useUpdateMyRole();
+  const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
   if (isLoading) {
@@ -28,7 +30,8 @@ export default function Onboarding() {
     updateRole.mutate(
       { data: { role } },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
           setLocation("/");
         },
       }
