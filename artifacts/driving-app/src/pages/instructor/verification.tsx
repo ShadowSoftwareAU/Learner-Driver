@@ -6,13 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Upload, CheckCircle2, Clock, XCircle, AlertTriangle,
-  FileText, ShieldCheck, Car, BookOpen, Trash2
+  FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type DocType = "wwcc" | "insurance" | "license" | "qualification";
+type DocType =
+  | "wwcc"
+  | "insurance"
+  | "license_front"
+  | "license_back"
+  | "qualification";
 
 type UploadedDoc = {
   docType: DocType;
@@ -34,10 +39,16 @@ const DOC_CONFIG: Record<DocType, { label: string; description: string; icon: Re
     icon: Car,
     required: true,
   },
-  license: {
-    label: "Driver's License",
-    description: "Your current Queensland driver's licence (front & back)",
-    icon: FileText,
+  license_front: {
+    label: "Front of Licence",
+    description: "Photo showing your name, licence number and photo",
+    icon: CreditCard,
+    required: true,
+  },
+  license_back: {
+    label: "Back of Licence",
+    description: "Photo showing conditions and expiry date",
+    icon: CreditCard,
     required: true,
   },
   qualification: {
@@ -74,23 +85,26 @@ async function uploadFileToBucket(file: File): Promise<{ objectPath: string }> {
   return { objectPath };
 }
 
-function DocUploadCard({
+function UploadSlot({
   docType,
   uploaded,
   onUploaded,
   onRemove,
   disabled,
+  compact = false,
 }: {
   docType: DocType;
   uploaded: UploadedDoc | null;
   onUploaded: (doc: UploadedDoc) => void;
   onRemove: () => void;
   disabled?: boolean;
+  compact?: boolean;
 }) {
   const cfg = DOC_CONFIG[docType];
   const Icon = cfg.icon;
   const [uploading, setUploading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleFile = async (file: File) => {
@@ -102,55 +116,136 @@ function DocUploadCard({
       toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
     }
   };
 
   return (
-    <Card className={`transition-colors ${uploaded ? "border-green-300 bg-green-50/30" : ""}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <div className={`mt-0.5 flex-shrink-0 rounded-lg p-2 ${uploaded ? "bg-green-100" : "bg-muted"}`}>
-            <Icon className={`w-4 h-4 ${uploaded ? "text-green-600" : "text-muted-foreground"}`} />
+    <div className={`rounded-lg border transition-colors ${uploaded ? "border-green-300 bg-green-50/40" : "border-border bg-background"} ${compact ? "p-3" : "p-4"}`}>
+      <div className="flex items-start gap-3">
+        <div className={`mt-0.5 flex-shrink-0 rounded-lg p-2 ${uploaded ? "bg-green-100" : "bg-muted"}`}>
+          <Icon className={`w-4 h-4 ${uploaded ? "text-green-600" : "text-muted-foreground"}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <p className="text-sm font-medium">{cfg.label}</p>
+            {cfg.required && <span className="text-xs text-destructive">*</span>}
           </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-0.5">
-              <p className="text-sm font-medium">{cfg.label}</p>
-              {cfg.required && <span className="text-xs text-destructive">*</span>}
-            </div>
-            <p className="text-xs text-muted-foreground">{cfg.description}</p>
-            {uploaded && (
-              <div className="mt-2 flex items-center gap-2">
-                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
-                <span className="text-xs text-green-700 truncate">{uploaded.fileName}</span>
-                {!disabled && (
-                  <button onClick={onRemove} className="ml-auto flex-shrink-0">
-                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive transition-colors" />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          {!uploaded && !disabled && (
-            <div className="flex-shrink-0">
-              <input
-                ref={inputRef}
-                type="file"
-                className="hidden"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
-              />
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => inputRef.current?.click()}
-                disabled={uploading}
-              >
-                {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
-                <span className="ml-1.5">{uploading ? "Uploading…" : "Upload"}</span>
-              </Button>
+          <p className="text-xs text-muted-foreground">{cfg.description}</p>
+          {uploaded && (
+            <div className="mt-2 flex items-center gap-2">
+              <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+              <span className="text-xs text-green-700 truncate max-w-[180px]">{uploaded.fileName}</span>
+              {!disabled && (
+                <button onClick={onRemove} className="ml-1 flex-shrink-0">
+                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive transition-colors" />
+                </button>
+              )}
             </div>
           )}
         </div>
+
+        {!uploaded && !disabled && (
+          <div className="flex-shrink-0 flex flex-col gap-1.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="h-8 px-3 text-xs"
+            >
+              {uploading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Upload className="w-3.5 h-3.5" />
+              )}
+              <span className="ml-1.5">{uploading ? "Uploading…" : "Upload"}</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={uploading}
+              className="h-8 px-3 text-xs"
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span className="ml-1.5">Camera</span>
+            </Button>
+          </div>
+        )}
+
+        {uploading && (
+          <div className="flex-shrink-0 flex items-center">
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function LicenceSection({
+  uploads,
+  onUploaded,
+  onRemove,
+  disabled,
+}: {
+  uploads: { license_front: UploadedDoc | null; license_back: UploadedDoc | null };
+  onUploaded: (doc: UploadedDoc) => void;
+  onRemove: (dt: "license_front" | "license_back") => void;
+  disabled?: boolean;
+}) {
+  const bothDone = uploads.license_front && uploads.license_back;
+
+  return (
+    <Card className={`transition-colors ${bothDone ? "border-green-300" : ""}`}>
+      <CardHeader className="pb-3 pt-4 px-4">
+        <div className="flex items-center gap-2">
+          <div className={`rounded-lg p-2 ${bothDone ? "bg-green-100" : "bg-muted"}`}>
+            <CreditCard className={`w-4 h-4 ${bothDone ? "text-green-600" : "text-muted-foreground"}`} />
+          </div>
+          <div>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium">Driver's Licence</CardTitle>
+              <span className="text-xs text-destructive">*</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Upload or photograph both sides of your Queensland driver's licence</p>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-4 space-y-2">
+        <UploadSlot
+          docType="license_front"
+          uploaded={uploads.license_front}
+          onUploaded={onUploaded}
+          onRemove={() => onRemove("license_front")}
+          disabled={disabled}
+          compact
+        />
+        <UploadSlot
+          docType="license_back"
+          uploaded={uploads.license_back}
+          onUploaded={onUploaded}
+          onRemove={() => onRemove("license_back")}
+          disabled={disabled}
+          compact
+        />
       </CardContent>
     </Card>
   );
@@ -164,11 +259,12 @@ export default function InstructorVerification() {
   const [uploads, setUploads] = useState<Record<DocType, UploadedDoc | null>>({
     wwcc: null,
     insurance: null,
-    license: null,
+    license_front: null,
+    license_back: null,
     qualification: null,
   });
 
-  const requiredDocs: DocType[] = ["wwcc", "insurance", "license"];
+  const requiredDocs: DocType[] = ["wwcc", "insurance", "license_front", "license_back"];
   const allRequiredUploaded = requiredDocs.every((dt) => uploads[dt] !== null);
   const anyUploaded = Object.values(uploads).some(Boolean);
 
@@ -215,14 +311,11 @@ export default function InstructorVerification() {
           </p>
         </div>
 
-        {/* Status banner */}
         {status !== "not_submitted" && (
           <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${cfg.bg}`}>
             <StatusIcon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${cfg.color}`} />
             <div>
-              <p className={`font-semibold text-sm ${cfg.color}`}>
-                {cfg.label}
-              </p>
+              <p className={`font-semibold text-sm ${cfg.color}`}>{cfg.label}</p>
               {verification?.reviewerNotes && (
                 <p className="text-sm mt-1 text-foreground">{verification.reviewerNotes}</p>
               )}
@@ -250,19 +343,35 @@ export default function InstructorVerification() {
             <CardHeader>
               <CardTitle>Upload Your Documents</CardTitle>
               <CardDescription>
-                Required: WWCC, Insurance, and Driver's Licence. Accepted formats: PDF, JPG, PNG.
+                Required: WWCC, Insurance, and Driver's Licence (front &amp; back). Each document can be uploaded as a file or captured with your camera.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {(["wwcc", "insurance", "license", "qualification"] as DocType[]).map((dt) => (
-                <DocUploadCard
-                  key={dt}
-                  docType={dt}
-                  uploaded={uploads[dt]}
-                  onUploaded={(doc) => setUploads((prev) => ({ ...prev, [dt]: doc }))}
-                  onRemove={() => setUploads((prev) => ({ ...prev, [dt]: null }))}
-                />
-              ))}
+              <UploadSlot
+                docType="wwcc"
+                uploaded={uploads.wwcc}
+                onUploaded={(doc) => setUploads((prev) => ({ ...prev, wwcc: doc }))}
+                onRemove={() => setUploads((prev) => ({ ...prev, wwcc: null }))}
+              />
+              <UploadSlot
+                docType="insurance"
+                uploaded={uploads.insurance}
+                onUploaded={(doc) => setUploads((prev) => ({ ...prev, insurance: doc }))}
+                onRemove={() => setUploads((prev) => ({ ...prev, insurance: null }))}
+              />
+
+              <LicenceSection
+                uploads={{ license_front: uploads.license_front, license_back: uploads.license_back }}
+                onUploaded={(doc) => setUploads((prev) => ({ ...prev, [doc.docType]: doc }))}
+                onRemove={(dt) => setUploads((prev) => ({ ...prev, [dt]: null }))}
+              />
+
+              <UploadSlot
+                docType="qualification"
+                uploaded={uploads.qualification}
+                onUploaded={(doc) => setUploads((prev) => ({ ...prev, qualification: doc }))}
+                onRemove={() => setUploads((prev) => ({ ...prev, qualification: null }))}
+              />
 
               <div className="pt-2">
                 <Button
@@ -286,7 +395,6 @@ export default function InstructorVerification() {
           </Card>
         )}
 
-        {/* Show submitted documents for active/pending applications */}
         {isActive && data?.documents && data.documents.length > 0 && (
           <Card>
             <CardHeader>
@@ -298,7 +406,7 @@ export default function InstructorVerification() {
                   <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <span className="truncate">{doc.fileName}</span>
                   <Badge variant="outline" className="ml-auto flex-shrink-0 text-xs capitalize">
-                    {doc.docType.replace("_", " ")}
+                    {doc.docType.replace(/_/g, " ")}
                   </Badge>
                 </div>
               ))}
