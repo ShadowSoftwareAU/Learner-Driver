@@ -3,20 +3,38 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: DriveTrack - Driving School Assessment Platform API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User profile and role management
+  - name: students
+    description: Student management
+  - name: instructors
+    description: Instructor management
+  - name: assessments
+    description: Lesson assessments
+  - name: maneuvers
+    description: Maneuver and competency definitions
+  - name: handover
+    description: Instructor handover notes
+  - name: intake
+    description: Student intake questionnaire
+  - name: audit
+    description: Audit trail
+  - name: dashboard
+    description: Dashboard summaries
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +42,1043 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Users ───────────────────────────────────────────────────────────────────
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+        "401":
+          description: Unauthorized
+
+  /users/me/role:
+    patch:
+      operationId: updateMyRole
+      tags: [users]
+      summary: Set or update user role (admin only in prod; open for onboarding)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  # ─── Students ────────────────────────────────────────────────────────────────
+  /students:
+    get:
+      operationId: listStudents
+      tags: [students]
+      summary: List students (instructor sees own; admin sees all)
+      responses:
+        "200":
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Student"
+
+    post:
+      operationId: createStudent
+      tags: [students]
+      summary: Create student profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /students/{id}:
+    get:
+      operationId: getStudent
+      tags: [students]
+      summary: Get student by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Student detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateStudent
+      tags: [students]
+      summary: Update student profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentUpdate"
+      responses:
+        "200":
+          description: Updated student
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
+  /students/{id}/progress:
+    get:
+      operationId: getStudentProgress
+      tags: [students]
+      summary: Get student skill progress summary
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Progress summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentProgress"
+
+  # ─── Instructors ─────────────────────────────────────────────────────────────
+  /instructors:
+    get:
+      operationId: listInstructors
+      tags: [instructors]
+      summary: List all instructors (admin only)
+      responses:
+        "200":
+          description: List of instructors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Instructor"
+
+  /instructors/{id}:
+    get:
+      operationId: getInstructor
+      tags: [instructors]
+      summary: Get instructor profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Instructor detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instructor"
+
+    patch:
+      operationId: updateInstructor
+      tags: [instructors]
+      summary: Update instructor profile
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstructorUpdate"
+      responses:
+        "200":
+          description: Updated instructor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instructor"
+
+  # ─── Maneuvers / Competencies ─────────────────────────────────────────────────
+  /maneuvers:
+    get:
+      operationId: listManeuvers
+      tags: [maneuvers]
+      summary: List all maneuver/competency definitions (TMR + QSAFE)
+      responses:
+        "200":
+          description: Maneuver list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Maneuver"
+
+  # ─── Assessments ──────────────────────────────────────────────────────────────
+  /assessments:
+    get:
+      operationId: listAssessments
+      tags: [assessments]
+      summary: List assessments (filtered by studentId or instructorId)
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+        - name: instructorId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assessment list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Assessment"
+
+    post:
+      operationId: createAssessment
+      tags: [assessments]
+      summary: Log a new lesson assessment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentInput"
+      responses:
+        "201":
+          description: Created assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+
+  /assessments/{id}:
+    get:
+      operationId: getAssessment
+      tags: [assessments]
+      summary: Get a single assessment with maneuver results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assessment detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssessmentDetail"
+        "404":
+          description: Not found
+
+    patch:
+      operationId: updateAssessment
+      tags: [assessments]
+      summary: Update assessment notes or status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentUpdate"
+      responses:
+        "200":
+          description: Updated assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+
+  /assessments/{id}/results:
+    post:
+      operationId: saveManeuverResults
+      tags: [assessments]
+      summary: Save maneuver competency ratings for an assessment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManeuverResultsBatch"
+      responses:
+        "200":
+          description: Saved results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ManeuverResult"
+
+  # ─── Handover ─────────────────────────────────────────────────────────────────
+  /handover/{studentId}:
+    get:
+      operationId: getHandover
+      tags: [handover]
+      summary: Get handover view for a student (completed hours, skills, notes)
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Handover summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverView"
+
+  /handover/{studentId}/notes:
+    post:
+      operationId: addHandoverNote
+      tags: [handover]
+      summary: Add a handover note for a student
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HandoverNoteInput"
+      responses:
+        "201":
+          description: Created note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverNote"
+
+  # ─── Intake ───────────────────────────────────────────────────────────────────
+  /intake/{studentId}:
+    get:
+      operationId: getIntake
+      tags: [intake]
+      summary: Get student intake questionnaire responses
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Intake data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Intake"
+        "404":
+          description: Not found
+
+    put:
+      operationId: saveIntake
+      tags: [intake]
+      summary: Submit or update intake questionnaire
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IntakeInput"
+      responses:
+        "200":
+          description: Saved intake
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Intake"
+
+  # ─── Audit Trail ──────────────────────────────────────────────────────────────
+  /audit:
+    get:
+      operationId: listAuditLogs
+      tags: [audit]
+      summary: List audit log entries (admin only)
+      parameters:
+        - name: studentId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLog"
+
+  # ─── Dashboard ────────────────────────────────────────────────────────────────
+  /dashboard/instructor:
+    get:
+      operationId: getInstructorDashboard
+      tags: [dashboard]
+      summary: Instructor dashboard — student counts, recent lessons, upcoming
+      responses:
+        "200":
+          description: Instructor dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorDashboard"
+
+  /dashboard/student:
+    get:
+      operationId: getStudentDashboard
+      tags: [dashboard]
+      summary: Student dashboard — hours, skill completion, recent assessments
+      responses:
+        "200":
+          description: Student dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentDashboard"
+
+  /dashboard/admin:
+    get:
+      operationId: getAdminDashboard
+      tags: [dashboard]
+      summary: Admin dashboard — fleet overview, instructor stats, compliance
+      responses:
+        "200":
+          description: Admin dashboard data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminDashboard"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    # ─── Users ─────────────────────────────────────────────────────────────────
+    UserProfile:
+      type: object
+      required: [id, clerkId, role, email]
+      properties:
+        id:
+          type: integer
+        clerkId:
+          type: string
+        email:
+          type: string
+        name:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [student, instructor, admin, unassigned]
+        createdAt:
+          type: string
+
+    RoleUpdate:
+      type: object
+      required: [role]
+      properties:
+        role:
+          type: string
+          enum: [student, instructor, admin]
+
+    # ─── Students ──────────────────────────────────────────────────────────────
+    Student:
+      type: object
+      required: [id, userId, fullName, email]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        dateOfBirth:
+          type: ["string", "null"]
+        guardianName:
+          type: ["string", "null"]
+        guardianPhone:
+          type: ["string", "null"]
+        licenseNumber:
+          type: ["string", "null"]
+        totalHours:
+          type: number
+        status:
+          type: string
+          enum: [active, on_hold, completed]
+        createdAt:
+          type: string
+
+    StudentInput:
+      type: object
+      required: [fullName, email]
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+        guardianName:
+          type: string
+        guardianPhone:
+          type: string
+        licenseNumber:
+          type: string
+
+    StudentUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        guardianName:
+          type: string
+        guardianPhone:
+          type: string
+        licenseNumber:
+          type: string
+        status:
+          type: string
+          enum: [active, on_hold, completed]
+
+    StudentProgress:
+      type: object
+      required: [studentId, totalHours, completedManeuvers, totalManeuvers, skillBreakdown]
+      properties:
+        studentId:
+          type: integer
+        totalHours:
+          type: number
+        completedManeuvers:
+          type: integer
+        totalManeuvers:
+          type: integer
+        skillBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillBreakdownItem"
+        recentAssessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assessment"
+
+    SkillBreakdownItem:
+      type: object
+      required: [category, total, mastered, practicing, notStarted]
+      properties:
+        category:
+          type: string
+        total:
+          type: integer
+        mastered:
+          type: integer
+        practicing:
+          type: integer
+        notStarted:
+          type: integer
+
+    # ─── Instructors ───────────────────────────────────────────────────────────
+    Instructor:
+      type: object
+      required: [id, userId, fullName, email]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        licenseNumber:
+          type: ["string", "null"]
+        vehicleMake:
+          type: ["string", "null"]
+        vehicleModel:
+          type: ["string", "null"]
+        vehicleYear:
+          type: ["integer", "null"]
+        qualifications:
+          type: ["string", "null"]
+        activeStudents:
+          type: integer
+        createdAt:
+          type: string
+
+    InstructorUpdate:
+      type: object
+      properties:
+        fullName:
+          type: string
+        phone:
+          type: string
+        licenseNumber:
+          type: string
+        vehicleMake:
+          type: string
+        vehicleModel:
+          type: string
+        vehicleYear:
+          type: integer
+        qualifications:
+          type: string
+
+    # ─── Maneuvers ─────────────────────────────────────────────────────────────
+    Maneuver:
+      type: object
+      required: [id, name, category, assessmentType, description]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        assessmentType:
+          type: string
+          enum: [tmr_learner, qsafe]
+        description:
+          type: string
+        sortOrder:
+          type: integer
+
+    # ─── Assessments ───────────────────────────────────────────────────────────
+    Assessment:
+      type: object
+      required: [id, studentId, instructorId, lessonDate, durationMinutes, status]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        instructorId:
+          type: integer
+        studentName:
+          type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        lessonDate:
+          type: string
+        durationMinutes:
+          type: integer
+        status:
+          type: string
+          enum: [in_progress, completed]
+        confidenceNote:
+          type: ["string", "null"]
+        focusAreasNext:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    AssessmentInput:
+      type: object
+      required: [studentId, lessonDate, durationMinutes]
+      properties:
+        studentId:
+          type: integer
+        lessonDate:
+          type: string
+        durationMinutes:
+          type: integer
+        confidenceNote:
+          type: string
+        focusAreasNext:
+          type: string
+
+    AssessmentUpdate:
+      type: object
+      properties:
+        confidenceNote:
+          type: string
+        focusAreasNext:
+          type: string
+        status:
+          type: string
+          enum: [in_progress, completed]
+        durationMinutes:
+          type: integer
+
+    AssessmentDetail:
+      type: object
+      required: [id, studentId, instructorId, lessonDate, durationMinutes, status, maneuverResults]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        instructorId:
+          type: integer
+        studentName:
+          type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        lessonDate:
+          type: string
+        durationMinutes:
+          type: integer
+        status:
+          type: string
+          enum: [in_progress, completed]
+        confidenceNote:
+          type: ["string", "null"]
+        focusAreasNext:
+          type: ["string", "null"]
+        maneuverResults:
+          type: array
+          items:
+            $ref: "#/components/schemas/ManeuverResult"
+        createdAt:
+          type: string
+
+    ManeuverResult:
+      type: object
+      required: [id, assessmentId, maneuverId, competencyLevel]
+      properties:
+        id:
+          type: integer
+        assessmentId:
+          type: integer
+        maneuverId:
+          type: integer
+        maneuverName:
+          type: ["string", "null"]
+        category:
+          type: ["string", "null"]
+        competencyLevel:
+          type: string
+          enum: [not_attempted, attempted, practiced, mastered]
+        notes:
+          type: ["string", "null"]
+
+    ManeuverResultsBatch:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ManeuverResultItem"
+
+    ManeuverResultItem:
+      type: object
+      required: [maneuverId, competencyLevel]
+      properties:
+        maneuverId:
+          type: integer
+        competencyLevel:
+          type: string
+          enum: [not_attempted, attempted, practiced, mastered]
+        notes:
+          type: string
+
+    # ─── Handover ──────────────────────────────────────────────────────────────
+    HandoverView:
+      type: object
+      required: [student, totalHours, completedManeuvers, totalManeuvers, notes, recentAssessments]
+      properties:
+        student:
+          $ref: "#/components/schemas/Student"
+        totalHours:
+          type: number
+        completedManeuvers:
+          type: integer
+        totalManeuvers:
+          type: integer
+        skillBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillBreakdownItem"
+        notes:
+          type: array
+          items:
+            $ref: "#/components/schemas/HandoverNote"
+        recentAssessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assessment"
+
+    HandoverNote:
+      type: object
+      required: [id, studentId, instructorId, note, createdAt]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        instructorId:
+          type: integer
+        instructorName:
+          type: ["string", "null"]
+        note:
+          type: string
+        focusAreas:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    HandoverNoteInput:
+      type: object
+      required: [note]
+      properties:
+        note:
+          type: string
+        focusAreas:
+          type: string
+
+    # ─── Intake ────────────────────────────────────────────────────────────────
+    Intake:
+      type: object
+      required: [id, studentId]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        priorExperience:
+          type: ["string", "null"]
+        previousLessons:
+          type: ["integer", "null"]
+        previousInstructorFeedback:
+          type: ["string", "null"]
+        medicalConditions:
+          type: ["string", "null"]
+        learningGoals:
+          type: ["string", "null"]
+        preferredLessonTime:
+          type: ["string", "null"]
+        emergencyContact:
+          type: ["string", "null"]
+        emergencyPhone:
+          type: ["string", "null"]
+        completedAt:
+          type: ["string", "null"]
+
+    IntakeInput:
+      type: object
+      properties:
+        priorExperience:
+          type: string
+        previousLessons:
+          type: integer
+        previousInstructorFeedback:
+          type: string
+        medicalConditions:
+          type: string
+        learningGoals:
+          type: string
+        preferredLessonTime:
+          type: string
+        emergencyContact:
+          type: string
+        emergencyPhone:
+          type: string
+
+    # ─── Audit ─────────────────────────────────────────────────────────────────
+    AuditLog:
+      type: object
+      required: [id, actorId, action, resourceType, createdAt]
+      properties:
+        id:
+          type: integer
+        actorId:
+          type: integer
+        actorName:
+          type: ["string", "null"]
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: ["integer", "null"]
+        studentId:
+          type: ["integer", "null"]
+        metadata:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ─── Dashboards ────────────────────────────────────────────────────────────
+    InstructorDashboard:
+      type: object
+      required: [activeStudents, lessonsThisWeek, totalHoursLogged, recentAssessments, studentSummaries]
+      properties:
+        activeStudents:
+          type: integer
+        lessonsThisWeek:
+          type: integer
+        totalHoursLogged:
+          type: number
+        recentAssessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assessment"
+        studentSummaries:
+          type: array
+          items:
+            $ref: "#/components/schemas/StudentSummary"
+
+    StudentDashboard:
+      type: object
+      required: [totalHours, completedManeuvers, totalManeuvers, progressPercent, recentAssessments]
+      properties:
+        totalHours:
+          type: number
+        completedManeuvers:
+          type: integer
+        totalManeuvers:
+          type: integer
+        progressPercent:
+          type: number
+        nextFocusAreas:
+          type: ["string", "null"]
+        recentAssessments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Assessment"
+        skillBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/SkillBreakdownItem"
+
+    AdminDashboard:
+      type: object
+      required: [totalStudents, totalInstructors, totalAssessments, activeStudents, recentActivity]
+      properties:
+        totalStudents:
+          type: integer
+        totalInstructors:
+          type: integer
+        totalAssessments:
+          type: integer
+        activeStudents:
+          type: integer
+        hoursLoggedThisMonth:
+          type: number
+        recentActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditLog"
+        instructorStats:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstructorStat"
+
+    StudentSummary:
+      type: object
+      required: [id, fullName, totalHours, progressPercent, lastLessonDate]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        totalHours:
+          type: number
+        progressPercent:
+          type: number
+        lastLessonDate:
+          type: ["string", "null"]
+        status:
+          type: string
+
+    InstructorStat:
+      type: object
+      required: [id, fullName, activeStudents, totalLessons, hoursThisMonth]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        activeStudents:
+          type: integer
+        totalLessons:
+          type: integer
+        hoursThisMonth:
+          type: number

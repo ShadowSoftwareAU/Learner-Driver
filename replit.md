@@ -1,6 +1,6 @@
-# [Project name]
+# DriveTrack
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A full-stack driving school assessment platform for Australian learner drivers, supporting three roles: Student, Instructor, and Admin.
 
 ## Run & Operate
 
@@ -14,6 +14,8 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
+- Frontend: React + Vite, Tailwind CSS, shadcn/ui, TanStack Query, Wouter
+- Auth: Clerk (`@clerk/clerk-react` on frontend, `@clerk/express` on server)
 - API: Express 5
 - DB: PostgreSQL + Drizzle ORM
 - Validation: Zod (`zod/v4`), `drizzle-zod`
@@ -22,15 +24,27 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/driving-app/` — React + Vite frontend
+- `artifacts/api-server/` — Express API server
+- `lib/db/src/schema/` — Drizzle ORM table definitions (users, students, instructors, maneuvers, assessments, handover_notes, intake, audit_logs)
+- `lib/api-spec/openapi.yaml` — OpenAPI 3.0 contract (source of truth for API)
+- `lib/api-client-react/` — generated TanStack Query hooks (Orval)
+- `lib/api-zod/` — generated Zod schemas and TypeScript types (Orval)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Contract-first API: OpenAPI spec drives code generation for both client hooks and server Zod schemas
+- Clerk proxy middleware on `/api/__clerk` routes Clerk FAPI through the app domain (for production)
+- Maneuver enums (competency levels, roles) are inlined in `artifacts/driving-app/src/lib/enums.ts` rather than imported from server-side `@workspace/api-zod`
+- Audit log is appended non-fatally on every significant action (view, create, update)
+- Student `total_hours` is maintained by the assessment creation endpoint using raw SQL `UPDATE ... SET total_hours = total_hours + X`
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Instructor**: Log assessments against TMR Learner Sheet + QSAFE maneuver categories; view student progress; write handover notes; access previous lesson history
+- **Student**: View own progress dashboard, mastered maneuvers, and instructor feedback
+- **Admin**: Fleet overview, student/instructor tables, system-wide audit log
+- 44 seeded maneuvers across 8 TMR categories + QSAFE compliance criteria
 
 ## User preferences
 
@@ -38,7 +52,11 @@ _Populate as you build — explicit user instructions worth remembering across s
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Use `@clerk/clerk-react` (not `@clerk/react`) for the frontend Clerk package
+- `Show` is not exported from `@clerk/clerk-react` — use `SignedIn`/`SignedOut` instead
+- `publishableKeyFromHost` is not in `@clerk/clerk-react/internal` — use `import.meta.env.VITE_CLERK_PUBLISHABLE_KEY` directly
+- Do NOT import `@workspace/api-zod` in the frontend — it's a server-side lib; use `artifacts/driving-app/src/lib/enums.ts` for shared enum values
+- After editing routes, restart the API server workflow (esbuild bundles on start)
 
 ## Pointers
 
