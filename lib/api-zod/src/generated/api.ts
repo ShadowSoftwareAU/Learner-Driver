@@ -973,3 +973,131 @@ export const MarkNotificationReadParams = zod.object({
 })
 
 
+/**
+ * @summary Request a presigned upload URL
+ */
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string(),
+  "size": zod.number(),
+  "contentType": zod.string()
+})
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().optional(),
+  "size": zod.number().optional(),
+  "contentType": zod.string().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Serve a stored object
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+
+/**
+ * @summary Get instructor verification status and documents
+ */
+export const GetVerificationStatusResponse = zod.object({
+  "status": zod.string(),
+  "verification": zod.union([zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'needs_revision']),
+  "submittedAt": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "reviewerId": zod.number().nullish(),
+  "reviewerNotes": zod.string().nullish(),
+  "createdAt": zod.string()
+}),zod.null()]).optional(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "verificationId": zod.number(),
+  "docType": zod.string(),
+  "fileName": zod.string(),
+  "fileSize": zod.number().nullish(),
+  "objectPath": zod.string(),
+  "uploadedAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Submit or resubmit an instructor verification application
+ */
+export const SubmitVerificationBody = zod.object({
+  "documents": zod.array(zod.object({
+  "docType": zod.string(),
+  "fileName": zod.string(),
+  "fileSize": zod.number().optional(),
+  "objectPath": zod.string()
+}))
+})
+
+
+/**
+ * @summary List all instructor verification applications (admin)
+ */
+export const ListVerificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'needs_revision']),
+  "submittedAt": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "reviewerNotes": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "instructorId": zod.number(),
+  "instructorName": zod.string(),
+  "instructorEmail": zod.string(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "verificationId": zod.number(),
+  "docType": zod.string(),
+  "fileName": zod.string(),
+  "fileSize": zod.number().nullish(),
+  "objectPath": zod.string(),
+  "uploadedAt": zod.string()
+}))
+})
+export const ListVerificationsResponse = zod.array(ListVerificationsResponseItem)
+
+
+/**
+ * @summary Approve, reject, or request revision on an application
+ */
+export const ReviewVerificationParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewVerificationBody = zod.object({
+  "action": zod.enum(['approved', 'rejected', 'needs_revision']),
+  "notes": zod.string().optional()
+})
+
+export const ReviewVerificationResponse = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'needs_revision']),
+  "submittedAt": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "reviewerId": zod.number().nullish(),
+  "reviewerNotes": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Get whether the current user has accepted the current terms version
+ */
+export const GetTermsStatusResponse = zod.object({
+  "accepted": zod.boolean(),
+  "version": zod.string(),
+  "acceptedAt": zod.string().nullish()
+})
+
+

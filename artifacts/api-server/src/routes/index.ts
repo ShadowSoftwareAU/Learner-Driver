@@ -14,6 +14,9 @@ import zonesRouter from "./zones";
 import bookingsRouter from "./bookings";
 import notificationsRouter from "./notifications";
 import lessonPlanRouter from "./lesson-plan";
+import storageRouter from "./storage";
+import verificationRouter from "./verification";
+import termsRouter from "./terms";
 
 const router: IRouter = Router();
 
@@ -32,5 +35,8 @@ router.use(zonesRouter);
 router.use(bookingsRouter);
 router.use(notificationsRouter);
 router.use(lessonPlanRouter);
+router.use(storageRouter);
+router.use(verificationRouter);
+router.use(termsRouter);
 
 export default router;

@@ -612,6 +612,86 @@ export interface LessonPlan {
   summary: string;
 }
 
+export interface VerificationDocument {
+  id: number;
+  verificationId: number;
+  docType: string;
+  fileName: string;
+  /** @nullable */
+  fileSize?: number | null;
+  objectPath: string;
+  uploadedAt: string;
+}
+
+export type InstructorVerificationStatus = typeof InstructorVerificationStatus[keyof typeof InstructorVerificationStatus];
+
+
+export const InstructorVerificationStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  needs_revision: 'needs_revision',
+} as const;
+
+export interface InstructorVerification {
+  id: number;
+  instructorId: number;
+  status: InstructorVerificationStatus;
+  /** @nullable */
+  submittedAt?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  /** @nullable */
+  reviewerId?: number | null;
+  /** @nullable */
+  reviewerNotes?: string | null;
+  createdAt: string;
+}
+
+export interface VerificationWithDocs {
+  verification: InstructorVerification;
+  documents: VerificationDocument[];
+}
+
+export interface VerificationStatusResponse {
+  status: string;
+  verification?: InstructorVerification | null;
+  documents: VerificationDocument[];
+}
+
+export type AdminVerificationStatus = typeof AdminVerificationStatus[keyof typeof AdminVerificationStatus];
+
+
+export const AdminVerificationStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  rejected: 'rejected',
+  needs_revision: 'needs_revision',
+} as const;
+
+export interface AdminVerification {
+  id: number;
+  status: AdminVerificationStatus;
+  /** @nullable */
+  submittedAt?: string | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  /** @nullable */
+  reviewerNotes?: string | null;
+  createdAt?: string;
+  instructorId: number;
+  instructorName: string;
+  instructorEmail: string;
+  documents: VerificationDocument[];
+}
+
+export interface TermsStatus {
+  accepted: boolean;
+  version: string;
+  /** @nullable */
+  acceptedAt?: string | null;
+}
+
 export type ListAssessmentsParams = {
 studentId?: number;
 instructorId?: number;
@@ -651,5 +731,48 @@ limit?: number;
 
 export type GetUnreadNotificationCount200 = {
   count: number;
+};
+
+export type RequestUploadUrlBody = {
+  name: string;
+  size: number;
+  contentType: string;
+};
+
+export type RequestUploadUrl200Metadata = {
+  name?: string;
+  size?: number;
+  contentType?: string;
+};
+
+export type RequestUploadUrl200 = {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: RequestUploadUrl200Metadata;
+};
+
+export type SubmitVerificationBodyDocumentsItem = {
+  docType: string;
+  fileName: string;
+  fileSize?: number;
+  objectPath: string;
+};
+
+export type SubmitVerificationBody = {
+  documents: SubmitVerificationBodyDocumentsItem[];
+};
+
+export type ReviewVerificationBodyAction = typeof ReviewVerificationBodyAction[keyof typeof ReviewVerificationBodyAction];
+
+
+export const ReviewVerificationBodyAction = {
+  approved: 'approved',
+  rejected: 'rejected',
+  needs_revision: 'needs_revision',
+} as const;
+
+export type ReviewVerificationBody = {
+  action: ReviewVerificationBodyAction;
+  notes?: string;
 };
 

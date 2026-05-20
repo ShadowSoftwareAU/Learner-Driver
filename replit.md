@@ -57,6 +57,8 @@ _Populate as you build — explicit user instructions worth remembering across s
 - `publishableKeyFromHost` is not in `@clerk/clerk-react/internal` — use `import.meta.env.VITE_CLERK_PUBLISHABLE_KEY` directly
 - Do NOT import `@workspace/api-zod` in the frontend — it's a server-side lib; use `artifacts/driving-app/src/lib/enums.ts` for shared enum values
 - After editing routes, restart the API server workflow (esbuild bundles on start)
+- Orval regenerates `lib/api-zod/src/index.ts` on every codegen run. Do NOT add `schemas: { path: "generated/types" }` to the zod output config — it causes TS2308 name conflicts. The codegen script post-processes `src/index.ts` to keep only `export * from './generated/api'`
+- `lib/object-storage-web` must have `composite: true` in its tsconfig so it can be referenced by `artifacts/driving-app`
 
 ## Pointers
 

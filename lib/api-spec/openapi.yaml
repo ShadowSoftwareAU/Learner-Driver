@@ -892,6 +892,184 @@ paths:
         "200":
           description: Done
 
+  /storage/uploads/request-url:
+    post:
+      operationId: requestUploadUrl
+      tags: [storage]
+      summary: Request a presigned upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, size, contentType]
+              properties:
+                name:
+                  type: string
+                size:
+                  type: integer
+                contentType:
+                  type: string
+      responses:
+        "200":
+          description: Presigned URL and object path
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [uploadURL, objectPath]
+                properties:
+                  uploadURL:
+                    type: string
+                  objectPath:
+                    type: string
+                  metadata:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      size:
+                        type: integer
+                      contentType:
+                        type: string
+
+  /storage/objects/{objectPath}:
+    get:
+      operationId: getStorageObject
+      tags: [storage]
+      summary: Serve a stored object
+      parameters:
+        - in: path
+          name: objectPath
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object bytes
+
+  /instructor/verification/status:
+    get:
+      operationId: getVerificationStatus
+      tags: [verification]
+      summary: Get instructor verification status and documents
+      responses:
+        "200":
+          description: Verification status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationStatusResponse"
+
+  /instructor/verification/submit:
+    post:
+      operationId: submitVerification
+      tags: [verification]
+      summary: Submit or resubmit an instructor verification application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documents]
+              properties:
+                documents:
+                  type: array
+                  items:
+                    type: object
+                    required: [docType, fileName, objectPath]
+                    properties:
+                      docType:
+                        type: string
+                      fileName:
+                        type: string
+                      fileSize:
+                        type: integer
+                      objectPath:
+                        type: string
+      responses:
+        "201":
+          description: Application submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationWithDocs"
+
+  /admin/verifications:
+    get:
+      operationId: listVerifications
+      tags: [verification]
+      summary: List all instructor verification applications (admin)
+      responses:
+        "200":
+          description: List of verifications with instructor info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminVerification"
+
+  /admin/verifications/{id}:
+    patch:
+      operationId: reviewVerification
+      tags: [verification]
+      summary: Approve, reject, or request revision on an application
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approved, rejected, needs_revision]
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Updated verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorVerification"
+
+  /terms/status:
+    get:
+      operationId: getTermsStatus
+      tags: [terms]
+      summary: Get whether the current user has accepted the current terms version
+      responses:
+        "200":
+          description: Terms acceptance status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TermsStatus"
+
+  /terms/accept:
+    post:
+      operationId: acceptTerms
+      tags: [terms]
+      summary: Record acceptance of the current terms version
+      responses:
+        "201":
+          description: Terms accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TermsStatus"
+
 
 components:
   schemas:
@@ -1728,3 +1906,109 @@ components:
             $ref: "#/components/schemas/LessonFocusArea"
         summary:
           type: string
+
+    VerificationDocument:
+      type: object
+      required: [id, verificationId, docType, fileName, objectPath, uploadedAt]
+      properties:
+        id:
+          type: integer
+        verificationId:
+          type: integer
+        docType:
+          type: string
+        fileName:
+          type: string
+        fileSize:
+          type: ["integer", "null"]
+        objectPath:
+          type: string
+        uploadedAt:
+          type: string
+
+    InstructorVerification:
+      type: object
+      required: [id, instructorId, status, createdAt]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected, needs_revision]
+        submittedAt:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        reviewerId:
+          type: ["integer", "null"]
+        reviewerNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    VerificationWithDocs:
+      type: object
+      required: [verification, documents]
+      properties:
+        verification:
+          $ref: "#/components/schemas/InstructorVerification"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationDocument"
+
+    VerificationStatusResponse:
+      type: object
+      required: [status, documents]
+      properties:
+        status:
+          type: string
+        verification:
+          oneOf:
+            - $ref: "#/components/schemas/InstructorVerification"
+            - type: "null"
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationDocument"
+
+    AdminVerification:
+      type: object
+      required: [id, status, instructorId, instructorName, instructorEmail, documents]
+      properties:
+        id:
+          type: integer
+        status:
+          type: string
+          enum: [pending, approved, rejected, needs_revision]
+        submittedAt:
+          type: ["string", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        reviewerNotes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        instructorId:
+          type: integer
+        instructorName:
+          type: string
+        instructorEmail:
+          type: string
+        documents:
+          type: array
+          items:
+            $ref: "#/components/schemas/VerificationDocument"
+
+    TermsStatus:
+      type: object
+      required: [accepted, version]
+      properties:
+        accepted:
+          type: boolean
+        version:
+          type: string
+        acceptedAt:
+          type: ["string", "null"]

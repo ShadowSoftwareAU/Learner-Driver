@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   ShieldAlert,
+  ShieldCheck,
   Car,
   Calendar,
   MapPin,
@@ -34,6 +35,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Bookings", href: "/instructor/bookings", icon: CalendarCheck },
       { label: "Availability", href: "/instructor/availability", icon: Calendar },
       { label: "Teaching Zones", href: "/instructor/zones", icon: MapPin },
+      { label: "My Verification", href: "/instructor/verification", icon: ShieldCheck },
     ],
     student: [
       { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
@@ -44,6 +46,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
       { label: "Students", href: "/admin/students", icon: Users },
       { label: "Instructors", href: "/admin/instructors", icon: Car },
+      { label: "Verifications", href: "/admin/verifications", icon: ShieldCheck },
       { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
       { label: "Audit Log", href: "/admin/audit", icon: ShieldAlert },
     ],
