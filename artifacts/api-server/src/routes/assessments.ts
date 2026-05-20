@@ -8,12 +8,37 @@ const router = Router();
 
 router.get("/assessments", requireAuth, async (req: any, res): Promise<void> => {
   const studentId = req.query.studentId ? parseInt(req.query.studentId as string, 10) : undefined;
-  const instructorId = req.query.instructorId ? parseInt(req.query.instructorId as string, 10) : undefined;
   const user = await getOrCreateUser(req.clerkUserId, "");
 
-  let rows = await db.select().from(assessmentsTable).orderBy(desc(assessmentsTable.lessonDate));
-  if (studentId) rows = rows.filter(r => r.studentId === studentId);
-  if (instructorId) rows = rows.filter(r => r.instructorId === instructorId);
+  let rows;
+
+  if (user.role === "admin") {
+    rows = await db.select().from(assessmentsTable).orderBy(desc(assessmentsTable.lessonDate));
+    if (studentId) rows = rows.filter(r => r.studentId === studentId);
+  } else if (user.role === "instructor") {
+    // Always scope to this instructor's own assessments
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor) { res.json([]); return; }
+
+    const conditions = [eq(assessmentsTable.instructorId, instructor.id)];
+    if (studentId) {
+      // Extra safety: also filter by studentId if provided
+      rows = await db.select().from(assessmentsTable)
+        .where(and(eq(assessmentsTable.instructorId, instructor.id), eq(assessmentsTable.studentId, studentId)))
+        .orderBy(desc(assessmentsTable.lessonDate));
+    } else {
+      rows = await db.select().from(assessmentsTable)
+        .where(eq(assessmentsTable.instructorId, instructor.id))
+        .orderBy(desc(assessmentsTable.lessonDate));
+    }
+  } else {
+    // Student: only their own assessments
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+    if (!student) { res.json([]); return; }
+    rows = await db.select().from(assessmentsTable)
+      .where(eq(assessmentsTable.studentId, student.id))
+      .orderBy(desc(assessmentsTable.lessonDate));
+  }
 
   const enriched = await Promise.all(rows.map(async (a) => {
     const [student] = await db.select({ fullName: studentsTable.fullName }).from(studentsTable).where(eq(studentsTable.id, a.studentId));
@@ -53,6 +78,20 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
   const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, id));
   if (!a) { res.status(404).json({ error: "Not found" }); return; }
 
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor || a.instructorId !== instructor.id) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (user.role === "student") {
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+    if (!student || a.studentId !== student.id) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  }
+
   const results = await db.select({
     id: maneuverResultsTable.id, assessmentId: maneuverResultsTable.assessmentId,
     maneuverId: maneuverResultsTable.maneuverId, competencyLevel: maneuverResultsTable.competencyLevel,
@@ -75,6 +114,19 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
 
 router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const [a] = await db.select({ instructorId: assessmentsTable.instructorId }).from(assessmentsTable).where(eq(assessmentsTable.id, id));
+  if (!a) { res.status(404).json({ error: "Not found" }); return; }
+
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor || a.instructorId !== instructor.id) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  }
+
   const { confidenceNote, focusAreasNext, status, durationMinutes } = req.body;
   const updates: any = {};
   if (confidenceNote !== undefined) updates.confidenceNote = confidenceNote;
@@ -91,6 +143,15 @@ router.post("/assessments/:id/results", requireAuth, async (req: any, res): Prom
   const user = await getOrCreateUser(req.clerkUserId, "");
   const { results } = req.body;
   if (!Array.isArray(results)) { res.status(400).json({ error: "results array required" }); return; }
+
+  if (user.role === "instructor") {
+    const [assessment] = await db.select({ instructorId: assessmentsTable.instructorId }).from(assessmentsTable).where(eq(assessmentsTable.id, assessmentId));
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!assessment || !instructor || assessment.instructorId !== instructor.id) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  }
 
   const saved = [];
   for (const r of results) {

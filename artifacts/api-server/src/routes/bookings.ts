@@ -276,8 +276,28 @@ router.get("/bookings", requireAuth, async (req: any, res): Promise<void> => {
 
 router.get("/bookings/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
   const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
   if (!booking) { res.status(404).json({ error: "Not found" }); return; }
+
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    // Allow if they own it OR were broadcast to it
+    const ownedOrClaimed = instructor && booking.instructorId === instructor.id;
+    let wasBroadcast = false;
+    if (instructor && !ownedOrClaimed) {
+      const [bc] = await db.select({ id: bookingBroadcastsTable.id })
+        .from(bookingBroadcastsTable)
+        .where(and(eq(bookingBroadcastsTable.bookingId, id), eq(bookingBroadcastsTable.instructorId, instructor.id)))
+        .limit(1);
+      wasBroadcast = !!bc;
+    }
+    if (!ownedOrClaimed && !wasBroadcast) { res.status(403).json({ error: "Access denied" }); return; }
+  } else if (user.role === "student") {
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+    if (!student || booking.studentId !== student.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
   const [student] = await db.select({ fullName: studentsTable.fullName }).from(studentsTable).where(eq(studentsTable.id, booking.studentId));
   const instructor = booking.instructorId ? (await db.select({ fullName: instructorsTable.fullName }).from(instructorsTable).where(eq(instructorsTable.id, booking.instructorId)))[0] : null;
   res.json({ ...formatBooking(booking), studentName: student?.fullName ?? null, instructorName: instructor?.fullName ?? null });
@@ -288,6 +308,18 @@ router.get("/bookings/:id", requireAuth, async (req: any, res): Promise<void> =>
 router.patch("/bookings/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+  if (!booking) { res.status(404).json({ error: "Not found" }); return; }
+
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor || booking.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
+  } else if (user.role === "student") {
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+    if (!student || booking.studentId !== student.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
   const { status, instructorNotes } = req.body;
   const updates: any = {};
   if (status) updates.status = status;

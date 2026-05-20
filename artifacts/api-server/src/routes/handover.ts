@@ -1,14 +1,39 @@
 import { Router } from "express";
-import { eq, desc, sql } from "drizzle-orm";
-import { db, studentsTable, handoverNotesTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, usersTable } from "@workspace/db";
+import { eq, desc, sql, and } from "drizzle-orm";
+import { db, studentsTable, handoverNotesTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, usersTable, bookingsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
 
 const router = Router();
 
+async function instructorHasStudent(instructorId: number, studentId: number): Promise<boolean> {
+  const [assessment] = await db
+    .select({ id: assessmentsTable.id })
+    .from(assessmentsTable)
+    .where(and(eq(assessmentsTable.instructorId, instructorId), eq(assessmentsTable.studentId, studentId)))
+    .limit(1);
+  if (assessment) return true;
+
+  const [booking] = await db
+    .select({ id: bookingsTable.id })
+    .from(bookingsTable)
+    .where(and(eq(bookingsTable.instructorId, instructorId), eq(bookingsTable.studentId, studentId)))
+    .limit(1);
+  return !!booking;
+}
+
 router.get("/handover/:studentId", requireAuth, async (req: any, res): Promise<void> => {
   const studentId = parseInt(Array.isArray(req.params.studentId) ? req.params.studentId[0] : req.params.studentId, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
+
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor) { res.status(403).json({ error: "Instructor record not found" }); return; }
+    if (!(await instructorHasStudent(instructor.id, studentId))) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  }
 
   const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, studentId));
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
@@ -70,6 +95,12 @@ router.post("/handover/:studentId/notes", requireAuth, async (req: any, res): Pr
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
     [instructor] = await db.insert(instructorsTable).values({ userId: user.id, fullName: user.name ?? "Instructor", email: user.email ?? "" }).returning();
+  }
+
+  // Verify the instructor has a relationship with this student before writing a note
+  if (!(await instructorHasStudent(instructor.id, studentId))) {
+    res.status(403).json({ error: "Access denied" });
+    return;
   }
 
   const [created] = await db.insert(handoverNotesTable).values({ studentId, instructorId: instructor.id, note, focusAreas: focusAreas ?? null }).returning();

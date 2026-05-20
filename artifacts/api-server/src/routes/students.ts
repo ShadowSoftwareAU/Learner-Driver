@@ -1,23 +1,84 @@
 import { Router } from "express";
-import { eq, sql } from "drizzle-orm";
-import { db, studentsTable, usersTable, assessmentsTable, maneuverResultsTable, maneuversTable } from "@workspace/db";
+import { eq, sql, and, or } from "drizzle-orm";
+import { db, studentsTable, usersTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, bookingsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logger } from "../lib/logger";
 import { logAudit } from "./audit";
 
 const router = Router();
 
+/**
+ * Returns true if the given instructor has ever had an assessment or
+ * a claimed/confirmed/completed booking with this student.
+ */
+async function instructorHasStudent(instructorId: number, studentId: number): Promise<boolean> {
+  const [assessment] = await db
+    .select({ id: assessmentsTable.id })
+    .from(assessmentsTable)
+    .where(and(eq(assessmentsTable.instructorId, instructorId), eq(assessmentsTable.studentId, studentId)))
+    .limit(1);
+  if (assessment) return true;
+
+  const [booking] = await db
+    .select({ id: bookingsTable.id })
+    .from(bookingsTable)
+    .where(and(eq(bookingsTable.instructorId, instructorId), eq(bookingsTable.studentId, studentId)))
+    .limit(1);
+  return !!booking;
+}
+
+/**
+ * Returns the instructor record for the authenticated user, or 403 if not found.
+ */
+async function getInstructor(userId: number, res: any) {
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, userId));
+  if (!instructor) {
+    res.status(403).json({ error: "Instructor record not found" });
+    return null;
+  }
+  return instructor;
+}
+
 router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
-  const auth = req.clerkUserId;
-  const user = await getOrCreateUser(auth, "");
+  const user = await getOrCreateUser(req.clerkUserId, "");
   let rows;
+
   if (user.role === "admin") {
     rows = await db.select().from(studentsTable).orderBy(studentsTable.fullName);
   } else if (user.role === "instructor") {
-    rows = await db.select().from(studentsTable).orderBy(studentsTable.fullName);
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+
+    // Only return students this instructor has worked with (via assessment or booking)
+    const assessed = await db
+      .selectDistinct({ studentId: assessmentsTable.studentId })
+      .from(assessmentsTable)
+      .where(eq(assessmentsTable.instructorId, instructor.id));
+
+    const booked = await db
+      .selectDistinct({ studentId: bookingsTable.studentId })
+      .from(bookingsTable)
+      .where(and(eq(bookingsTable.instructorId, instructor.id)));
+
+    const studentIds = [...new Set([
+      ...assessed.map(r => r.studentId),
+      ...booked.map(r => r.studentId),
+    ])];
+
+    if (studentIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    rows = await db
+      .select()
+      .from(studentsTable)
+      .where(sql`${studentsTable.id} = ANY(${sql.raw(`ARRAY[${studentIds.join(",")}]::integer[]`)})`)
+      .orderBy(studentsTable.fullName);
   } else {
     rows = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
   }
+
   res.json(rows.map(formatStudent));
 });
 
@@ -35,6 +96,19 @@ router.get("/students/:id", requireAuth, async (req: any, res): Promise<void> =>
   const user = await getOrCreateUser(req.clerkUserId, "");
   const [s] = await db.select().from(studentsTable).where(eq(studentsTable.id, id));
   if (!s) { res.status(404).json({ error: "Not found" }); return; }
+
+  if (user.role === "instructor") {
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+    if (!(await instructorHasStudent(instructor.id, id))) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (user.role === "student" && s.userId !== user.id) {
+    res.status(403).json({ error: "Access denied" });
+    return;
+  }
+
   await logAudit({ actorId: user.id, action: "view_student", resourceType: "student", resourceId: s.id, studentId: s.id });
   res.json(formatStudent(s));
 });
@@ -42,6 +116,17 @@ router.get("/students/:id", requireAuth, async (req: any, res): Promise<void> =>
 router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
+
+  // Only admins and the student themselves can edit student records
+  if (user.role === "instructor") {
+    res.status(403).json({ error: "Instructors cannot edit student records" });
+    return;
+  }
+  if (user.role === "student") {
+    const [s] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, id));
+    if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
   const { fullName, phone, guardianName, guardianPhone, licenseNumber, status } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
@@ -49,7 +134,7 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
   if (guardianName !== undefined) updates.guardianName = guardianName;
   if (guardianPhone !== undefined) updates.guardianPhone = guardianPhone;
   if (licenseNumber !== undefined) updates.licenseNumber = licenseNumber;
-  if (status) updates.status = status;
+  if (status && user.role === "admin") updates.status = status; // only admins can change status
   const [updated] = await db.update(studentsTable).set(updates).where(eq(studentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatStudent(updated));
@@ -58,6 +143,19 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
 router.get("/students/:id/progress", requireAuth, async (req: any, res): Promise<void> => {
   const studentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
+
+  if (user.role === "instructor") {
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+    if (!(await instructorHasStudent(instructor.id, studentId))) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (user.role === "student") {
+    const [s] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, studentId));
+    if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
   const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, studentId));
   if (!student) { res.status(404).json({ error: "Not found" }); return; }
 
