@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { useGetMe, useUpdateMyRole, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,23 +8,26 @@ import { Car, GraduationCap, Building2, Loader2 } from "lucide-react";
 import { RoleUpdateRole } from "@/lib/enums";
 
 export default function Onboarding() {
-  const { data: user, isLoading } = useGetMe();
+  const { data: user, isLoading, isError } = useGetMe();
   const updateRole = useUpdateMyRole();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  if (isLoading) {
+  const needsRedirect =
+    isError || (!!user?.role && user.role !== "unassigned");
+
+  useEffect(() => {
+    if (needsRedirect) {
+      setLocation("/");
+    }
+  }, [needsRedirect, setLocation]);
+
+  if (isLoading || needsRedirect) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
-  }
-
-  if (user?.role && user.role !== "unassigned") {
-    // Should be handled by DashboardRedirect, but just in case
-    setLocation("/");
-    return null;
   }
 
   const handleSelectRole = (role: RoleUpdateRole) => {

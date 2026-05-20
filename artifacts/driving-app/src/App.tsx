@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ClerkProvider, SignIn, SignUp, SignedIn, SignedOut, useClerk } from "@clerk/clerk-react";
+import { ClerkProvider, SignIn, SignUp, SignedIn, SignedOut, useClerk, useAuth } from "@clerk/clerk-react";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -125,19 +125,52 @@ function LoadingScreen() {
 }
 
 /**
+ * Shown when an authenticated API call (e.g. /api/users/me) returns 401/403.
+ * Usually means the Clerk session on the server is stale or out of sync.
+ * Offers a one-click sign-out + return-to-home to recover instead of looping.
+ */
+function AuthErrorScreen() {
+  const { signOut } = useClerk();
+  const handleReset = async () => {
+    try {
+      await signOut();
+    } finally {
+      window.location.assign(basePath || "/");
+    }
+  };
+  return (
+    <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-gray-50 px-4 text-center">
+      <h1 className="text-xl font-semibold text-foreground">Your session has expired</h1>
+      <p className="max-w-md text-sm text-muted-foreground">
+        We couldn't verify your account. Please sign in again to continue.
+      </p>
+      <button
+        type="button"
+        onClick={handleReset}
+        className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        Sign in again
+      </button>
+    </div>
+  );
+}
+
+/**
  * Wraps any protected page. Shows a terms acceptance screen if the user
  * hasn't accepted the current privacy policy version yet.
  * Passes through immediately for unassigned users (onboarding handles them).
  */
 function TermsGate({ children }: { children: React.ReactNode }) {
-  const { data: user, isLoading: userLoading } = useGetMe();
-  const { data: terms, isLoading: termsLoading, refetch } = useGetTermsStatus({
+  const { data: user, isLoading: userLoading, isError: userError } = useGetMe();
+  const { data: terms, isLoading: termsLoading, isError: termsError, refetch } = useGetTermsStatus({
     query: { enabled: !!user && user.role !== "unassigned", queryKey: ["/api/terms/status"] },
   });
 
   if (userLoading) return <LoadingScreen />;
+  if (userError) return <AuthErrorScreen />;
   if (!user || user.role === "unassigned") return <>{children}</>;
   if (termsLoading) return <LoadingScreen />;
+  if (termsError) return <AuthErrorScreen />;
   if (!terms?.accepted) {
     return (
       <TermsPage
@@ -176,9 +209,10 @@ function InstructorVerificationGate({ children }: { children: React.ReactNode })
 }
 
 function DashboardRedirect() {
-  const { data: user, isLoading } = useGetMe();
+  const { data: user, isLoading, isError } = useGetMe();
 
   if (isLoading) return <LoadingScreen />;
+  if (isError) return <AuthErrorScreen />;
 
   if (!user) return <Redirect to="/onboarding" />;
 
@@ -208,23 +242,21 @@ function HomeRedirect() {
 }
 
 function ClerkQueryClientCacheInvalidator() {
-  const { addListener } = useClerk();
+  const { userId } = useAuth();
   const queryClientInstance = useQueryClient();
   const prevUserIdRef = useRef<string | null | undefined>(undefined);
 
   useEffect(() => {
-    const unsubscribe = addListener(({ user }) => {
-      const userId = user?.id ?? null;
-      if (
-        prevUserIdRef.current !== undefined &&
-        prevUserIdRef.current !== userId
-      ) {
-        queryClientInstance.clear();
-      }
-      prevUserIdRef.current = userId;
-    });
-    return unsubscribe;
-  }, [addListener, queryClientInstance]);
+    const current = userId ?? null;
+    const prev = prevUserIdRef.current;
+    // Only clear on a real transition: sign-out (prev set, now null)
+    // or a user switch (prev set, now a different non-null id).
+    // Ignore initial mount and sign-in (null -> id) since there's nothing stale.
+    if (prev !== undefined && prev !== null && prev !== current) {
+      queryClientInstance.clear();
+    }
+    prevUserIdRef.current = current;
+  }, [userId, queryClientInstance]);
 
   return null;
 }
