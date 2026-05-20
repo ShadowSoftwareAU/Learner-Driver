@@ -152,8 +152,16 @@ function TermsGate({ children }: { children: React.ReactNode }) {
 
 /**
  * Redirects instructors to /instructor/verification if they haven't been approved yet.
+ *
+ * TEMPORARILY DISABLED for editor review (May 2026 demo).
+ * To re-enable, set BYPASS_VERIFICATION_GATE = false below.
  */
+const BYPASS_VERIFICATION_GATE = true;
+
 function InstructorVerificationGate({ children }: { children: React.ReactNode }) {
+  if (BYPASS_VERIFICATION_GATE) return <>{children}</>;
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: verification, isLoading } = useGetVerificationStatus({
     query: { queryKey: ["/api/instructor/verification/status"] },
   });
