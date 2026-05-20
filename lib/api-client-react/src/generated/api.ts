@@ -43,6 +43,7 @@ import type {
   InstructorZone,
   Intake,
   IntakeInput,
+  LessonPlan,
   ListAssessmentsParams,
   ListAuditLogsParams,
   ListBookingsParams,
@@ -661,6 +662,83 @@ export function useGetStudentProgress<TData = Awaited<ReturnType<typeof getStude
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetStudentProgressQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetStudentLessonPlanUrl = (id: number,) => {
+
+
+
+
+  return `/api/students/${id}/lesson-plan`
+}
+
+/**
+ * @summary Generate a dynamic lesson plan based on student skill gaps
+ */
+export const getStudentLessonPlan = async (id: number, options?: RequestInit): Promise<LessonPlan> => {
+
+  return customFetch<LessonPlan>(getGetStudentLessonPlanUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStudentLessonPlanQueryKey = (id: number,) => {
+    return [
+    `/api/students/${id}/lesson-plan`
+    ] as const;
+    }
+
+
+export const getGetStudentLessonPlanQueryOptions = <TData = Awaited<ReturnType<typeof getStudentLessonPlan>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudentLessonPlan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStudentLessonPlanQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStudentLessonPlan>>> = ({ signal }) => getStudentLessonPlan(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStudentLessonPlan>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStudentLessonPlanQueryResult = NonNullable<Awaited<ReturnType<typeof getStudentLessonPlan>>>
+export type GetStudentLessonPlanQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Generate a dynamic lesson plan based on student skill gaps
+ */
+
+export function useGetStudentLessonPlan<TData = Awaited<ReturnType<typeof getStudentLessonPlan>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudentLessonPlan>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStudentLessonPlanQueryOptions(id,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

@@ -9,3 +9,4 @@ export * from "./audit";
 export * from "./availability";
 export * from "./zones";
 export * from "./bookings";
+export * from "./lesson-types";

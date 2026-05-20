@@ -1,12 +1,28 @@
-import { useGetStudent, useGetStudentProgress, useListAssessments, getGetStudentQueryKey, getGetStudentProgressQueryKey, getListAssessmentsQueryKey } from "@workspace/api-client-react";
+import { lazy, Suspense } from "react";
+import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, getGetStudentQueryKey, getGetStudentProgressQueryKey, getListAssessmentsQueryKey } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink } from "lucide-react";
+import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+
+const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
+
+const LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
+  not_attempted: { label: "Not Started", color: "bg-gray-100 text-gray-600" },
+  attempted: { label: "Attempted", color: "bg-red-100 text-red-700" },
+  practiced: { label: "Practiced", color: "bg-amber-100 text-amber-700" },
+  mastered: { label: "Mastered", color: "bg-green-100 text-green-700" },
+};
+
+const PRIORITY_CONFIG: Record<string, { label: string; variant: "destructive" | "default" | "secondary" }> = {
+  high: { label: "High Priority", variant: "destructive" },
+  medium: { label: "Medium", variant: "default" },
+  low: { label: "Low", variant: "secondary" },
+};
 
 export default function InstructorStudentDetail() {
   const params = useParams();
@@ -15,6 +31,7 @@ export default function InstructorStudentDetail() {
   const { data: student, isLoading: isStudentLoading } = useGetStudent(id, { query: { enabled: !!id, queryKey: getGetStudentQueryKey(id) } });
   const { data: progress, isLoading: isProgressLoading } = useGetStudentProgress(id, { query: { enabled: !!id, queryKey: getGetStudentProgressQueryKey(id) } });
   const { data: assessments, isLoading: isAssessmentsLoading } = useListAssessments({ studentId: id }, { query: { queryKey: ["/api/assessments", { studentId: id }] } });
+  const { data: lessonPlan, isLoading: isPlanLoading } = useGetStudentLessonPlan(id, { query: { enabled: !!id, queryKey: ["/api/students", id, "lesson-plan"] } });
 
   const isLoading = isStudentLoading || isProgressLoading || isAssessmentsLoading;
 
@@ -27,6 +44,8 @@ export default function InstructorStudentDetail() {
       </SidebarLayout>
     );
   }
+
+  const highlightedTypeIds = lessonPlan?.lessonFocus?.slice(0, 3).map((f: any) => f.lessonType.id) ?? [];
 
   return (
     <SidebarLayout>
@@ -96,6 +115,10 @@ export default function InstructorStudentDetail() {
         <Tabs defaultValue="progress" className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
             <TabsTrigger value="progress" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Skill Progress</TabsTrigger>
+            <TabsTrigger value="lesson-plan" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
+              <TrendingUp className="w-3.5 h-3.5 mr-1.5" />
+              Lesson Plan
+            </TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Assessment History</TabsTrigger>
             <TabsTrigger value="intake" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Intake Info</TabsTrigger>
           </TabsList>
@@ -126,6 +149,126 @@ export default function InstructorStudentDetail() {
                 </div>
               )}
             </div>
+          </TabsContent>
+
+          <TabsContent value="lesson-plan" className="pt-6">
+            {isPlanLoading ? (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : !lessonPlan ? (
+              <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
+                Could not load lesson plan.
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Summary banner */}
+                <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-blue-800">{lessonPlan.summary}</p>
+                </div>
+
+                {lessonPlan.lessonFocus?.length === 0 ? (
+                  <div className="text-center py-12 border border-dashed rounded-lg">
+                    <Award className="w-10 h-10 text-green-500 mx-auto mb-3" />
+                    <p className="font-semibold text-green-700">All skills mastered!</p>
+                    <p className="text-sm text-muted-foreground mt-1">This student is ready for a QSAFE pre-test assessment.</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Focus area cards */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {lessonPlan.lessonFocus?.map((area: any, idx: number) => {
+                        const priorityCfg = PRIORITY_CONFIG[area.priority] ?? PRIORITY_CONFIG.low;
+                        return (
+                          <Card
+                            key={area.lessonType.id}
+                            className={`relative overflow-hidden ${idx === 0 ? "ring-2 ring-primary/30" : ""}`}
+                          >
+                            {/* Color accent bar */}
+                            <div
+                              className="absolute top-0 left-0 right-0 h-1"
+                              style={{ backgroundColor: area.lessonType.color }}
+                            />
+                            <CardHeader className="pt-5 pb-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div>
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span
+                                      className="inline-block h-3 w-3 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: area.lessonType.color }}
+                                    />
+                                    <CardTitle className="text-base leading-tight">{area.lessonType.name}</CardTitle>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">{area.lessonType.description}</p>
+                                </div>
+                                <Badge variant={priorityCfg.variant} className="flex-shrink-0 text-xs">
+                                  {priorityCfg.label}
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                              <p className="text-xs text-muted-foreground mb-3">
+                                {area.gapCount} skill{area.gapCount !== 1 ? "s" : ""} need attention
+                              </p>
+                              <div className="space-y-1.5">
+                                {area.maneuvers?.slice(0, 5).map((m: any) => {
+                                  const lvl = LEVEL_CONFIG[m.bestLevel] ?? LEVEL_CONFIG.not_attempted;
+                                  return (
+                                    <div key={m.id} className="flex items-center justify-between gap-2">
+                                      <span className="text-xs truncate">{m.name}</span>
+                                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full flex-shrink-0 ${lvl.color}`}>
+                                        {lvl.label}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                                {area.maneuvers?.length > 5 && (
+                                  <p className="text-xs text-muted-foreground pt-1">
+                                    +{area.maneuvers.length - 5} more maneuvers
+                                  </p>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+
+                    {/* Route map */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <MapPin className="w-4 h-4 text-muted-foreground" />
+                        <h3 className="font-semibold text-sm">Recommended Practice Locations — Brisbane</h3>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Highlighted zones match this student's priority lesson types. Click a zone for practice tips.
+                      </p>
+                      <Suspense fallback={
+                        <div className="rounded-xl border bg-muted flex items-center justify-center" style={{ height: 420 }}>
+                          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                        </div>
+                      }>
+                        <LessonRouteMap highlightedTypeIds={highlightedTypeIds} />
+                      </Suspense>
+
+                      {/* Map legend */}
+                      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+                        {lessonPlan.lessonFocus?.slice(0, 5).map((area: any) => (
+                          <div key={area.lessonType.id} className="flex items-center gap-1.5">
+                            <span
+                              className="h-3 w-3 rounded-full flex-shrink-0 border"
+                              style={{ backgroundColor: area.lessonType.color }}
+                            />
+                            <span className="text-xs text-muted-foreground">{area.lessonType.name}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="history" className="pt-6">

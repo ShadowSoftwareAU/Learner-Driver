@@ -574,6 +574,44 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface LessonType {
+  id: number;
+  name: string;
+  description: string;
+  icon: string;
+  color: string;
+  sortOrder: number;
+}
+
+export interface LessonFocusManeuver {
+  id: number;
+  name: string;
+  category: string;
+  bestLevel: string;
+}
+
+export type LessonFocusAreaPriority = typeof LessonFocusAreaPriority[keyof typeof LessonFocusAreaPriority];
+
+
+export const LessonFocusAreaPriority = {
+  high: 'high',
+  medium: 'medium',
+  low: 'low',
+} as const;
+
+export interface LessonFocusArea {
+  lessonType: LessonType;
+  priority: LessonFocusAreaPriority;
+  score: number;
+  gapCount: number;
+  maneuvers: LessonFocusManeuver[];
+}
+
+export interface LessonPlan {
+  lessonFocus: LessonFocusArea[];
+  summary: string;
+}
+
 export type ListAssessmentsParams = {
 studentId?: number;
 instructorId?: number;

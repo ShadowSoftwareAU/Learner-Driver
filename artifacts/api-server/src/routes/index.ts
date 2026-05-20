@@ -13,6 +13,7 @@ import availabilityRouter from "./availability";
 import zonesRouter from "./zones";
 import bookingsRouter from "./bookings";
 import notificationsRouter from "./notifications";
+import lessonPlanRouter from "./lesson-plan";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(availabilityRouter);
 router.use(zonesRouter);
 router.use(bookingsRouter);
 router.use(notificationsRouter);
+router.use(lessonPlanRouter);
 
 export default router;

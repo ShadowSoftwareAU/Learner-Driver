@@ -171,6 +171,37 @@ export const GetStudentProgressResponse = zod.object({
 
 
 /**
+ * @summary Generate a dynamic lesson plan based on student skill gaps
+ */
+export const GetStudentLessonPlanParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStudentLessonPlanResponse = zod.object({
+  "lessonFocus": zod.array(zod.object({
+  "lessonType": zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "icon": zod.string(),
+  "color": zod.string(),
+  "sortOrder": zod.number()
+}),
+  "priority": zod.enum(['high', 'medium', 'low']),
+  "score": zod.number(),
+  "gapCount": zod.number(),
+  "maneuvers": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "bestLevel": zod.string()
+}))
+})),
+  "summary": zod.string()
+})
+
+
+/**
  * @summary List all instructors (admin only)
  */
 export const ListInstructorsResponseItem = zod.object({
