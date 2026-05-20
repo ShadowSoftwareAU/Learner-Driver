@@ -407,6 +407,173 @@ export interface AdminDashboard {
   instructorStats?: InstructorStat[];
 }
 
+export interface AvailabilitySlot {
+  id: number;
+  instructorId: number;
+  /** 0=Sun, 1=Mon, ..., 6=Sat */
+  dayOfWeek: number;
+  /** HH:mm */
+  startTime: string;
+  /** HH:mm */
+  endTime: string;
+  /** CSV: auto, manual */
+  transmissionTypes: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface CreateAvailabilitySlot {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  transmissionTypes?: string | string[];
+  isActive?: boolean;
+}
+
+export interface InstructorZone {
+  id: number;
+  instructorId: number;
+  suburb: string;
+  postcode: string;
+  state: string;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export interface CreateZone {
+  suburb: string;
+  postcode: string;
+  state?: string;
+}
+
+export type BookingItemTransmissionType = typeof BookingItemTransmissionType[keyof typeof BookingItemTransmissionType];
+
+
+export const BookingItemTransmissionType = {
+  auto: 'auto',
+  manual: 'manual',
+  either: 'either',
+} as const;
+
+export type BookingItemStatus = typeof BookingItemStatus[keyof typeof BookingItemStatus];
+
+
+export const BookingItemStatus = {
+  pending: 'pending',
+  claimed: 'claimed',
+  confirmed: 'confirmed',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface BookingItem {
+  id: number;
+  studentId: number;
+  /** @nullable */
+  instructorId?: number | null;
+  requestedDate: string;
+  requestedTime: string;
+  durationMinutes: number;
+  transmissionType: BookingItemTransmissionType;
+  suburb: string;
+  postcode: string;
+  status: BookingItemStatus;
+  /** @nullable */
+  studentNotes?: string | null;
+  /** @nullable */
+  instructorNotes?: string | null;
+  broadcastCount: number;
+  /** @nullable */
+  claimedAt?: string | null;
+  /** @nullable */
+  confirmedAt?: string | null;
+  createdAt: string;
+  /** @nullable */
+  studentName?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
+  /** @nullable */
+  instructorPhone?: string | null;
+}
+
+export type PatchBookingInputStatus = typeof PatchBookingInputStatus[keyof typeof PatchBookingInputStatus];
+
+
+export const PatchBookingInputStatus = {
+  pending: 'pending',
+  claimed: 'claimed',
+  confirmed: 'confirmed',
+  completed: 'completed',
+  cancelled: 'cancelled',
+} as const;
+
+export interface PatchBookingInput {
+  status?: PatchBookingInputStatus;
+  instructorNotes?: string;
+}
+
+export type CreateBookingTransmissionType = typeof CreateBookingTransmissionType[keyof typeof CreateBookingTransmissionType];
+
+
+export const CreateBookingTransmissionType = {
+  auto: 'auto',
+  manual: 'manual',
+  either: 'either',
+} as const;
+
+export interface CreateBooking {
+  requestedDate: string;
+  requestedTime: string;
+  durationMinutes?: number;
+  transmissionType?: CreateBookingTransmissionType;
+  suburb: string;
+  postcode: string;
+  studentNotes?: string;
+}
+
+export type AvailableInstructorZonesItem = {
+  suburb?: string;
+  postcode?: string;
+  state?: string;
+};
+
+export type AvailableInstructorAvailabilitySlotsItem = {
+  dayOfWeek?: number;
+  dayName?: string;
+  startTime?: string;
+  endTime?: string;
+  transmissionTypes?: string[];
+};
+
+export interface AvailableInstructor {
+  id: number;
+  fullName: string;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  vehicleMake?: string | null;
+  /** @nullable */
+  vehicleModel?: string | null;
+  /** @nullable */
+  vehicleYear?: number | null;
+  /** @nullable */
+  qualifications?: string | null;
+  zones?: AvailableInstructorZonesItem[];
+  availabilitySlots?: AvailableInstructorAvailabilitySlotsItem[];
+}
+
+export interface Notification {
+  id: number;
+  userId: number;
+  type: string;
+  title: string;
+  body: string;
+  /** @nullable */
+  relatedId?: number | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
 export type ListAssessmentsParams = {
 studentId?: number;
 instructorId?: number;
@@ -415,5 +582,36 @@ instructorId?: number;
 export type ListAuditLogsParams = {
 studentId?: number;
 limit?: number;
+};
+
+export type SearchInstructorsParams = {
+date: string;
+time: string;
+transmissionType?: SearchInstructorsTransmissionType;
+suburb?: string;
+postcode?: string;
+durationMinutes?: number;
+};
+
+export type SearchInstructorsTransmissionType = typeof SearchInstructorsTransmissionType[keyof typeof SearchInstructorsTransmissionType];
+
+
+export const SearchInstructorsTransmissionType = {
+  auto: 'auto',
+  manual: 'manual',
+  either: 'either',
+} as const;
+
+export type ListBookingsParams = {
+status?: string;
+};
+
+export type ListNotificationsParams = {
+unread?: boolean;
+limit?: number;
+};
+
+export type GetUnreadNotificationCount200 = {
+  count: number;
 };
 

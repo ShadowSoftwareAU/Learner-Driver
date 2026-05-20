@@ -28,6 +28,8 @@ tags:
     description: Audit trail
   - name: dashboard
     description: Dashboard summaries
+  - name: scheduling
+    description: Availability, zones, bookings and notifications
 
 paths:
   /healthz:
@@ -522,6 +524,355 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
+
+  # ─── Availability ─────────────────────────────────────────────────────────────
+  /availability/me:
+    get:
+      operationId: getMyAvailability
+      tags: [scheduling]
+      summary: Get my availability slots
+      responses:
+        "200":
+          description: List of availability slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilitySlot"
+
+  /availability:
+    post:
+      operationId: createAvailabilitySlot
+      tags: [scheduling]
+      summary: Create availability slot
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAvailabilitySlot"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilitySlot"
+
+  /availability/{id}:
+    patch:
+      operationId: updateAvailabilitySlot
+      tags: [scheduling]
+      summary: Update availability slot
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAvailabilitySlot"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvailabilitySlot"
+    delete:
+      operationId: deleteAvailabilitySlot
+      tags: [scheduling]
+      summary: Delete availability slot
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Zones ────────────────────────────────────────────────────────────────────
+  /zones/me:
+    get:
+      operationId: getMyZones
+      tags: [scheduling]
+      summary: Get my operational zones
+      responses:
+        "200":
+          description: List of zones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstructorZone"
+
+  /zones:
+    post:
+      operationId: createZone
+      tags: [scheduling]
+      summary: Add a zone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateZone"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorZone"
+
+  /zones/{id}:
+    delete:
+      operationId: deleteZone
+      tags: [scheduling]
+      summary: Remove a zone
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  # ─── Bookings ─────────────────────────────────────────────────────────────────
+  /bookings/search:
+    get:
+      operationId: searchInstructors
+      tags: [scheduling]
+      summary: Search for available instructors
+      parameters:
+        - in: query
+          name: date
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: time
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: transmissionType
+          schema:
+            type: string
+            enum: [auto, manual, either]
+        - in: query
+          name: suburb
+          schema:
+            type: string
+        - in: query
+          name: postcode
+          schema:
+            type: string
+        - in: query
+          name: durationMinutes
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Available instructors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailableInstructor"
+
+  /bookings:
+    get:
+      operationId: listBookings
+      tags: [scheduling]
+      summary: List bookings for current user
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookingItem"
+    post:
+      operationId: createBooking
+      tags: [scheduling]
+      summary: Create a booking request (broadcasts to instructors)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBooking"
+      responses:
+        "201":
+          description: Booking created and broadcast
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingItem"
+
+  /bookings/{id}:
+    get:
+      operationId: getBooking
+      tags: [scheduling]
+      summary: Get booking detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingItem"
+    patch:
+      operationId: updateBooking
+      tags: [scheduling]
+      summary: Update booking status or notes
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PatchBookingInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingItem"
+
+  /bookings/{id}/claim:
+    post:
+      operationId: claimBooking
+      tags: [scheduling]
+      summary: Instructor claims a booking (first-to-accept)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking claimed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingItem"
+        "409":
+          description: Already claimed
+
+  /bookings/{id}/decline:
+    post:
+      operationId: declineBooking
+      tags: [scheduling]
+      summary: Instructor declines a broadcast booking
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Declined
+
+  # ─── Notifications ────────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [scheduling]
+      summary: List my notifications
+      parameters:
+        - in: query
+          name: unread
+          schema:
+            type: boolean
+        - in: query
+          name: limit
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/unread-count:
+    get:
+      operationId: getUnreadNotificationCount
+      tags: [scheduling]
+      summary: Get unread notification count
+      responses:
+        "200":
+          description: Count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count]
+                properties:
+                  count:
+                    type: integer
+
+  /notifications/mark-all-read:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [scheduling]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: Done
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [scheduling]
+      summary: Mark a notification as read
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Done
+
 
 components:
   schemas:
@@ -1082,3 +1433,220 @@ components:
           type: integer
         hoursThisMonth:
           type: number
+
+    # ─── Scheduling Schemas ───────────────────────────────────────────────────────
+    AvailabilitySlot:
+      type: object
+      required: [id, instructorId, dayOfWeek, startTime, endTime, transmissionTypes, isActive]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        dayOfWeek:
+          type: integer
+          description: "0=Sun, 1=Mon, ..., 6=Sat"
+        startTime:
+          type: string
+          description: "HH:mm"
+        endTime:
+          type: string
+          description: "HH:mm"
+        transmissionTypes:
+          type: string
+          description: "CSV: auto, manual"
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    CreateAvailabilitySlot:
+      type: object
+      required: [dayOfWeek, startTime, endTime]
+      properties:
+        dayOfWeek:
+          type: integer
+        startTime:
+          type: string
+        endTime:
+          type: string
+        transmissionTypes:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        isActive:
+          type: boolean
+
+    InstructorZone:
+      type: object
+      required: [id, instructorId, suburb, postcode, state, isActive]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        suburb:
+          type: string
+        postcode:
+          type: string
+        state:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    CreateZone:
+      type: object
+      required: [suburb, postcode]
+      properties:
+        suburb:
+          type: string
+        postcode:
+          type: string
+        state:
+          type: string
+
+    BookingItem:
+      type: object
+      required: [id, studentId, requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, status, broadcastCount, createdAt]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        instructorId:
+          type: ["integer", "null"]
+        requestedDate:
+          type: string
+        requestedTime:
+          type: string
+        durationMinutes:
+          type: integer
+        transmissionType:
+          type: string
+          enum: [auto, manual, either]
+        suburb:
+          type: string
+        postcode:
+          type: string
+        status:
+          type: string
+          enum: [pending, claimed, confirmed, completed, cancelled]
+        studentNotes:
+          type: ["string", "null"]
+        instructorNotes:
+          type: ["string", "null"]
+        broadcastCount:
+          type: integer
+        claimedAt:
+          type: ["string", "null"]
+        confirmedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        studentName:
+          type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        instructorPhone:
+          type: ["string", "null"]
+
+    PatchBookingInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, claimed, confirmed, completed, cancelled]
+        instructorNotes:
+          type: string
+
+    CreateBooking:
+      type: object
+      required: [requestedDate, requestedTime, suburb, postcode]
+      properties:
+        requestedDate:
+          type: string
+        requestedTime:
+          type: string
+        durationMinutes:
+          type: integer
+        transmissionType:
+          type: string
+          enum: [auto, manual, either]
+        suburb:
+          type: string
+        postcode:
+          type: string
+        studentNotes:
+          type: string
+
+    AvailableInstructor:
+      type: object
+      required: [id, fullName]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        phone:
+          type: ["string", "null"]
+        vehicleMake:
+          type: ["string", "null"]
+        vehicleModel:
+          type: ["string", "null"]
+        vehicleYear:
+          type: ["integer", "null"]
+        qualifications:
+          type: ["string", "null"]
+        zones:
+          type: array
+          items:
+            type: object
+            properties:
+              suburb:
+                type: string
+              postcode:
+                type: string
+              state:
+                type: string
+        availabilitySlots:
+          type: array
+          items:
+            type: object
+            properties:
+              dayOfWeek:
+                type: integer
+              dayName:
+                type: string
+              startTime:
+                type: string
+              endTime:
+                type: string
+              transmissionTypes:
+                type: array
+                items:
+                  type: string
+
+    Notification:
+      type: object
+      required: [id, userId, type, title, body, isRead, createdAt]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        relatedId:
+          type: ["integer", "null"]
+        isRead:
+          type: boolean
+        createdAt:
+          type: string

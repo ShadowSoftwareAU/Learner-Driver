@@ -625,3 +625,320 @@ export const GetAdminDashboardResponse = zod.object({
 })
 
 
+/**
+ * @summary Get my availability slots
+ */
+export const GetMyAvailabilityResponseItem = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "dayOfWeek": zod.number().describe('0=Sun, 1=Mon, ..., 6=Sat'),
+  "startTime": zod.string().describe('HH:mm'),
+  "endTime": zod.string().describe('HH:mm'),
+  "transmissionTypes": zod.string().describe('CSV: auto, manual'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional()
+})
+export const GetMyAvailabilityResponse = zod.array(GetMyAvailabilityResponseItem)
+
+
+/**
+ * @summary Create availability slot
+ */
+export const CreateAvailabilitySlotBody = zod.object({
+  "dayOfWeek": zod.number(),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "transmissionTypes": zod.union([zod.string(),zod.array(zod.string())]).optional(),
+  "isActive": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Update availability slot
+ */
+export const UpdateAvailabilitySlotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAvailabilitySlotBody = zod.object({
+  "dayOfWeek": zod.number(),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "transmissionTypes": zod.union([zod.string(),zod.array(zod.string())]).optional(),
+  "isActive": zod.boolean().optional()
+})
+
+export const UpdateAvailabilitySlotResponse = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "dayOfWeek": zod.number().describe('0=Sun, 1=Mon, ..., 6=Sat'),
+  "startTime": zod.string().describe('HH:mm'),
+  "endTime": zod.string().describe('HH:mm'),
+  "transmissionTypes": zod.string().describe('CSV: auto, manual'),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete availability slot
+ */
+export const DeleteAvailabilitySlotParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Get my operational zones
+ */
+export const GetMyZonesResponseItem = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "state": zod.string(),
+  "isActive": zod.boolean(),
+  "createdAt": zod.string().optional()
+})
+export const GetMyZonesResponse = zod.array(GetMyZonesResponseItem)
+
+
+/**
+ * @summary Add a zone
+ */
+export const CreateZoneBody = zod.object({
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "state": zod.string().optional()
+})
+
+
+/**
+ * @summary Remove a zone
+ */
+export const DeleteZoneParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Search for available instructors
+ */
+export const SearchInstructorsQueryParams = zod.object({
+  "date": zod.coerce.string(),
+  "time": zod.coerce.string(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']).optional(),
+  "suburb": zod.coerce.string().optional(),
+  "postcode": zod.coerce.string().optional(),
+  "durationMinutes": zod.coerce.number().optional()
+})
+
+export const SearchInstructorsResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "phone": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "qualifications": zod.string().nullish(),
+  "zones": zod.array(zod.object({
+  "suburb": zod.string().optional(),
+  "postcode": zod.string().optional(),
+  "state": zod.string().optional()
+})).optional(),
+  "availabilitySlots": zod.array(zod.object({
+  "dayOfWeek": zod.number().optional(),
+  "dayName": zod.string().optional(),
+  "startTime": zod.string().optional(),
+  "endTime": zod.string().optional(),
+  "transmissionTypes": zod.array(zod.string()).optional()
+})).optional()
+})
+export const SearchInstructorsResponse = zod.array(SearchInstructorsResponseItem)
+
+
+/**
+ * @summary List bookings for current user
+ */
+export const ListBookingsQueryParams = zod.object({
+  "status": zod.coerce.string().optional()
+})
+
+export const ListBookingsResponseItem = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number().nullish(),
+  "requestedDate": zod.string(),
+  "requestedTime": zod.string(),
+  "durationMinutes": zod.number(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "studentNotes": zod.string().nullish(),
+  "instructorNotes": zod.string().nullish(),
+  "broadcastCount": zod.number(),
+  "claimedAt": zod.string().nullish(),
+  "confirmedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorPhone": zod.string().nullish()
+})
+export const ListBookingsResponse = zod.array(ListBookingsResponseItem)
+
+
+/**
+ * @summary Create a booking request (broadcasts to instructors)
+ */
+export const CreateBookingBody = zod.object({
+  "requestedDate": zod.string(),
+  "requestedTime": zod.string(),
+  "durationMinutes": zod.number().optional(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']).optional(),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "studentNotes": zod.string().optional()
+})
+
+
+/**
+ * @summary Get booking detail
+ */
+export const GetBookingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetBookingResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number().nullish(),
+  "requestedDate": zod.string(),
+  "requestedTime": zod.string(),
+  "durationMinutes": zod.number(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "studentNotes": zod.string().nullish(),
+  "instructorNotes": zod.string().nullish(),
+  "broadcastCount": zod.number(),
+  "claimedAt": zod.string().nullish(),
+  "confirmedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorPhone": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update booking status or notes
+ */
+export const UpdateBookingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateBookingBody = zod.object({
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']).optional(),
+  "instructorNotes": zod.string().optional()
+})
+
+export const UpdateBookingResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number().nullish(),
+  "requestedDate": zod.string(),
+  "requestedTime": zod.string(),
+  "durationMinutes": zod.number(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "studentNotes": zod.string().nullish(),
+  "instructorNotes": zod.string().nullish(),
+  "broadcastCount": zod.number(),
+  "claimedAt": zod.string().nullish(),
+  "confirmedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorPhone": zod.string().nullish()
+})
+
+
+/**
+ * @summary Instructor claims a booking (first-to-accept)
+ */
+export const ClaimBookingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ClaimBookingResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number().nullish(),
+  "requestedDate": zod.string(),
+  "requestedTime": zod.string(),
+  "durationMinutes": zod.number(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "studentNotes": zod.string().nullish(),
+  "instructorNotes": zod.string().nullish(),
+  "broadcastCount": zod.number(),
+  "claimedAt": zod.string().nullish(),
+  "confirmedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorPhone": zod.string().nullish()
+})
+
+
+/**
+ * @summary Instructor declines a broadcast booking
+ */
+export const DeclineBookingParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List my notifications
+ */
+export const ListNotificationsQueryParams = zod.object({
+  "unread": zod.coerce.boolean().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "type": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "relatedId": zod.number().nullish(),
+  "isRead": zod.boolean(),
+  "createdAt": zod.string()
+})
+export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
+
+
+/**
+ * @summary Get unread notification count
+ */
+export const GetUnreadNotificationCountResponse = zod.object({
+  "count": zod.number()
+})
+
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

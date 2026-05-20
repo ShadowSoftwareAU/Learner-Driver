@@ -9,6 +9,10 @@ import handoverRouter from "./handover";
 import intakeRouter from "./intake";
 import dashboardRouter from "./dashboard";
 import auditRouter from "./audit";
+import availabilityRouter from "./availability";
+import zonesRouter from "./zones";
+import bookingsRouter from "./bookings";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -22,5 +26,9 @@ router.use(handoverRouter);
 router.use(intakeRouter);
 router.use(dashboardRouter);
 router.use(auditRouter);
+router.use(availabilityRouter);
+router.use(zonesRouter);
+router.use(bookingsRouter);
+router.use(notificationsRouter);
 
 export default router;

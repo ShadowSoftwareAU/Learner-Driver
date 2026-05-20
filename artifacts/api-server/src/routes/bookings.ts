@@ -1,0 +1,345 @@
+import { Router } from "express";
+import { eq, and, desc, sql } from "drizzle-orm";
+import {
+  db, bookingsTable, bookingBroadcastsTable, notificationsTable,
+  instructorAvailabilityTable, instructorZonesTable, instructorsTable,
+  studentsTable, usersTable,
+} from "@workspace/db";
+import { requireAuth, getOrCreateUser } from "./users";
+import { logAudit } from "./audit";
+
+const router = Router();
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function timeToMinutes(t: string) {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function slotCoversRequest(slot: { startTime: string; endTime: string; dayOfWeek: number }, date: string, time: string, durationMinutes: number) {
+  const d = new Date(date);
+  if (d.getDay() !== slot.dayOfWeek) return false;
+  const reqStart = timeToMinutes(time);
+  const reqEnd = reqStart + durationMinutes;
+  const slotStart = timeToMinutes(slot.startTime);
+  const slotEnd = timeToMinutes(slot.endTime);
+  return slotStart <= reqStart && reqEnd <= slotEnd;
+}
+
+// ─── Student Search ───────────────────────────────────────────────────────────
+
+router.get("/bookings/search", requireAuth, async (req: any, res): Promise<void> => {
+  const { date, time, transmissionType, suburb, postcode, durationMinutes } = req.query as Record<string, string>;
+  if (!date || !time) { res.status(400).json({ error: "date and time are required" }); return; }
+  const duration = parseInt(durationMinutes ?? "60", 10);
+
+  // Find all active instructors with matching zones
+  const zoneFilter: any[] = [];
+  if (suburb) zoneFilter.push(eq(instructorZonesTable.suburb, suburb));
+  if (postcode) zoneFilter.push(eq(instructorZonesTable.postcode, postcode));
+
+  const zonesQuery = zoneFilter.length > 0
+    ? db.select().from(instructorZonesTable).where(and(eq(instructorZonesTable.isActive, true), ...zoneFilter))
+    : db.select().from(instructorZonesTable).where(eq(instructorZonesTable.isActive, true));
+
+  const matchingZones = await zonesQuery;
+  const instructorIdsInZone = [...new Set(matchingZones.map(z => z.instructorId))];
+  if (instructorIdsInZone.length === 0) { res.json([]); return; }
+
+  // Find instructors available at that date/time
+  const requestedDay = new Date(date).getDay();
+  const availSlots = await db.select().from(instructorAvailabilityTable)
+    .where(and(
+      eq(instructorAvailabilityTable.isActive, true),
+      eq(instructorAvailabilityTable.dayOfWeek, requestedDay),
+      sql`${instructorAvailabilityTable.instructorId} = ANY(${sql.raw(`ARRAY[${instructorIdsInZone.join(",")}]::integer[]`)})`
+    ));
+
+  const qualifiedInstructorIds = availSlots
+    .filter(slot => {
+      if (transmissionType && transmissionType !== "either") {
+        const types = slot.transmissionTypes.split(",").map(s => s.trim());
+        if (!types.includes(transmissionType)) return false;
+      }
+      return slotCoversRequest(slot, date, time, duration);
+    })
+    .map(slot => slot.instructorId);
+
+  if (qualifiedInstructorIds.length === 0) { res.json([]); return; }
+
+  const instructors = await db.select().from(instructorsTable)
+    .where(sql`${instructorsTable.id} = ANY(${sql.raw(`ARRAY[${qualifiedInstructorIds.join(",")}]::integer[]`)})`);
+
+  const enriched = await Promise.all(instructors.map(async (i) => {
+    const zones = await db.select().from(instructorZonesTable)
+      .where(and(eq(instructorZonesTable.instructorId, i.id), eq(instructorZonesTable.isActive, true)));
+    const slots = await db.select().from(instructorAvailabilityTable)
+      .where(and(eq(instructorAvailabilityTable.instructorId, i.id), eq(instructorAvailabilityTable.isActive, true)));
+    return {
+      id: i.id, fullName: i.fullName, phone: i.phone, vehicleMake: i.vehicleMake,
+      vehicleModel: i.vehicleModel, vehicleYear: i.vehicleYear, qualifications: i.qualifications,
+      zones: zones.map(z => ({ suburb: z.suburb, postcode: z.postcode, state: z.state })),
+      availabilitySlots: slots.map(s => ({
+        dayOfWeek: s.dayOfWeek, dayName: DAY_NAMES[s.dayOfWeek],
+        startTime: s.startTime, endTime: s.endTime,
+        transmissionTypes: s.transmissionTypes.split(",").map((t: string) => t.trim()),
+      })),
+    };
+  }));
+
+  res.json(enriched);
+});
+
+// ─── Create Booking (Broadcast) ───────────────────────────────────────────────
+
+router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  // Ensure student record exists
+  let [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+  if (!student) {
+    [student] = await db.insert(studentsTable).values({ userId: user.id, fullName: user.name ?? "Student", email: user.email ?? "" }).returning();
+  }
+
+  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes } = req.body;
+  if (!requestedDate || !requestedTime || !suburb || !postcode) {
+    res.status(400).json({ error: "requestedDate, requestedTime, suburb, postcode are required" }); return;
+  }
+
+  // Create the booking
+  const [booking] = await db.insert(bookingsTable).values({
+    studentId: student.id,
+    requestedDate, requestedTime,
+    durationMinutes: durationMinutes ?? 60,
+    transmissionType: transmissionType ?? "auto",
+    suburb, postcode,
+    studentNotes: studentNotes ?? null,
+    status: "pending",
+    broadcastCount: 0,
+  }).returning();
+
+  // Find eligible instructors for broadcast
+  const day = new Date(requestedDate).getDay();
+  const duration = durationMinutes ?? 60;
+
+  const zoneMatches = await db.select().from(instructorZonesTable)
+    .where(and(
+      eq(instructorZonesTable.suburb, suburb),
+      eq(instructorZonesTable.isActive, true),
+    ));
+  const postcodeMatches = await db.select().from(instructorZonesTable)
+    .where(and(eq(instructorZonesTable.postcode, postcode), eq(instructorZonesTable.isActive, true)));
+  const zoneInstructorIds = [...new Set([...zoneMatches, ...postcodeMatches].map(z => z.instructorId))];
+
+  let eligibleInstructorIds: number[] = [];
+  if (zoneInstructorIds.length > 0) {
+    const availSlots = await db.select().from(instructorAvailabilityTable)
+      .where(and(
+        eq(instructorAvailabilityTable.isActive, true),
+        eq(instructorAvailabilityTable.dayOfWeek, day),
+        sql`${instructorAvailabilityTable.instructorId} = ANY(${sql.raw(`ARRAY[${zoneInstructorIds.join(",")}]::integer[]`)})`
+      ));
+    eligibleInstructorIds = availSlots
+      .filter(slot => {
+        if (transmissionType && transmissionType !== "either") {
+          const types = slot.transmissionTypes.split(",").map((s: string) => s.trim());
+          if (!types.includes(transmissionType)) return false;
+        }
+        return slotCoversRequest(slot, requestedDate, requestedTime, duration);
+      })
+      .map(slot => slot.instructorId);
+  }
+
+  // Create broadcast records + in-app notifications for each instructor
+  let broadcastCount = 0;
+  for (const instructorId of [...new Set(eligibleInstructorIds)]) {
+    await db.insert(bookingBroadcastsTable).values({
+      bookingId: booking.id, instructorId, notificationType: "in_app", status: "sent",
+    });
+
+    // Get instructor's user_id for notification
+    const [inst] = await db.select().from(instructorsTable).where(eq(instructorsTable.id, instructorId));
+    if (inst) {
+      await db.insert(notificationsTable).values({
+        userId: inst.userId,
+        type: "booking_request",
+        title: "New lesson request",
+        body: `${student.fullName} wants a ${transmissionType ?? "auto"} lesson in ${suburb} on ${requestedDate} at ${requestedTime}.`,
+        relatedId: booking.id,
+        isRead: false,
+      });
+    }
+    broadcastCount++;
+  }
+
+  // Update broadcast count
+  if (broadcastCount > 0) {
+    await db.update(bookingsTable).set({ broadcastCount }).where(eq(bookingsTable.id, booking.id));
+  }
+
+  await logAudit({ actorId: user.id, action: "create_booking", resourceType: "booking", resourceId: booking.id, studentId: student.id });
+
+  // Notify the student their request was sent
+  await db.insert(notificationsTable).values({
+    userId: user.id,
+    type: "booking_request",
+    title: "Booking request sent",
+    body: `Your lesson request for ${requestedDate} at ${requestedTime} has been broadcast to ${broadcastCount} instructor${broadcastCount !== 1 ? "s" : ""}.`,
+    relatedId: booking.id,
+    isRead: false,
+  });
+
+  res.status(201).json({ ...booking, broadcastCount });
+});
+
+// ─── Claim Booking (first-to-accept) ─────────────────────────────────────────
+
+router.post("/bookings/:id/claim", requireAuth, async (req: any, res): Promise<void> => {
+  const bookingId = parseInt(req.params.id as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) { res.status(403).json({ error: "Only instructors can claim bookings" }); return; }
+
+  // Atomic claim — only succeeds if still pending
+  const [claimed] = await db.update(bookingsTable)
+    .set({ instructorId: instructor.id, status: "claimed", claimedAt: new Date() })
+    .where(and(eq(bookingsTable.id, bookingId), eq(bookingsTable.status, "pending")))
+    .returning();
+
+  if (!claimed) {
+    // Already claimed or doesn't exist
+    const [existing] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, bookingId));
+    if (!existing) { res.status(404).json({ error: "Booking not found" }); return; }
+    res.status(409).json({ error: "This booking has already been claimed", booking: formatBooking(existing) });
+    return;
+  }
+
+  // Notify student
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, claimed.studentId));
+  if (student) {
+    await db.insert(notificationsTable).values({
+      userId: student.userId,
+      type: "booking_claimed",
+      title: "Instructor accepted your lesson",
+      body: `${instructor.fullName} has accepted your lesson request for ${claimed.requestedDate} at ${claimed.requestedTime}. Contact: ${instructor.phone ?? instructor.email}.`,
+      relatedId: claimed.id,
+      isRead: false,
+    });
+  }
+
+  await logAudit({ actorId: user.id, action: "claim_booking", resourceType: "booking", resourceId: bookingId });
+  res.json(formatBooking(claimed));
+});
+
+// ─── List Bookings ────────────────────────────────────────────────────────────
+
+router.get("/bookings", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const status = req.query.status as string | undefined;
+
+  let rows: any[];
+
+  if (user.role === "admin") {
+    rows = await db.select().from(bookingsTable).orderBy(desc(bookingsTable.createdAt));
+  } else if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor) { res.json([]); return; }
+    // Instructors see bookings that were broadcast to them OR that they claimed
+    const broadcasts = await db.select().from(bookingBroadcastsTable).where(eq(bookingBroadcastsTable.instructorId, instructor.id));
+    const broadcastIds = broadcasts.map(b => b.bookingId);
+    const claimedRows = await db.select().from(bookingsTable).where(eq(bookingsTable.instructorId, instructor.id));
+    const broadcastRows = broadcastIds.length > 0
+      ? await db.select().from(bookingsTable).where(sql`${bookingsTable.id} = ANY(${sql.raw(`ARRAY[${broadcastIds.join(",")}]::integer[]`)})`)
+      : [];
+    const allIds = new Set([...claimedRows.map(r => r.id), ...broadcastRows.map(r => r.id)]);
+    rows = [...claimedRows, ...broadcastRows.filter(r => !claimedRows.find(c => c.id === r.id))];
+  } else {
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+    if (!student) { res.json([]); return; }
+    rows = await db.select().from(bookingsTable).where(eq(bookingsTable.studentId, student.id)).orderBy(desc(bookingsTable.createdAt));
+  }
+
+  if (status) rows = rows.filter(r => r.status === status);
+
+  const enriched = await Promise.all(rows.map(async (b) => {
+    const [student] = await db.select({ fullName: studentsTable.fullName }).from(studentsTable).where(eq(studentsTable.id, b.studentId));
+    const instructor = b.instructorId ? (await db.select({ fullName: instructorsTable.fullName, phone: instructorsTable.phone }).from(instructorsTable).where(eq(instructorsTable.id, b.instructorId)))[0] : null;
+    return { ...formatBooking(b), studentName: student?.fullName ?? null, instructorName: instructor?.fullName ?? null, instructorPhone: instructor?.phone ?? null };
+  }));
+
+  res.json(enriched);
+});
+
+// ─── Get Single Booking ───────────────────────────────────────────────────────
+
+router.get("/bookings/:id", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+  if (!booking) { res.status(404).json({ error: "Not found" }); return; }
+  const [student] = await db.select({ fullName: studentsTable.fullName }).from(studentsTable).where(eq(studentsTable.id, booking.studentId));
+  const instructor = booking.instructorId ? (await db.select({ fullName: instructorsTable.fullName }).from(instructorsTable).where(eq(instructorsTable.id, booking.instructorId)))[0] : null;
+  res.json({ ...formatBooking(booking), studentName: student?.fullName ?? null, instructorName: instructor?.fullName ?? null });
+});
+
+// ─── Update Booking Status ────────────────────────────────────────────────────
+
+router.patch("/bookings/:id", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const { status, instructorNotes } = req.body;
+  const updates: any = {};
+  if (status) updates.status = status;
+  if (instructorNotes !== undefined) updates.instructorNotes = instructorNotes;
+  if (status === "confirmed") updates.confirmedAt = new Date();
+
+  const [updated] = await db.update(bookingsTable).set(updates).where(eq(bookingsTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+
+  // Notify relevant parties on cancellation
+  if (status === "cancelled") {
+    const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, updated.studentId));
+    if (student) {
+      await db.insert(notificationsTable).values({
+        userId: student.userId, type: "booking_cancelled",
+        title: "Booking cancelled",
+        body: `Your lesson booking for ${updated.requestedDate} at ${updated.requestedTime} has been cancelled.`,
+        relatedId: updated.id, isRead: false,
+      });
+    }
+  }
+
+  await logAudit({ actorId: user.id, action: `update_booking_${status ?? "notes"}`, resourceType: "booking", resourceId: id });
+  res.json(formatBooking(updated));
+});
+
+// ─── Decline Booking (instructor declines a broadcast) ───────────────────────
+
+router.post("/bookings/:id/decline", requireAuth, async (req: any, res): Promise<void> => {
+  const bookingId = parseInt(req.params.id as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) { res.status(403).json({ error: "Only instructors can decline bookings" }); return; }
+
+  await db.update(bookingBroadcastsTable)
+    .set({ status: "declined" })
+    .where(and(eq(bookingBroadcastsTable.bookingId, bookingId), eq(bookingBroadcastsTable.instructorId, instructor.id)));
+
+  res.json({ ok: true });
+});
+
+function formatBooking(b: any) {
+  return {
+    id: b.id, studentId: b.studentId, instructorId: b.instructorId,
+    requestedDate: b.requestedDate, requestedTime: b.requestedTime,
+    durationMinutes: b.durationMinutes, transmissionType: b.transmissionType,
+    suburb: b.suburb, postcode: b.postcode, status: b.status,
+    studentNotes: b.studentNotes, instructorNotes: b.instructorNotes,
+    broadcastCount: b.broadcastCount, claimedAt: b.claimedAt,
+    confirmedAt: b.confirmedAt, createdAt: b.createdAt,
+    studentName: null, instructorName: null,
+  };
+}
+
+export default router;

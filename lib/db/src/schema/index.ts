@@ -6,3 +6,6 @@ export * from "./assessments";
 export * from "./handover";
 export * from "./intake";
 export * from "./audit";
+export * from "./availability";
+export * from "./zones";
+export * from "./bookings";

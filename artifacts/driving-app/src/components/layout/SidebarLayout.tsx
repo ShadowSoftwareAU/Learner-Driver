@@ -8,8 +8,14 @@ import {
   ClipboardList,
   ShieldAlert,
   Car,
+  Calendar,
+  MapPin,
+  BookOpen,
+  Search,
+  CalendarCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { data: user } = useGetMe();
@@ -25,14 +31,20 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Dashboard", href: "/instructor/dashboard", icon: LayoutDashboard },
       { label: "Students", href: "/instructor/students", icon: Users },
       { label: "New Assessment", href: "/instructor/assessments/new", icon: ClipboardList },
+      { label: "Bookings", href: "/instructor/bookings", icon: CalendarCheck },
+      { label: "Availability", href: "/instructor/availability", icon: Calendar },
+      { label: "Teaching Zones", href: "/instructor/zones", icon: MapPin },
     ],
     student: [
       { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
+      { label: "Find Instructor", href: "/student/search", icon: Search },
+      { label: "My Bookings", href: "/student/bookings", icon: BookOpen },
     ],
     admin: [
       { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
       { label: "Students", href: "/admin/students", icon: Users },
       { label: "Instructors", href: "/admin/instructors", icon: Car },
+      { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
       { label: "Audit Log", href: "/admin/audit", icon: ShieldAlert },
     ],
     unassigned: [],
@@ -67,9 +79,12 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
           })}
         </nav>
         <div className="p-4 border-t border-sidebar-border">
-          <div className="mb-4 px-2">
-            <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "User"}</p>
-            <p className="text-xs text-sidebar-foreground/60 truncate capitalize">{user?.role}</p>
+          <div className="mb-3 px-2 flex items-center justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-sidebar-foreground truncate">{user?.name || "User"}</p>
+              <p className="text-xs text-sidebar-foreground/60 truncate capitalize">{user?.role}</p>
+            </div>
+            <NotificationBell />
           </div>
           <Button
             variant="outline"

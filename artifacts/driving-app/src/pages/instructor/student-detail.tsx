@@ -14,7 +14,7 @@ export default function InstructorStudentDetail() {
 
   const { data: student, isLoading: isStudentLoading } = useGetStudent(id, { query: { enabled: !!id, queryKey: getGetStudentQueryKey(id) } });
   const { data: progress, isLoading: isProgressLoading } = useGetStudentProgress(id, { query: { enabled: !!id, queryKey: getGetStudentProgressQueryKey(id) } });
-  const { data: assessments, isLoading: isAssessmentsLoading } = useListAssessments({ query: { queryKey: ["/api/assessments", { studentId: id }] } });
+  const { data: assessments, isLoading: isAssessmentsLoading } = useListAssessments({ studentId: id }, { query: { queryKey: ["/api/assessments", { studentId: id }] } });
 
   const isLoading = isStudentLoading || isProgressLoading || isAssessmentsLoading;
 

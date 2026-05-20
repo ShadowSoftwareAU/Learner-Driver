@@ -21,11 +21,18 @@ import ViewAssessment from "@/pages/instructor/assessment-detail";
 import HandoverView from "@/pages/instructor/handover";
 
 import StudentDashboard from "@/pages/student/dashboard";
+import StudentSearch from "@/pages/student/search";
+import StudentBookings from "@/pages/student/bookings";
 
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
 import AdminInstructors from "@/pages/admin/instructors";
 import AdminAuditLog from "@/pages/admin/audit";
+import AdminBookings from "@/pages/admin/bookings";
+
+import InstructorAvailability from "@/pages/instructor/availability";
+import InstructorZones from "@/pages/instructor/zones";
+import InstructorBookings from "@/pages/instructor/bookings";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 
@@ -211,11 +218,18 @@ function ClerkProviderWithRoutes() {
           <Route path="/instructor/handover/:studentId" component={() => <ProtectedRoute component={HandoverView} />} />
           
           <Route path="/student/dashboard" component={() => <ProtectedRoute component={StudentDashboard} />} />
+          <Route path="/student/search" component={() => <ProtectedRoute component={StudentSearch} />} />
+          <Route path="/student/bookings" component={() => <ProtectedRoute component={StudentBookings} />} />
+
+          <Route path="/instructor/availability" component={() => <ProtectedRoute component={InstructorAvailability} />} />
+          <Route path="/instructor/zones" component={() => <ProtectedRoute component={InstructorZones} />} />
+          <Route path="/instructor/bookings" component={() => <ProtectedRoute component={InstructorBookings} />} />
 
           <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} />} />
           <Route path="/admin/students" component={() => <ProtectedRoute component={AdminStudents} />} />
           <Route path="/admin/instructors" component={() => <ProtectedRoute component={AdminInstructors} />} />
           <Route path="/admin/audit" component={() => <ProtectedRoute component={AdminAuditLog} />} />
+          <Route path="/admin/bookings" component={() => <ProtectedRoute component={AdminBookings} />} />
           
           <Route component={NotFound} />
         </Switch>
