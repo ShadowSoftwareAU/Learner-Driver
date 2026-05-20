@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
 import { eq } from "drizzle-orm";
-import { db, usersTable } from "@workspace/db";
+import { db, usersTable, instructorsTable, studentsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -46,6 +46,30 @@ router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void>
     return;
   }
   const [updated] = await db.update(usersTable).set({ role }).where(eq(usersTable.id, user.id)).returning();
+
+  // Ensure matching profile row exists for the role.
+  const displayName = updated.name || updated.email || `User ${updated.id}`;
+  const emailValue = updated.email || "";
+  try {
+    if (role === "instructor") {
+      const existing = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, updated.id)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(instructorsTable).values({ userId: updated.id, fullName: displayName, email: emailValue });
+        req.log.info({ userId: updated.id }, "Instructor profile created for role assignment");
+      }
+    } else if (role === "student") {
+      const existing = await db.select().from(studentsTable).where(eq(studentsTable.userId, updated.id)).limit(1);
+      if (existing.length === 0) {
+        await db.insert(studentsTable).values({ userId: updated.id, fullName: displayName, email: emailValue });
+        req.log.info({ userId: updated.id }, "Student profile created for role assignment");
+      }
+    }
+  } catch (err) {
+    req.log.error({ err, userId: updated.id, role }, "Failed to create profile row for role");
+    res.status(500).json({ error: "Failed to create profile" });
+    return;
+  }
+
   res.json({
     id: updated.id,
     clerkId: updated.clerkId,
