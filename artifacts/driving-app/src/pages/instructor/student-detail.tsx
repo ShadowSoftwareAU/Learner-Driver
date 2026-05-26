@@ -1,8 +1,8 @@
-import { lazy, Suspense } from "react";
-import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, getGetStudentQueryKey, getGetStudentProgressQueryKey, getListAssessmentsQueryKey } from "@workspace/api-client-react";
+import { lazy, Suspense, useMemo } from "react";
+import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, useGetHandover, useListBookings, getGetStudentQueryKey, getGetStudentProgressQueryKey } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle } from "lucide-react";
+import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
@@ -32,6 +32,30 @@ export default function InstructorStudentDetail() {
   const { data: progress, isLoading: isProgressLoading } = useGetStudentProgress(id, { query: { enabled: !!id, queryKey: getGetStudentProgressQueryKey(id) } });
   const { data: assessments, isLoading: isAssessmentsLoading } = useListAssessments({ studentId: id }, { query: { queryKey: ["/api/assessments", { studentId: id }] } });
   const { data: lessonPlan, isLoading: isPlanLoading } = useGetStudentLessonPlan(id, { query: { enabled: !!id, queryKey: ["/api/students", id, "lesson-plan"] } });
+  const { data: handover } = useGetHandover(id, { query: { enabled: !!id, queryKey: ["/api/handover", id] } });
+  const { data: allBookings } = useListBookings(undefined, { query: { queryKey: ["/api/bookings"] } });
+
+  const sortedAssessments = useMemo(() => {
+    if (!assessments) return [];
+    return [...assessments].sort(
+      (a, b) => new Date(b.lessonDate).getTime() - new Date(a.lessonDate).getTime(),
+    );
+  }, [assessments]);
+
+  const latestAssessment = sortedAssessments[0];
+
+  const upcomingBookings = useMemo(() => {
+    if (!allBookings) return [];
+    const now = new Date();
+    return allBookings
+      .filter(b => b.studentId === id)
+      .filter(b => b.status === "pending" || b.status === "claimed" || b.status === "confirmed")
+      .filter(b => {
+        const when = new Date(`${b.requestedDate}T${b.requestedTime || "00:00"}`);
+        return when.getTime() >= now.getTime() - 60 * 60 * 1000;
+      })
+      .sort((a, b) => new Date(a.requestedDate).getTime() - new Date(b.requestedDate).getTime());
+  }, [allBookings, id]);
 
   const isLoading = isStudentLoading || isProgressLoading || isAssessmentsLoading;
 
@@ -112,6 +136,66 @@ export default function InstructorStudentDetail() {
           </Card>
         </div>
 
+        {/* Latest focus areas + upcoming bookings: at-a-glance for the next lesson */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="border-blue-200 bg-blue-50/40">
+            <CardHeader className="p-6 pb-3">
+              <CardTitle className="text-base flex items-center gap-2 text-blue-900">
+                <Target className="w-4 h-4" />
+                Current Focus for Next Lesson
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              {latestAssessment ? (
+                <>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Set on {format(new Date(latestAssessment.lessonDate), "PPP")}
+                  </p>
+                  {latestAssessment.focusAreasNext && latestAssessment.focusAreasNext.trim().length > 0 ? (
+                    <p className="text-sm text-foreground whitespace-pre-wrap">{latestAssessment.focusAreasNext}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">No focus areas were set last lesson.</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No lessons recorded yet.</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="p-6 pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CalendarClock className="w-4 h-4 text-muted-foreground" />
+                Upcoming Bookings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              {upcomingBookings.length === 0 ? (
+                <p className="text-sm text-muted-foreground italic">No upcoming bookings.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {upcomingBookings.slice(0, 4).map(b => (
+                    <li key={b.id} className="text-sm flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-medium">
+                          {format(new Date(b.requestedDate), "PP")} · {b.requestedTime}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {b.suburb} {b.postcode} · {b.durationMinutes} min
+                        </p>
+                      </div>
+                      <Badge variant="outline" className="capitalize text-xs flex-shrink-0">
+                        {b.status}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
         <Tabs defaultValue="progress" className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
             <TabsTrigger value="progress" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Skill Progress</TabsTrigger>
@@ -120,6 +204,10 @@ export default function InstructorStudentDetail() {
               Lesson Plan
             </TabsTrigger>
             <TabsTrigger value="history" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Assessment History</TabsTrigger>
+            <TabsTrigger value="handover" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
+              <MessageSquare className="w-3.5 h-3.5 mr-1.5" />
+              Handover Notes
+            </TabsTrigger>
             <TabsTrigger value="intake" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Intake Info</TabsTrigger>
           </TabsList>
           
@@ -273,29 +361,83 @@ export default function InstructorStudentDetail() {
           
           <TabsContent value="history" className="pt-6">
             <div className="space-y-4">
-              {assessments?.map(assessment => (
+              {sortedAssessments.map(assessment => (
                 <Link key={assessment.id} href={`/instructor/assessments/${assessment.id}`}>
                   <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-                    <CardContent className="p-4 flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold text-foreground">{format(new Date(assessment.lessonDate), 'PPP')}</p>
-                        <p className="text-sm text-muted-foreground">{assessment.durationMinutes} minutes</p>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-foreground">{format(new Date(assessment.lessonDate), 'PPP')}</p>
+                          <p className="text-sm text-muted-foreground">{assessment.durationMinutes} minutes</p>
+                        </div>
+                        <Badge variant={assessment.status === 'completed' ? 'default' : 'secondary'} className="capitalize flex-shrink-0">
+                          {assessment.status.replace('_', ' ')}
+                        </Badge>
                       </div>
-                      <Badge variant={assessment.status === 'completed' ? 'default' : 'secondary'} className="capitalize">
-                        {assessment.status.replace('_', ' ')}
-                      </Badge>
+                      {(assessment.confidenceNote || assessment.focusAreasNext) && (
+                        <div className="mt-3 space-y-2 border-t pt-3">
+                          {assessment.confidenceNote && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Notes</p>
+                              <p className="text-sm text-foreground line-clamp-2">{assessment.confidenceNote}</p>
+                            </div>
+                          )}
+                          {assessment.focusAreasNext && (
+                            <div>
+                              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Focus Areas for Next Lesson</p>
+                              <p className="text-sm text-foreground line-clamp-2">{assessment.focusAreasNext}</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </Link>
               ))}
-              {(!assessments || assessments.length === 0) && (
+              {sortedAssessments.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
                   No assessments recorded yet.
                 </div>
               )}
             </div>
           </TabsContent>
-          
+
+          <TabsContent value="handover" className="pt-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">Notes shared between instructors about this student.</p>
+                <Link href={`/instructor/handover/${student.id}`}>
+                  <Button variant="outline" size="sm">
+                    <ExternalLink className="w-4 h-4 mr-2" /> Add note
+                  </Button>
+                </Link>
+              </div>
+              {!handover || handover.notes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
+                  No handover notes yet.
+                </div>
+              ) : (
+                handover.notes.map(note => (
+                  <Card key={note.id}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium">{note.instructorName ?? "Instructor"}</p>
+                        <p className="text-xs text-muted-foreground">{format(new Date(note.createdAt), "PPp")}</p>
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{note.note}</p>
+                      {note.focusAreas && (
+                        <div className="border-l-2 border-blue-200 pl-3 mt-2">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Focus Areas</p>
+                          <p className="text-sm whitespace-pre-wrap">{note.focusAreas}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
           <TabsContent value="intake" className="pt-6">
             <Card>
               <CardHeader>

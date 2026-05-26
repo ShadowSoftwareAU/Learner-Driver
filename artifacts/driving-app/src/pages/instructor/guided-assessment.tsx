@@ -14,6 +14,9 @@ import { useLocation } from "wouter";
 import { useState, useMemo } from "react";
 import { ManeuverResultItemCompetencyLevel } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
+import { PreviousLessonCard } from "@/components/PreviousLessonCard";
+import { QuickNoteChips } from "@/components/QuickNoteChips";
+import { CategorySummary } from "@/components/CategorySummary";
 
 type GuidedStep = "setup" | "select" | "assess" | "summary";
 
@@ -188,6 +191,14 @@ export default function GuidedAssessment() {
             </CardContent>
           </Card>
 
+          <PreviousLessonCard
+            studentId={studentId ? parseInt(studentId) : null}
+            onUseFocus={(focus) => {
+              setFocusAreas(prev => (prev.trim().length === 0 ? focus : `${prev.trimEnd()}\n${focus}`));
+              toast({ title: "Carried forward", description: "Previous focus areas copied into today's focus." });
+            }}
+          />
+
           <Button
             className="w-full h-16 text-lg"
             onClick={() => setStep("select")}
@@ -346,6 +357,10 @@ export default function GuidedAssessment() {
               {/* Notes */}
               <div className="space-y-2">
                 <Label className="text-base">Notes</Label>
+                <QuickNoteChips
+                  value={maneuverNotes[currentManeuver.id] || ""}
+                  onChange={(next) => setManeuverNotes(prev => ({ ...prev, [currentManeuver.id]: next }))}
+                />
                 <Textarea
                   placeholder="Quick notes for this maneuver..."
                   value={maneuverNotes[currentManeuver.id] || ""}
@@ -405,6 +420,13 @@ export default function GuidedAssessment() {
             <h1 className="text-3xl font-bold tracking-tight">Lesson Summary</h1>
             <p className="text-muted-foreground text-lg mt-1">Review and save your assessment.</p>
           </div>
+
+          <CategorySummary
+            maneuvers={selectedManeuvers}
+            results={results}
+            notes={maneuverNotes}
+            title="Lesson Breakdown"
+          />
 
           <Card>
             <CardHeader className="bg-gray-50 border-b p-6">

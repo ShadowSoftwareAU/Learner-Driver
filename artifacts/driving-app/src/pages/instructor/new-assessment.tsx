@@ -12,6 +12,9 @@ import { useLocation, Link } from "wouter";
 import { useState, useMemo } from "react";
 import { ManeuverResultItemCompetencyLevel } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
+import { PreviousLessonCard } from "@/components/PreviousLessonCard";
+import { QuickNoteChips } from "@/components/QuickNoteChips";
+import { CategorySummary } from "@/components/CategorySummary";
 
 export default function NewAssessment() {
   const [, setLocation] = useLocation();
@@ -148,6 +151,14 @@ export default function NewAssessment() {
           </CardContent>
         </Card>
 
+        <PreviousLessonCard
+          studentId={studentId ? parseInt(studentId) : null}
+          onUseFocus={(focus) => {
+            setFocusAreas(prev => (prev.trim().length === 0 ? focus : `${prev.trimEnd()}\n${focus}`));
+            toast({ title: "Carried forward", description: "Previous focus areas copied into today's focus." });
+          }}
+        />
+
         {Object.entries(groupedManeuvers).map(([category, items]) => (
           <Card key={category}>
             <CardHeader className="bg-gray-50 border-b pb-4 p-6">
@@ -218,14 +229,18 @@ export default function NewAssessment() {
                       ))}
                     </div>
                     {expandedManeuver === m.id && (
-                      <div className="mt-4">
+                      <div className="mt-4 space-y-2">
                         <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
+                        <QuickNoteChips
+                          value={maneuverNotes[m.id] || ""}
+                          onChange={(next) => handleManeuverNoteChange(m.id, next)}
+                        />
                         <Textarea
                           placeholder="Add notes for this maneuver..."
                           value={maneuverNotes[m.id] || ""}
                           onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
                           rows={2}
-                          className="mt-1 text-base"
+                          className="text-base"
                         />
                       </div>
                     )}
@@ -263,6 +278,16 @@ export default function NewAssessment() {
             </div>
           </CardContent>
         </Card>
+
+        {maneuvers && Object.keys(results).length > 0 && (
+          <CategorySummary
+            maneuvers={maneuvers}
+            results={results}
+            notes={maneuverNotes}
+            title="Pre-save Summary"
+            onlyAssessed
+          />
+        )}
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
           <Button variant="outline" onClick={() => setLocation("/instructor/students")} className="h-16 text-base px-6">Cancel</Button>
