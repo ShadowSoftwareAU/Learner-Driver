@@ -228,6 +228,12 @@ export default function NewAssessment() {
                         </button>
                       ))}
                     </div>
+                    {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
+                      <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
+                        <p className="text-xs font-medium text-green-800 mb-0.5">Mastered means:</p>
+                        <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
+                      </div>
+                    )}
                     {expandedManeuver === m.id && (
                       <div className="mt-4 space-y-2">
                         <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>

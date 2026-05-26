@@ -12,7 +12,7 @@ import { eq } from "drizzle-orm";
 // ─── QSAFE Compliance Criteria ──────────────────────────────────────────────
 
 const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: string }> = {
-  "Reverse Parallel Parking": {
+  "Parallel parking": {
     complianceCriteria: [
       "Maximum 3 movements (forward/reverse counted separately)",
       "Final position within 500mm of the kerb",
@@ -47,7 +47,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Confident execution on various road widths",
     ].join("\n"),
   },
-  "U-Turn": {
+  "U-turns": {
     complianceCriteria: [
       "Must check for 'No U-Turn' signs before attempting",
       "Must have clear visibility for at least 100m in both directions",
@@ -65,7 +65,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Confident execution in varied traffic conditions",
     ].join("\n"),
   },
-  "Lane Changing": {
+  "Lane changing": {
     complianceCriteria: [
       "Must check mirrors (centre and side) before signalling",
       "Must indicate for at least 5 seconds before changing",
@@ -81,7 +81,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Confident merging in heavy traffic",
     ].join("\n"),
   },
-  "Brake Control": {
+  "Brake control": {
     complianceCriteria: [
       "Must bring vehicle to a smooth, controlled stop",
       "No harsh or sudden braking unless emergency",
@@ -96,7 +96,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Maintains vehicle control during braking on varied surfaces",
     ].join("\n"),
   },
-  "Steering Control": {
+  "Steering technique": {
     complianceCriteria: [
       "Hands at 9 and 3 (or 10 and 2) position",
       "Push-pull or hand-over-hand technique",
@@ -128,7 +128,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Confident navigation of multi-lane roundabouts",
     ].join("\n"),
   },
-  "Hill Start": {
+  "Hill starts": {
     complianceCriteria: [
       "Must not roll back more than 500mm",
       "Must use handbrake or brake-to-accelerator technique",
@@ -143,7 +143,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Can perform hill start in traffic without hesitation",
     ].join("\n"),
   },
-  "Emergency Stop": {
+  "Stopping safely": {
     complianceCriteria: [
       "Must stop vehicle as quickly and safely as possible",
       "Must maintain straight line during stop",
@@ -158,7 +158,7 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
       "Calm and controlled response",
     ].join("\n"),
   },
-  "Hazard Perception": {
+  "Hazard response": {
     complianceCriteria: [
       "Must scan ahead, to sides, and in mirrors regularly",
       "Must identify potential hazards early",

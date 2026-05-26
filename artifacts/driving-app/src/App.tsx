@@ -187,13 +187,23 @@ function TermsGate({ children }: { children: React.ReactNode }) {
 /**
  * Redirects instructors to /instructor/verification if they haven't been approved yet.
  *
- * TEMPORARILY DISABLED for editor review (May 2026 demo).
- * To re-enable, set BYPASS_VERIFICATION_GATE = false below.
+ * ───────────────────────────────────────────────────────────────────────────
+ * DEMO MODE FLAG — currently ON for the PCYC demo.
+ *
+ * When ON (true): all signed-in instructors bypass the verification gate
+ *   and can access the full instructor app immediately. This lets reviewers
+ *   and demo audiences explore the product without an approval step.
+ *
+ * When OFF (false): instructors are redirected to /instructor/verification
+ *   until an admin approves them. This is the intended production behavior.
+ *
+ * To restore production gating, set this constant to `false`.
+ * ───────────────────────────────────────────────────────────────────────────
  */
-const BYPASS_VERIFICATION_GATE = true;
+const DEMO_MODE_BYPASS_VERIFICATION_GATE = true;
 
 function InstructorVerificationGate({ children }: { children: React.ReactNode }) {
-  if (BYPASS_VERIFICATION_GATE) return <>{children}</>;
+  if (DEMO_MODE_BYPASS_VERIFICATION_GATE) return <>{children}</>;
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { data: verification, isLoading } = useGetVerificationStatus({

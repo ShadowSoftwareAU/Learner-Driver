@@ -1,9 +1,46 @@
 import { useListAuditLogs } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+
+// Friendly labels for known audit actions
+const ACTION_LABELS: Record<string, string> = {
+  create: "Created",
+  update: "Updated",
+  delete: "Deleted",
+  view: "Viewed",
+  view_student: "Viewed student",
+  create_assessment: "Logged assessment",
+  update_assessment: "Updated assessment",
+  create_handover: "Wrote handover note",
+  create_booking: "Created booking",
+  claim_booking: "Claimed booking",
+  decline_booking: "Declined booking",
+  complete_booking: "Completed booking",
+  verify_instructor: "Verified instructor",
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  create: "bg-green-50 text-green-800 border-green-200",
+  update: "bg-blue-50 text-blue-800 border-blue-200",
+  delete: "bg-red-50 text-red-800 border-red-200",
+  view: "bg-gray-50 text-gray-700 border-gray-200",
+};
+
+function actionLabel(action: string): string {
+  if (ACTION_LABELS[action]) return ACTION_LABELS[action];
+  // Fallback: snake_case → Sentence case
+  return action.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+}
+
+function actionColor(action: string): string {
+  for (const key of Object.keys(ACTION_COLORS)) {
+    if (action.startsWith(key)) return ACTION_COLORS[key];
+  }
+  return "bg-gray-50 text-gray-700 border-gray-200";
+}
 
 export default function AdminAuditLog() {
   const { data: logs, isLoading } = useListAuditLogs();
@@ -44,8 +81,8 @@ export default function AdminAuditLog() {
                           {log.actorName || `User ${log.actorId}`}
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant="outline" className="bg-gray-50 capitalize font-mono text-xs">
-                            {log.action}
+                          <Badge variant="outline" className={`text-xs ${actionColor(log.action)}`}>
+                            {actionLabel(log.action)}
                           </Badge>
                         </td>
                         <td className="px-6 py-4">

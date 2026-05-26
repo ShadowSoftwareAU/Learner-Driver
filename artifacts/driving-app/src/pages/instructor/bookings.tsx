@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { Link } from "wouter";
 import {
   useListBookings,
   useClaimBooking,
@@ -6,14 +7,16 @@ import {
   useUpdateBooking,
 } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CalendarCheck, Clock, MapPin, Car, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CalendarCheck, Clock, MapPin, Car, CheckCircle2, XCircle, User } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { BookingStatus, DAY_NAMES } from "@/lib/enums";
+import { BookingStatus } from "@/lib/enums";
 import { format } from "date-fns";
+
+const PAST_LIMIT = 20;
 
 const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-100 text-amber-800 border-amber-200",
@@ -41,7 +44,14 @@ function BookingCard({
       <CardContent className="pt-4 space-y-3">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold">{booking.studentName ?? "Student"}</p>
+            {booking.studentId ? (
+              <Link href={`/instructor/students/${booking.studentId}`} className="font-semibold hover:underline inline-flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-muted-foreground" />
+                {booking.studentName ?? "Student"}
+              </Link>
+            ) : (
+              <p className="font-semibold">{booking.studentName ?? "Student"}</p>
+            )}
             <p className="text-sm text-muted-foreground">
               {format(new Date(booking.requestedDate), "EEEE d MMMM yyyy")} at {booking.requestedTime}
             </p>
@@ -126,10 +136,11 @@ export default function InstructorBookings() {
     setActionId(id);
     try {
       await claim.mutateAsync({ id });
-      invalidate();
-      toast({ title: "Booking claimed! The student will be notified." });
+      await invalidate();
+      toast({ title: "Booking claimed", description: "The student will be notified." });
     } catch (err: any) {
-      const msg = err?.response?.status === 409
+      const status = err?.status ?? err?.response?.status;
+      const msg = status === 409
         ? "Another instructor already claimed this booking."
         : "Failed to claim booking.";
       toast({ title: msg, variant: "destructive" });
@@ -142,7 +153,7 @@ export default function InstructorBookings() {
     setActionId(id);
     try {
       await decline.mutateAsync({ id });
-      invalidate();
+      await invalidate();
       toast({ title: "Booking declined." });
     } catch {
       toast({ title: "Failed to decline booking.", variant: "destructive" });
@@ -155,7 +166,7 @@ export default function InstructorBookings() {
     setActionId(id);
     try {
       await update.mutateAsync({ id, data: { status: BookingStatus.completed } });
-      invalidate();
+      await invalidate();
       toast({ title: "Booking marked as complete." });
     } catch {
       toast({ title: "Failed to update booking.", variant: "destructive" });
@@ -164,13 +175,29 @@ export default function InstructorBookings() {
     }
   };
 
-  const pending = (allBookings ?? []).filter((b: any) => b.status === BookingStatus.pending);
-  const active = (allBookings ?? []).filter(
-    (b: any) => b.status === BookingStatus.claimed || b.status === BookingStatus.confirmed
-  );
-  const past = (allBookings ?? []).filter(
-    (b: any) => b.status === BookingStatus.completed || b.status === BookingStatus.cancelled
-  );
+  // Sort: pending & upcoming chronological (soonest first); past reverse chronological
+  const byRequestedAsc = (a: any, b: any) => {
+    const ad = `${a.requestedDate}T${a.requestedTime ?? "00:00"}`;
+    const bd = `${b.requestedDate}T${b.requestedTime ?? "00:00"}`;
+    return ad.localeCompare(bd);
+  };
+  const byRequestedDesc = (a: any, b: any) => -byRequestedAsc(a, b);
+
+  const { pending, active, past } = useMemo(() => {
+    const all = (allBookings ?? []) as any[];
+    return {
+      pending: all.filter((b) => b.status === BookingStatus.pending).sort(byRequestedAsc),
+      active: all
+        .filter((b) => b.status === BookingStatus.claimed || b.status === BookingStatus.confirmed)
+        .sort(byRequestedAsc),
+      past: all
+        .filter((b) => b.status === BookingStatus.completed || b.status === BookingStatus.cancelled)
+        .sort(byRequestedDesc),
+    };
+  }, [allBookings]);
+
+  const [showAllPast, setShowAllPast] = useState(false);
+  const visiblePast = showAllPast ? past : past.slice(0, PAST_LIMIT);
 
   return (
     <SidebarLayout>
@@ -231,12 +258,24 @@ export default function InstructorBookings() {
 
             {past.length > 0 && (
               <section className="space-y-3">
-                <h2 className="text-lg font-semibold text-muted-foreground">Past Lessons</h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-muted-foreground">Past Lessons</h2>
+                  <span className="text-xs text-muted-foreground">
+                    {showAllPast ? past.length : Math.min(PAST_LIMIT, past.length)} of {past.length}
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {past.map((b: any) => (
+                  {visiblePast.map((b: any) => (
                     <BookingCard key={b.id} booking={b} loading={false} />
                   ))}
                 </div>
+                {past.length > PAST_LIMIT && !showAllPast && (
+                  <div className="flex justify-center pt-2">
+                    <Button variant="ghost" size="sm" onClick={() => setShowAllPast(true)}>
+                      Show all {past.length} past lessons
+                    </Button>
+                  </div>
+                )}
               </section>
             )}
           </>

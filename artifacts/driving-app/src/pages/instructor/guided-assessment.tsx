@@ -354,6 +354,13 @@ export default function GuidedAssessment() {
                 ))}
               </div>
 
+              {results[currentManeuver.id] === ManeuverResultItemCompetencyLevel.mastered && currentManeuver.masteryDefinition && (
+                <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
+                  <p className="text-sm font-semibold text-green-900 mb-1">Mastered means:</p>
+                  <p className="text-sm text-green-900/80 whitespace-pre-wrap italic">{currentManeuver.masteryDefinition}</p>
+                </div>
+              )}
+
               {/* Notes */}
               <div className="space-y-2">
                 <Label className="text-base">Notes</Label>

@@ -15,7 +15,10 @@ import { Loader2, Plus, Trash2, Calendar } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DAY_NAMES } from "@/lib/enums";
 
-const TRANSMISSION_OPTIONS = ["auto", "manual"] as const;
+const TRANSMISSION_OPTIONS: { value: string; label: string }[] = [
+  { value: "auto", label: "Automatic" },
+  { value: "manual", label: "Manual" },
+];
 
 export default function InstructorAvailability() {
   const { toast } = useToast();
@@ -35,10 +38,14 @@ export default function InstructorAvailability() {
     transmissionTypes: ["auto", "manual"] as string[],
   });
 
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+
   const grouped = Array.from({ length: 7 }, (_, idx) => ({
     day: DAY_NAMES[idx],
     idx,
-    slots: (slots ?? []).filter((s: any) => s.dayOfWeek === idx),
+    slots: ((slots ?? []) as any[])
+      .filter((s) => s.dayOfWeek === idx)
+      .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime))),
   }));
 
   const toggleTransmission = (type: string) => {
@@ -55,6 +62,10 @@ export default function InstructorAvailability() {
       toast({ title: "Select at least one transmission type", variant: "destructive" });
       return;
     }
+    if (form.endTime <= form.startTime) {
+      toast({ title: "End time must be after start time", variant: "destructive" });
+      return;
+    }
     try {
       await createSlot.mutateAsync({
         data: {
@@ -64,20 +75,29 @@ export default function InstructorAvailability() {
           transmissionTypes: form.transmissionTypes,
         },
       });
-      qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
-      toast({ title: "Availability slot added" });
-    } catch {
-      toast({ title: "Failed to add slot", variant: "destructive" });
+      await qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
+      toast({ title: "Availability slot added", description: `${DAY_NAMES[Number(form.dayOfWeek)]} ${form.startTime}–${form.endTime}` });
+    } catch (err: any) {
+      const status = err?.status ?? err?.response?.status;
+      const serverMsg = err?.body?.error ?? err?.response?.data?.error;
+      if (status === 409) {
+        toast({ title: "Time conflict", description: serverMsg ?? "This slot overlaps an existing one.", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to add slot", description: serverMsg ?? "Please try again.", variant: "destructive" });
+      }
     }
   };
 
   const handleDelete = async (id: number) => {
+    setDeletingId(id);
     try {
       await deleteSlot.mutateAsync({ id });
-      qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
+      await qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
       toast({ title: "Slot removed" });
     } catch {
       toast({ title: "Failed to remove slot", variant: "destructive" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -136,15 +156,15 @@ export default function InstructorAvailability() {
             <div className="space-y-1.5">
               <Label>Transmission Types</Label>
               <div className="flex gap-4">
-                {TRANSMISSION_OPTIONS.map((type) => (
-                  <label key={type} className="flex items-center gap-2 cursor-pointer">
+                {TRANSMISSION_OPTIONS.map((t) => (
+                  <label key={t.value} className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={form.transmissionTypes.includes(type)}
-                      onChange={() => toggleTransmission(type)}
+                      checked={form.transmissionTypes.includes(t.value)}
+                      onChange={() => toggleTransmission(t.value)}
                       className="h-4 w-4 rounded border-gray-300"
                     />
-                    <span className="capitalize text-sm">{type}matic</span>
+                    <span className="text-sm">{t.label}</span>
                   </label>
                 ))}
               </div>
@@ -185,11 +205,14 @@ export default function InstructorAvailability() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {slots.map((slot: any) => {
-                      const types = Array.isArray(slot.transmissionTypes)
+                      const types: string[] = Array.isArray(slot.transmissionTypes)
                         ? slot.transmissionTypes
                         : String(slot.transmissionTypes)
                             .split(",")
-                            .map((t: string) => t.trim());
+                            .map((t: string) => t.trim())
+                            .filter(Boolean);
+                      const labelFor = (v: string) =>
+                        TRANSMISSION_OPTIONS.find((o) => o.value === v)?.label ?? v;
                       return (
                         <div
                           key={slot.id}
@@ -201,8 +224,8 @@ export default function InstructorAvailability() {
                             </span>
                             <div className="flex gap-1 mt-1 flex-wrap">
                               {types.map((t: string) => (
-                                <Badge key={t} variant="secondary" className="text-xs capitalize">
-                                  {t}
+                                <Badge key={t} variant="secondary" className="text-xs">
+                                  {labelFor(t)}
                                 </Badge>
                               ))}
                             </div>
@@ -211,10 +234,14 @@ export default function InstructorAvailability() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(slot.id)}
-                            disabled={deleteSlot.isPending}
+                            disabled={deletingId === slot.id}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10 p-1 h-auto"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            {deletingId === slot.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                           </Button>
                         </div>
                       );
