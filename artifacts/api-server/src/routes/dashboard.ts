@@ -30,7 +30,8 @@ router.get("/dashboard/instructor", requireAuth, async (req: any, res): Promise<
 
   const studentSummaries = await Promise.all(allStudents.slice(0, 10).map(async (s) => {
     const studentAssessments = await db.select().from(assessmentsTable).where(eq(assessmentsTable.studentId, s.id)).orderBy(desc(assessmentsTable.lessonDate)).limit(1);
-    return { id: s.id, fullName: s.fullName, totalHours: s.totalHours, progressPercent: Math.min((s.totalHours / 100) * 100, 100), lastLessonDate: studentAssessments[0]?.lessonDate ?? null, status: s.status };
+    const rawPercent = Math.min((Number(s.totalHours) / 100) * 100, 100);
+    return { id: s.id, fullName: s.fullName, totalHours: s.totalHours, progressPercent: Math.round(rawPercent), lastLessonDate: studentAssessments[0]?.lessonDate ?? null, status: s.status };
   }));
 
   const enriched = await Promise.all(recentAssessments.map(async (a) => {
