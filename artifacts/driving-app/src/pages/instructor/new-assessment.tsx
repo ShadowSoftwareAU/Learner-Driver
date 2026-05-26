@@ -1,13 +1,14 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, ArrowRight, Save } from "lucide-react";
+import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useLocation } from "wouter";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useLocation, Link } from "wouter";
 import { useState, useMemo } from "react";
 import { ManeuverResultItemCompetencyLevel } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,8 @@ export default function NewAssessment() {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>({});
+  const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>({});
+  const [expandedManeuver, setExpandedManeuver] = useState<number | null>(null);
   const [confidenceNote, setConfidenceNote] = useState("");
   const [focusAreas, setFocusAreas] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +43,14 @@ export default function NewAssessment() {
 
   const handleLevelSelect = (maneuverId: number, level: ManeuverResultItemCompetencyLevel) => {
     setResults(prev => ({ ...prev, [maneuverId]: level }));
+  };
+
+  const handleManeuverNoteChange = (maneuverId: number, note: string) => {
+    setManeuverNotes(prev => ({ ...prev, [maneuverId]: note }));
+  };
+
+  const toggleExpanded = (maneuverId: number) => {
+    setExpandedManeuver(prev => prev === maneuverId ? null : maneuverId);
   };
 
   const handleSave = async () => {
@@ -62,7 +73,8 @@ export default function NewAssessment() {
 
       const maneuverResultsArray = Object.entries(results).map(([id, level]) => ({
         maneuverId: parseInt(id),
-        competencyLevel: level
+        competencyLevel: level,
+        notes: maneuverNotes[parseInt(id)] || undefined,
       }));
 
       if (maneuverResultsArray.length > 0) {
@@ -93,51 +105,97 @@ export default function NewAssessment() {
 
   return (
     <SidebarLayout>
-      <div className="space-y-6 max-w-4xl mx-auto pb-20">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">New Assessment</h1>
-          <p className="text-muted-foreground">Log lesson details and maneuver proficiency.</p>
+      <div className="space-y-6 max-w-4xl mx-auto pb-28">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">New Assessment</h1>
+            <p className="text-muted-foreground">Log lesson details and maneuver proficiency.</p>
+          </div>
+          <Link href="/instructor/assessments/guided">
+            <Button variant="outline" className="h-16 text-base px-6 gap-2">
+              <PlayCircle className="w-5 h-5" />
+              Start Guided Lesson
+            </Button>
+          </Link>
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>Lesson Details</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pt-0">
             <div className="space-y-2">
-              <Label>Student</Label>
+              <Label className="text-base">Student</Label>
               <Select value={studentId} onValueChange={setStudentId}>
-                <SelectTrigger>
+                <SelectTrigger className="h-16 text-base">
                   <SelectValue placeholder="Select student" />
                 </SelectTrigger>
                 <SelectContent>
                   {students?.map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()}>{s.fullName}</SelectItem>
+                    <SelectItem key={s.id} value={s.id.toString()} className="text-base py-3">{s.fullName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Date</Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+              <Label className="text-base">Date</Label>
+              <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-16 text-base" />
             </div>
             <div className="space-y-2">
-              <Label>Duration (mins)</Label>
-              <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} />
+              <Label className="text-base">Duration (mins)</Label>
+              <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} className="h-16 text-base" />
             </div>
           </CardContent>
         </Card>
 
         {Object.entries(groupedManeuvers).map(([category, items]) => (
           <Card key={category}>
-            <CardHeader className="bg-gray-50 border-b pb-4">
+            <CardHeader className="bg-gray-50 border-b pb-4 p-6">
               <CardTitle className="text-lg">{category}</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y">
                 {items.map(m => (
-                  <div key={m.id} className="p-4">
-                    <p className="font-medium mb-3">{m.name}</p>
+                  <div key={m.id} className="p-4 sm:p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <p className="font-medium text-base flex-1">{m.name}</p>
+                      {(m.complianceCriteria || m.masteryDefinition) && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                              <Info className="w-5 h-5 text-blue-500" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                              <DialogTitle>{m.name}</DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4 mt-2">
+                              {m.complianceCriteria && (
+                                <div>
+                                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">QSAFE Compliance Criteria</h4>
+                                  <p className="text-sm text-foreground whitespace-pre-wrap">{m.complianceCriteria}</p>
+                                </div>
+                              )}
+                              {m.masteryDefinition && (
+                                <div>
+                                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Mastery Definition</h4>
+                                  <p className="text-sm text-foreground whitespace-pre-wrap">{m.masteryDefinition}</p>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 shrink-0"
+                        onClick={() => toggleExpanded(m.id)}
+                      >
+                        {expandedManeuver === m.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                      </Button>
+                    </div>
                     <div className="grid grid-cols-4 gap-2">
                       {[
                         { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted", color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
@@ -150,7 +208,7 @@ export default function NewAssessment() {
                           type="button"
                           onClick={() => handleLevelSelect(m.id, level.val)}
                           className={`
-                            h-12 rounded-md border flex flex-col items-center justify-center transition-all text-xs sm:text-sm font-medium
+                            h-16 rounded-md border flex flex-col items-center justify-center transition-all text-sm font-medium min-w-0
                             ${results[m.id] === level.val ? level.active : level.color}
                           `}
                         >
@@ -159,6 +217,18 @@ export default function NewAssessment() {
                         </button>
                       ))}
                     </div>
+                    {expandedManeuver === m.id && (
+                      <div className="mt-4">
+                        <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
+                        <Textarea
+                          placeholder="Add notes for this maneuver..."
+                          value={maneuverNotes[m.id] || ""}
+                          onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
+                          rows={2}
+                          className="mt-1 text-base"
+                        />
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -167,35 +237,37 @@ export default function NewAssessment() {
         ))}
 
         <Card>
-          <CardHeader>
+          <CardHeader className="p-6">
             <CardTitle>Lesson Notes</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 p-6 pt-0">
             <div className="space-y-2">
-              <Label>Overall Confidence & Notes</Label>
+              <Label className="text-base">Overall Confidence & Notes</Label>
               <Textarea 
                 placeholder="How did the student perform overall?" 
                 value={confidenceNote}
                 onChange={e => setConfidenceNote(e.target.value)}
                 rows={3}
+                className="text-base"
               />
             </div>
             <div className="space-y-2">
-              <Label>Focus Areas for Next Lesson</Label>
+              <Label className="text-base">Focus Areas for Next Lesson</Label>
               <Textarea 
                 placeholder="What should be the priority next time?" 
                 value={focusAreas}
                 onChange={e => setFocusAreas(e.target.value)}
                 rows={2}
+                className="text-base"
               />
             </div>
           </CardContent>
         </Card>
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
-          <Button variant="outline" onClick={() => setLocation("/instructor/students")}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSubmitting || !studentId}>
-            {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+          <Button variant="outline" onClick={() => setLocation("/instructor/students")} className="h-16 text-base px-6">Cancel</Button>
+          <Button onClick={handleSave} disabled={isSubmitting || !studentId} className="h-16 text-base px-6">
+            {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
             Save Assessment
           </Button>
         </div>

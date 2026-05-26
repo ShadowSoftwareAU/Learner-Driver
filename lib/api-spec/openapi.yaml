@@ -1130,6 +1130,10 @@ components:
           type: ["string", "null"]
         licenseNumber:
           type: ["string", "null"]
+        region:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
         totalHours:
           type: number
         status:
@@ -1156,6 +1160,10 @@ components:
           type: string
         licenseNumber:
           type: string
+        region:
+          type: string
+        country:
+          type: string
 
     StudentUpdate:
       type: object
@@ -1169,6 +1177,10 @@ components:
         guardianPhone:
           type: string
         licenseNumber:
+          type: string
+        region:
+          type: string
+        country:
           type: string
         status:
           type: string
@@ -1276,6 +1288,10 @@ components:
           type: string
         sortOrder:
           type: integer
+        complianceCriteria:
+          type: ["string", "null"]
+        masteryDefinition:
+          type: ["string", "null"]
 
     # ─── Assessments ───────────────────────────────────────────────────────────
     Assessment:

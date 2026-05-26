@@ -9,6 +9,8 @@ export const maneuversTable = pgTable("maneuvers", {
   assessmentType: text("assessment_type").notNull().default("tmr_learner"),
   description: text("description").notNull().default(""),
   sortOrder: integer("sort_order").notNull().default(0),
+  complianceCriteria: text("compliance_criteria"),
+  masteryDefinition: text("mastery_definition"),
 });
 
 export const insertManeuverSchema = createInsertSchema(maneuversTable).omit({ id: true });

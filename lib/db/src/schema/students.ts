@@ -13,6 +13,8 @@ export const studentsTable = pgTable("students", {
   guardianPhone: text("guardian_phone"),
   licenseNumber: text("license_number"),
   totalHours: real("total_hours").notNull().default(0),
+  region: text("region"),
+  country: text("country").default("AU"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

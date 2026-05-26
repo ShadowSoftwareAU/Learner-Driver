@@ -66,6 +66,10 @@ export interface Student {
   guardianPhone?: string | null;
   /** @nullable */
   licenseNumber?: string | null;
+  /** @nullable */
+  region?: string | null;
+  /** @nullable */
+  country?: string | null;
   totalHours?: number;
   status?: StudentStatus;
   createdAt?: string;
@@ -79,6 +83,8 @@ export interface StudentInput {
   guardianName?: string;
   guardianPhone?: string;
   licenseNumber?: string;
+  region?: string;
+  country?: string;
 }
 
 export type StudentUpdateStatus = typeof StudentUpdateStatus[keyof typeof StudentUpdateStatus];
@@ -96,6 +102,8 @@ export interface StudentUpdate {
   guardianName?: string;
   guardianPhone?: string;
   licenseNumber?: string;
+  region?: string;
+  country?: string;
   status?: StudentUpdateStatus;
 }
 
@@ -188,6 +196,10 @@ export interface Maneuver {
   assessmentType: ManeuverAssessmentType;
   description: string;
   sortOrder?: number;
+  /** @nullable */
+  complianceCriteria?: string | null;
+  /** @nullable */
+  masteryDefinition?: string | null;
 }
 
 export interface AssessmentInput {

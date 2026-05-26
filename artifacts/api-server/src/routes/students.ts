@@ -84,9 +84,9 @@ router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
 
 router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { fullName, email, phone, dateOfBirth, guardianName, guardianPhone, licenseNumber } = req.body;
+  const { fullName, email, phone, dateOfBirth, guardianName, guardianPhone, licenseNumber, region, country } = req.body;
   if (!fullName || !email) { res.status(400).json({ error: "fullName and email required" }); return; }
-  const [s] = await db.insert(studentsTable).values({ userId: user.id, fullName, email, phone: phone ?? null, dateOfBirth: dateOfBirth ?? null, guardianName: guardianName ?? null, guardianPhone: guardianPhone ?? null, licenseNumber: licenseNumber ?? null }).returning();
+  const [s] = await db.insert(studentsTable).values({ userId: user.id, fullName, email, phone: phone ?? null, dateOfBirth: dateOfBirth ?? null, guardianName: guardianName ?? null, guardianPhone: guardianPhone ?? null, licenseNumber: licenseNumber ?? null, region: region ?? null, country: country ?? null }).returning();
   await logAudit({ actorId: user.id, action: "create_student", resourceType: "student", resourceId: s.id, studentId: s.id });
   res.status(201).json(formatStudent(s));
 });
@@ -127,13 +127,15 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
     if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  const { fullName, phone, guardianName, guardianPhone, licenseNumber, status } = req.body;
+  const { fullName, phone, guardianName, guardianPhone, licenseNumber, status, region, country } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
   if (guardianName !== undefined) updates.guardianName = guardianName;
   if (guardianPhone !== undefined) updates.guardianPhone = guardianPhone;
   if (licenseNumber !== undefined) updates.licenseNumber = licenseNumber;
+  if (region !== undefined) updates.region = region;
+  if (country !== undefined) updates.country = country;
   if (status && user.role === "admin") updates.status = status; // only admins can change status
   const [updated] = await db.update(studentsTable).set(updates).where(eq(studentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
@@ -201,7 +203,7 @@ router.get("/students/:id/progress", requireAuth, async (req: any, res): Promise
 });
 
 function formatStudent(s: any) {
-  return { id: s.id, userId: s.userId, fullName: s.fullName, email: s.email, phone: s.phone, dateOfBirth: s.dateOfBirth, guardianName: s.guardianName, guardianPhone: s.guardianPhone, licenseNumber: s.licenseNumber, totalHours: s.totalHours, status: s.status, createdAt: s.createdAt };
+  return { id: s.id, userId: s.userId, fullName: s.fullName, email: s.email, phone: s.phone, dateOfBirth: s.dateOfBirth, guardianName: s.guardianName, guardianPhone: s.guardianPhone, licenseNumber: s.licenseNumber, region: s.region, country: s.country, totalHours: s.totalHours, status: s.status, createdAt: s.createdAt };
 }
 
 function formatAssessment(a: any) {

@@ -59,6 +59,8 @@ export const ListStudentsResponseItem = zod.object({
   "guardianName": zod.string().nullish(),
   "guardianPhone": zod.string().nullish(),
   "licenseNumber": zod.string().nullish(),
+  "region": zod.string().nullish(),
+  "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
   "createdAt": zod.string().optional()
@@ -76,7 +78,9 @@ export const CreateStudentBody = zod.object({
   "dateOfBirth": zod.string().optional(),
   "guardianName": zod.string().optional(),
   "guardianPhone": zod.string().optional(),
-  "licenseNumber": zod.string().optional()
+  "licenseNumber": zod.string().optional(),
+  "region": zod.string().optional(),
+  "country": zod.string().optional()
 })
 
 
@@ -97,6 +101,8 @@ export const GetStudentResponse = zod.object({
   "guardianName": zod.string().nullish(),
   "guardianPhone": zod.string().nullish(),
   "licenseNumber": zod.string().nullish(),
+  "region": zod.string().nullish(),
+  "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
   "createdAt": zod.string().optional()
@@ -116,6 +122,8 @@ export const UpdateStudentBody = zod.object({
   "guardianName": zod.string().optional(),
   "guardianPhone": zod.string().optional(),
   "licenseNumber": zod.string().optional(),
+  "region": zod.string().optional(),
+  "country": zod.string().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional()
 })
 
@@ -129,6 +137,8 @@ export const UpdateStudentResponse = zod.object({
   "guardianName": zod.string().nullish(),
   "guardianPhone": zod.string().nullish(),
   "licenseNumber": zod.string().nullish(),
+  "region": zod.string().nullish(),
+  "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
   "createdAt": zod.string().optional()
@@ -286,7 +296,9 @@ export const ListManeuversResponseItem = zod.object({
   "category": zod.string(),
   "assessmentType": zod.enum(['tmr_learner', 'qsafe']),
   "description": zod.string(),
-  "sortOrder": zod.number().optional()
+  "sortOrder": zod.number().optional(),
+  "complianceCriteria": zod.string().nullish(),
+  "masteryDefinition": zod.string().nullish()
 })
 export const ListManeuversResponse = zod.array(ListManeuversResponseItem)
 

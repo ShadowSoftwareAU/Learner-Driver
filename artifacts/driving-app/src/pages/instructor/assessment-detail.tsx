@@ -1,17 +1,26 @@
 import { useGetAssessment, getGetAssessmentQueryKey } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2 } from "lucide-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
+import { useMemo } from "react";
 
 export default function ViewAssessment() {
   const params = useParams();
   const id = parseInt(params.id || "0", 10);
 
   const { data: assessment, isLoading } = useGetAssessment(id, { query: { enabled: !!id, queryKey: getGetAssessmentQueryKey(id) } });
+
+  const combinedNotes = useMemo(() => {
+    if (!assessment?.maneuverResults) return "";
+    return assessment.maneuverResults
+      .filter((r: any) => r.notes)
+      .map((r: any) => `${r.maneuverName || "Maneuver"}: ${r.notes}`)
+      .join("\n");
+  }, [assessment]);
 
   if (isLoading || !assessment) {
     return (
@@ -37,7 +46,7 @@ export default function ViewAssessment() {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Assessment Record</h1>
-            <p className="text-muted-foreground">{format(new Date(assessment.lessonDate), 'PPP')} • {assessment.durationMinutes} mins</p>
+            <p className="text-muted-foreground">{format(new Date(assessment.lessonDate), 'PPP')} &bull; {assessment.durationMinutes} mins</p>
           </div>
           <Badge variant={assessment.status === 'completed' ? 'default' : 'secondary'} className="text-sm px-3 py-1">
             {assessment.status.replace('_', ' ')}
@@ -70,21 +79,27 @@ export default function ViewAssessment() {
               <CardTitle>Maneuver Results</CardTitle>
             </CardHeader>
             <CardContent className="pt-6">
-              {/* @ts-ignore - Assuming assessment has maneuverResults if it's an AssessmentDetail response or we need a new endpoint */}
               {assessment.maneuverResults && assessment.maneuverResults.length > 0 ? (
-                 <div className="space-y-4">
-                   {/* @ts-ignore */}
+                 <div className="space-y-2">
                    {assessment.maneuverResults.map((result: any) => (
-                     <div key={result.id} className="flex justify-between items-center p-3 border-b last:border-0">
-                       <span className="font-medium">{result.maneuverName}</span>
-                       <Badge variant="outline" className={
-                         result.competencyLevel === 'mastered' ? 'bg-green-100 text-green-800 border-green-200' :
-                         result.competencyLevel === 'practiced' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                         result.competencyLevel === 'attempted' ? 'bg-red-100 text-red-800 border-red-200' :
-                         'bg-gray-100 text-gray-800 border-gray-200'
-                       }>
-                         {result.competencyLevel.replace('_', ' ')}
-                       </Badge>
+                     <div key={result.id} className="p-3 border rounded-lg">
+                       <div className="flex justify-between items-center">
+                         <span className="font-medium">{result.maneuverName}</span>
+                         <Badge variant="outline" className={
+                           result.competencyLevel === 'mastered' ? 'bg-green-100 text-green-800 border-green-200' :
+                           result.competencyLevel === 'practiced' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                           result.competencyLevel === 'attempted' ? 'bg-red-100 text-red-800 border-red-200' :
+                           'bg-gray-100 text-gray-800 border-gray-200'
+                         }>
+                           {result.competencyLevel.replace('_', ' ')}
+                         </Badge>
+                       </div>
+                       {result.notes && (
+                         <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+                           <MessageSquare className="w-4 h-4 mt-0.5 shrink-0" />
+                           <p>{result.notes}</p>
+                         </div>
+                       )}
                      </div>
                    ))}
                  </div>
@@ -96,6 +111,19 @@ export default function ViewAssessment() {
               )}
             </CardContent>
           </Card>
+
+          {combinedNotes && (
+            <Card className="col-span-full">
+              <CardHeader className="bg-gray-50 border-b">
+                <CardTitle>Combined Maneuver Notes</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <p className="text-foreground bg-gray-50/50 p-4 rounded-md border border-border whitespace-pre-wrap text-sm">
+                  {combinedNotes}
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </SidebarLayout>
