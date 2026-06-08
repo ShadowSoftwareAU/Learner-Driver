@@ -12,6 +12,13 @@ const router = Router();
  * a claimed/confirmed/completed booking with this student.
  */
 async function instructorHasStudent(instructorId: number, studentId: number): Promise<boolean> {
+  const [created] = await db
+    .select({ id: studentsTable.id })
+    .from(studentsTable)
+    .where(and(eq(studentsTable.id, studentId), eq(studentsTable.createdByInstructorId, instructorId)))
+    .limit(1);
+  if (created) return true;
+
   const [assessment] = await db
     .select({ id: assessmentsTable.id })
     .from(assessmentsTable)
@@ -60,9 +67,15 @@ router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
       .from(bookingsTable)
       .where(and(eq(bookingsTable.instructorId, instructor.id)));
 
+    const created = await db
+      .select({ id: studentsTable.id })
+      .from(studentsTable)
+      .where(eq(studentsTable.createdByInstructorId, instructor.id));
+
     const studentIds = [...new Set([
       ...assessed.map(r => r.studentId),
       ...booked.map(r => r.studentId),
+      ...created.map(r => r.id),
     ])];
 
     if (studentIds.length === 0) {
@@ -84,9 +97,46 @@ router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
 
 router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { fullName, email, phone, dateOfBirth, guardianName, guardianPhone, licenseNumber, region, country } = req.body;
+  const {
+    fullName, email, phone, dateOfBirth, guardianName, guardianPhone,
+    guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath,
+    licenceBackPath, headshotPath, notes, region, country,
+  } = req.body;
   if (!fullName || !email) { res.status(400).json({ error: "fullName and email required" }); return; }
-  const [s] = await db.insert(studentsTable).values({ userId: user.id, fullName, email, phone: phone ?? null, dateOfBirth: dateOfBirth ?? null, guardianName: guardianName ?? null, guardianPhone: guardianPhone ?? null, licenseNumber: licenseNumber ?? null, region: region ?? null, country: country ?? null }).returning();
+
+  // A student onboarding themselves links the profile to their own user account.
+  // An instructor (or admin) manually creating a profile leaves userId null
+  // (the learner has no account yet) and stamps createdByInstructorId so the
+  // profile surfaces in that instructor's student list.
+  let userId: number | null = null;
+  let createdByInstructorId: number | null = null;
+  if (user.role === "student") {
+    userId = user.id;
+  } else if (user.role === "instructor") {
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+    createdByInstructorId = instructor.id;
+  }
+
+  const [s] = await db.insert(studentsTable).values({
+    userId,
+    createdByInstructorId,
+    fullName,
+    email,
+    phone: phone ?? null,
+    dateOfBirth: dateOfBirth ?? null,
+    guardianName: guardianName ?? null,
+    guardianPhone: guardianPhone ?? null,
+    guardianEmail: guardianEmail ?? null,
+    pcycSchoolEmail: pcycSchoolEmail ?? null,
+    licenseNumber: licenseNumber ?? null,
+    licenceFrontPath: licenceFrontPath ?? null,
+    licenceBackPath: licenceBackPath ?? null,
+    headshotPath: headshotPath ?? null,
+    notes: notes ?? null,
+    region: region ?? null,
+    country: country ?? null,
+  }).returning();
   await logAudit({ actorId: user.id, action: "create_student", resourceType: "student", resourceId: s.id, studentId: s.id });
   res.status(201).json(formatStudent(s));
 });
@@ -127,13 +177,19 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
     if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  const { fullName, phone, guardianName, guardianPhone, licenseNumber, status, region, country } = req.body;
+  const { fullName, phone, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, status, region, country } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
   if (guardianName !== undefined) updates.guardianName = guardianName;
   if (guardianPhone !== undefined) updates.guardianPhone = guardianPhone;
+  if (guardianEmail !== undefined) updates.guardianEmail = guardianEmail;
+  if (pcycSchoolEmail !== undefined) updates.pcycSchoolEmail = pcycSchoolEmail;
   if (licenseNumber !== undefined) updates.licenseNumber = licenseNumber;
+  if (licenceFrontPath !== undefined) updates.licenceFrontPath = licenceFrontPath;
+  if (licenceBackPath !== undefined) updates.licenceBackPath = licenceBackPath;
+  if (headshotPath !== undefined) updates.headshotPath = headshotPath;
+  if (notes !== undefined) updates.notes = notes;
   if (region !== undefined) updates.region = region;
   if (country !== undefined) updates.country = country;
   if (status && user.role === "admin") updates.status = status; // only admins can change status
@@ -203,7 +259,7 @@ router.get("/students/:id/progress", requireAuth, async (req: any, res): Promise
 });
 
 function formatStudent(s: any) {
-  return { id: s.id, userId: s.userId, fullName: s.fullName, email: s.email, phone: s.phone, dateOfBirth: s.dateOfBirth, guardianName: s.guardianName, guardianPhone: s.guardianPhone, licenseNumber: s.licenseNumber, region: s.region, country: s.country, totalHours: s.totalHours, status: s.status, createdAt: s.createdAt };
+  return { id: s.id, userId: s.userId, createdByInstructorId: s.createdByInstructorId, fullName: s.fullName, email: s.email, phone: s.phone, dateOfBirth: s.dateOfBirth, guardianName: s.guardianName, guardianPhone: s.guardianPhone, guardianEmail: s.guardianEmail, pcycSchoolEmail: s.pcycSchoolEmail, licenseNumber: s.licenseNumber, licenceFrontPath: s.licenceFrontPath, licenceBackPath: s.licenceBackPath, headshotPath: s.headshotPath, notes: s.notes, region: s.region, country: s.country, totalHours: s.totalHours, status: s.status, createdAt: s.createdAt };
 }
 
 function formatAssessment(a: any) {

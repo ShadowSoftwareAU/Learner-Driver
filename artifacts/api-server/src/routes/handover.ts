@@ -7,6 +7,13 @@ import { logAudit } from "./audit";
 const router = Router();
 
 async function instructorHasStudent(instructorId: number, studentId: number): Promise<boolean> {
+  const [created] = await db
+    .select({ id: studentsTable.id })
+    .from(studentsTable)
+    .where(and(eq(studentsTable.id, studentId), eq(studentsTable.createdByInstructorId, instructorId)))
+    .limit(1);
+  if (created) return true;
+
   const [assessment] = await db
     .select({ id: assessmentsTable.id })
     .from(assessmentsTable)

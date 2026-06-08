@@ -218,7 +218,7 @@ router.post("/bookings/:id/claim", requireAuth, async (req: any, res): Promise<v
 
   // Notify student
   const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, claimed.studentId));
-  if (student) {
+  if (student?.userId) {
     await db.insert(notificationsTable).values({
       userId: student.userId,
       type: "booking_claimed",
@@ -332,7 +332,7 @@ router.patch("/bookings/:id", requireAuth, async (req: any, res): Promise<void> 
   // Notify relevant parties on cancellation
   if (status === "cancelled") {
     const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, updated.studentId));
-    if (student) {
+    if (student?.userId) {
       await db.insert(notificationsTable).values({
         userId: student.userId, type: "booking_cancelled",
         title: "Booking cancelled",

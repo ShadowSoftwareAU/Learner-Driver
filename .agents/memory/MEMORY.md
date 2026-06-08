@@ -1,0 +1,1 @@
+- [Manual student profiles & instructor ownership](manual-student-profiles.md) — students.userId is nullable (account-less instructor-created learners); two instructorHasStudent() copies must stay in sync; /storage/objects now needs auth.

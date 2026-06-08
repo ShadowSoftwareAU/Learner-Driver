@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { PhotoCaptureField } from "@/components/PhotoCaptureField";
 import { Car, GraduationCap, Building2, Loader2, ArrowLeft } from "lucide-react";
 import { RoleUpdateRole } from "@/lib/enums";
 
@@ -29,6 +32,20 @@ export default function Onboarding() {
 
   const [step, setStep] = useState<"role" | "region">("role");
   const [selectedRegion, setSelectedRegion] = useState<string>("");
+  const [details, setDetails] = useState({
+    licenseNumber: "",
+    phone: "",
+    guardianPhone: "",
+    guardianEmail: "",
+    pcycSchoolEmail: "",
+    notes: "",
+  });
+  const [headshotPath, setHeadshotPath] = useState<string | null>(null);
+  const [licenceFrontPath, setLicenceFrontPath] = useState<string | null>(null);
+  const [licenceBackPath, setLicenceBackPath] = useState<string | null>(null);
+
+  const setDetail = (key: keyof typeof details) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setDetails((prev) => ({ ...prev, [key]: e.target.value }));
 
   const needsRedirect =
     isError || (!!user?.role && user.role !== "unassigned");
@@ -75,6 +92,15 @@ export default function Onboarding() {
                   fullName: user.name || user.email,
                   email: user.email,
                   region: selectedRegion || undefined,
+                  licenseNumber: details.licenseNumber.trim() || undefined,
+                  phone: details.phone.trim() || undefined,
+                  guardianPhone: details.guardianPhone.trim() || undefined,
+                  guardianEmail: details.guardianEmail.trim() || undefined,
+                  pcycSchoolEmail: details.pcycSchoolEmail.trim() || undefined,
+                  notes: details.notes.trim() || undefined,
+                  headshotPath: headshotPath || undefined,
+                  licenceFrontPath: licenceFrontPath || undefined,
+                  licenceBackPath: licenceBackPath || undefined,
                   country: "AU",
                 },
               });
@@ -92,7 +118,7 @@ export default function Onboarding() {
   if (step === "region") {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 p-6">
-        <div className="max-w-md w-full">
+        <div className="max-w-lg w-full">
           <Button
             variant="ghost"
             size="sm"
@@ -107,12 +133,12 @@ export default function Onboarding() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
                 <GraduationCap className="w-8 h-8" />
               </div>
-              <CardTitle className="text-2xl">Where are you learning?</CardTitle>
+              <CardTitle className="text-2xl">Tell us about yourself</CardTitle>
               <CardDescription>
-                Select your state so we can show the right assessment criteria for your region.
+                These details help your instructor track your progress. You can skip and add them later.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label>State / Territory</Label>
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
@@ -127,6 +153,57 @@ export default function Onboarding() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ob-license">Learner Licence number</Label>
+                <Input id="ob-license" value={details.licenseNumber} onChange={setDetail("licenseNumber")} placeholder="e.g. 123 456 789" />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ob-phone">Your phone</Label>
+                <Input id="ob-phone" type="tel" value={details.phone} onChange={setDetail("phone")} placeholder="04xx xxx xxx" />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="ob-gphone">Parent / guardian phone</Label>
+                  <Input id="ob-gphone" type="tel" value={details.guardianPhone} onChange={setDetail("guardianPhone")} placeholder="04xx xxx xxx" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ob-gemail">Parent / guardian email</Label>
+                  <Input id="ob-gemail" type="email" value={details.guardianEmail} onChange={setDetail("guardianEmail")} placeholder="guardian@example.com" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ob-pcyc">PCYC / School email <span className="text-muted-foreground text-xs">(optional)</span></Label>
+                <Input id="ob-pcyc" type="email" value={details.pcycSchoolEmail} onChange={setDetail("pcycSchoolEmail")} placeholder="program@school.edu.au" />
+              </div>
+
+              <div className="space-y-3">
+                <PhotoCaptureField
+                  label="Profile photo"
+                  description="Used as your profile picture across DriveTrack."
+                  value={headshotPath}
+                  onChange={setHeadshotPath}
+                  rounded
+                />
+                <PhotoCaptureField
+                  label="Licence — front"
+                  value={licenceFrontPath}
+                  onChange={setLicenceFrontPath}
+                />
+                <PhotoCaptureField
+                  label="Licence — back"
+                  value={licenceBackPath}
+                  onChange={setLicenceBackPath}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ob-notes">Notes</Label>
+                <Textarea id="ob-notes" value={details.notes} onChange={setDetail("notes")} rows={3} placeholder="Anything your instructor should know." />
               </div>
 
               <Button

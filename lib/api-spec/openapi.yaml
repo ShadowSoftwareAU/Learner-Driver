@@ -1110,12 +1110,14 @@ components:
     # ─── Students ──────────────────────────────────────────────────────────────
     Student:
       type: object
-      required: [id, userId, fullName, email]
+      required: [id, fullName, email]
       properties:
         id:
           type: integer
         userId:
-          type: integer
+          type: ["integer", "null"]
+        createdByInstructorId:
+          type: ["integer", "null"]
         fullName:
           type: string
         email:
@@ -1128,7 +1130,19 @@ components:
           type: ["string", "null"]
         guardianPhone:
           type: ["string", "null"]
+        guardianEmail:
+          type: ["string", "null"]
+        pcycSchoolEmail:
+          type: ["string", "null"]
         licenseNumber:
+          type: ["string", "null"]
+        licenceFrontPath:
+          type: ["string", "null"]
+        licenceBackPath:
+          type: ["string", "null"]
+        headshotPath:
+          type: ["string", "null"]
+        notes:
           type: ["string", "null"]
         region:
           type: ["string", "null"]
@@ -1158,7 +1172,19 @@ components:
           type: string
         guardianPhone:
           type: string
+        guardianEmail:
+          type: string
+        pcycSchoolEmail:
+          type: string
         licenseNumber:
+          type: string
+        licenceFrontPath:
+          type: string
+        licenceBackPath:
+          type: string
+        headshotPath:
+          type: string
+        notes:
           type: string
         region:
           type: string
@@ -1176,7 +1202,19 @@ components:
           type: string
         guardianPhone:
           type: string
+        guardianEmail:
+          type: string
+        pcycSchoolEmail:
+          type: string
         licenseNumber:
+          type: string
+        licenceFrontPath:
+          type: string
+        licenceBackPath:
+          type: string
+        headshotPath:
+          type: string
+        notes:
           type: string
         region:
           type: string

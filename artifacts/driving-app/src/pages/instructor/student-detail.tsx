@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
+import { StudentAvatar } from "@/components/StudentAvatar";
+import { storageUrl } from "@/lib/upload";
 
 const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
 
@@ -83,14 +85,17 @@ export default function InstructorStudentDetail() {
         </div>
 
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-              {student.fullName}
-              <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className="capitalize">
-                {student.status?.replace('_', ' ')}
-              </Badge>
-            </h1>
-            <p className="text-muted-foreground">{student.email} {student.phone ? `• ${student.phone}` : ''}</p>
+          <div className="flex items-center gap-4">
+            <StudentAvatar fullName={student.fullName} headshotPath={student.headshotPath} className="w-14 h-14" textClassName="text-xl" />
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                {student.fullName}
+                <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className="capitalize">
+                  {student.status?.replace('_', ' ')}
+                </Badge>
+              </h1>
+              <p className="text-muted-foreground">{student.email} {student.phone ? `• ${student.phone}` : ''}</p>
+            </div>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
             <Link href={`/instructor/handover/${student.id}`}>
@@ -462,7 +467,42 @@ export default function InstructorStudentDetail() {
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Guardian Phone</h4>
                     <p className="mt-1">{student.guardianPhone || 'N/A'}</p>
                   </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Guardian Email</h4>
+                    <p className="mt-1 break-words">{student.guardianEmail || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">PCYC / School Email</h4>
+                    <p className="mt-1 break-words">{student.pcycSchoolEmail || 'N/A'}</p>
+                  </div>
                 </div>
+
+                {student.notes && (
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Notes</h4>
+                    <p className="mt-1 whitespace-pre-wrap">{student.notes}</p>
+                  </div>
+                )}
+
+                {(student.licenceFrontPath || student.licenceBackPath) && (
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Licence Photos</h4>
+                    <div className="flex flex-wrap gap-4">
+                      {student.licenceFrontPath && (
+                        <a href={storageUrl(student.licenceFrontPath) ?? undefined} target="_blank" rel="noreferrer">
+                          <img src={storageUrl(student.licenceFrontPath) ?? undefined} alt="Licence front" className="w-40 h-24 object-cover rounded-md border border-border hover:border-primary transition-colors" />
+                          <p className="text-xs text-muted-foreground mt-1">Front</p>
+                        </a>
+                      )}
+                      {student.licenceBackPath && (
+                        <a href={storageUrl(student.licenceBackPath) ?? undefined} target="_blank" rel="noreferrer">
+                          <img src={storageUrl(student.licenceBackPath) ?? undefined} alt="Licence back" className="w-40 h-24 object-cover rounded-md border border-border hover:border-primary transition-colors" />
+                          <p className="text-xs text-muted-foreground mt-1">Back</p>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

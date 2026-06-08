@@ -53,7 +53,10 @@ export const StudentStatus = {
 
 export interface Student {
   id: number;
-  userId: number;
+  /** @nullable */
+  userId?: number | null;
+  /** @nullable */
+  createdByInstructorId?: number | null;
   fullName: string;
   email: string;
   /** @nullable */
@@ -65,7 +68,19 @@ export interface Student {
   /** @nullable */
   guardianPhone?: string | null;
   /** @nullable */
+  guardianEmail?: string | null;
+  /** @nullable */
+  pcycSchoolEmail?: string | null;
+  /** @nullable */
   licenseNumber?: string | null;
+  /** @nullable */
+  licenceFrontPath?: string | null;
+  /** @nullable */
+  licenceBackPath?: string | null;
+  /** @nullable */
+  headshotPath?: string | null;
+  /** @nullable */
+  notes?: string | null;
   /** @nullable */
   region?: string | null;
   /** @nullable */
@@ -82,7 +97,13 @@ export interface StudentInput {
   dateOfBirth?: string;
   guardianName?: string;
   guardianPhone?: string;
+  guardianEmail?: string;
+  pcycSchoolEmail?: string;
   licenseNumber?: string;
+  licenceFrontPath?: string;
+  licenceBackPath?: string;
+  headshotPath?: string;
+  notes?: string;
   region?: string;
   country?: string;
 }
@@ -101,7 +122,13 @@ export interface StudentUpdate {
   phone?: string;
   guardianName?: string;
   guardianPhone?: string;
+  guardianEmail?: string;
+  pcycSchoolEmail?: string;
   licenseNumber?: string;
+  licenceFrontPath?: string;
+  licenceBackPath?: string;
+  headshotPath?: string;
+  notes?: string;
   region?: string;
   country?: string;
   status?: StudentUpdateStatus;

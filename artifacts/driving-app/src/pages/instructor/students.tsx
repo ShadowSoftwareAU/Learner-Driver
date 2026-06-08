@@ -1,11 +1,13 @@
 import { useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Search, ChevronRight } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Loader2, Search, ChevronRight, UserPlus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { StudentAvatar } from "@/components/StudentAvatar";
 
 export default function InstructorStudents() {
   const { data: students, isLoading } = useListStudents();
@@ -22,11 +24,13 @@ export default function InstructorStudents() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Students</h1>
-            <p className="text-muted-foreground">Manage your assigned learners.</p>
+            <p className="text-muted-foreground">Manage your learners and add new ones.</p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Students appear here once they book a lesson with you.
-          </p>
+          <Link href="/instructor/students/new">
+            <Button>
+              <UserPlus className="w-4 h-4 mr-2" /> Add Student
+            </Button>
+          </Link>
         </div>
 
         <Card>
@@ -52,9 +56,7 @@ export default function InstructorStudents() {
                   <Link key={student.id} href={`/instructor/students/${student.id}`}>
                     <div className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 hover:bg-gray-50 transition-colors cursor-pointer group">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
-                          {student.fullName.charAt(0).toUpperCase()}
-                        </div>
+                        <StudentAvatar fullName={student.fullName} headshotPath={student.headshotPath} />
                         <div>
                           <p className="font-medium text-foreground group-hover:text-primary transition-colors">{student.fullName}</p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">

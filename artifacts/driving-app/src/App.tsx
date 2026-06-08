@@ -16,6 +16,7 @@ import Onboarding from "@/pages/onboarding";
 import TermsPage from "@/pages/terms";
 import InstructorDashboard from "@/pages/instructor/dashboard";
 import InstructorStudents from "@/pages/instructor/students";
+import InstructorStudentNew from "@/pages/instructor/student-new";
 import InstructorStudentDetail from "@/pages/instructor/student-detail";
 import NewAssessment from "@/pages/instructor/new-assessment";
 import GuidedAssessment from "@/pages/instructor/guided-assessment";
@@ -318,6 +319,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/instructor/verification" component={() => <ProtectedRoute component={InstructorVerification} />} />
           <Route path="/instructor/dashboard" component={() => <ProtectedRoute component={InstructorDashboard} gateInstructors />} />
           <Route path="/instructor/students" component={() => <ProtectedRoute component={InstructorStudents} gateInstructors />} />
+          <Route path="/instructor/students/new" component={() => <ProtectedRoute component={InstructorStudentNew} gateInstructors />} />
           <Route path="/instructor/students/:id" component={() => <ProtectedRoute component={InstructorStudentDetail} gateInstructors />} />
           <Route path="/instructor/assessments/new" component={() => <ProtectedRoute component={NewAssessment} gateInstructors />} />
           <Route path="/instructor/assessments/guided" component={() => <ProtectedRoute component={GuidedAssessment} gateInstructors />} />
