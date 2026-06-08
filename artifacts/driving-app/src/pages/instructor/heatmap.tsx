@@ -91,7 +91,7 @@ export default function HeatmapPage() {
                     <SelectTrigger className="h-10">
                       <SelectValue placeholder="Choose a maneuver to visualise..." />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[9999]">
                       {(maneuvers ?? []).map(m => (
                         <SelectItem key={m.id} value={m.id.toString()}>
                           {m.name}
@@ -108,7 +108,7 @@ export default function HeatmapPage() {
                   <SelectTrigger className="h-10">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="all">All levels</SelectItem>
                     <SelectItem value="mastered">Mastered</SelectItem>
                     <SelectItem value="practiced">Practiced</SelectItem>
