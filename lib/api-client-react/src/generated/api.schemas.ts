@@ -150,6 +150,12 @@ export const AssessmentStatus = {
   completed: 'completed',
 } as const;
 
+export type AssessmentRoutePathItem = {
+  lat: number;
+  lng: number;
+  ts: number;
+};
+
 export interface Assessment {
   id: number;
   studentId: number;
@@ -165,6 +171,7 @@ export interface Assessment {
   confidenceNote?: string | null;
   /** @nullable */
   focusAreasNext?: string | null;
+  routePath?: AssessmentRoutePathItem[] | null;
   createdAt?: string;
 }
 
@@ -229,12 +236,19 @@ export interface Maneuver {
   masteryDefinition?: string | null;
 }
 
+export type AssessmentInputRoutePathItem = {
+  lat: number;
+  lng: number;
+  ts: number;
+};
+
 export interface AssessmentInput {
   studentId: number;
   lessonDate: string;
   durationMinutes: number;
   confidenceNote?: string;
   focusAreasNext?: string;
+  routePath?: AssessmentInputRoutePathItem[] | null;
 }
 
 export type AssessmentUpdateStatus = typeof AssessmentUpdateStatus[keyof typeof AssessmentUpdateStatus];
@@ -245,11 +259,18 @@ export const AssessmentUpdateStatus = {
   completed: 'completed',
 } as const;
 
+export type AssessmentUpdateRoutePathItem = {
+  lat: number;
+  lng: number;
+  ts: number;
+};
+
 export interface AssessmentUpdate {
   confidenceNote?: string;
   focusAreasNext?: string;
   status?: AssessmentUpdateStatus;
   durationMinutes?: number;
+  routePath?: AssessmentUpdateRoutePathItem[] | null;
 }
 
 export type AssessmentDetailStatus = typeof AssessmentDetailStatus[keyof typeof AssessmentDetailStatus];
@@ -281,6 +302,10 @@ export interface ManeuverResult {
   competencyLevel: ManeuverResultCompetencyLevel;
   /** @nullable */
   notes?: string | null;
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
 }
 
 export interface AssessmentDetail {
@@ -316,10 +341,30 @@ export interface ManeuverResultItem {
   maneuverId: number;
   competencyLevel: ManeuverResultItemCompetencyLevel;
   notes?: string;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface ManeuverResultsBatch {
   results: ManeuverResultItem[];
+}
+
+export type HeatmapPointCompetencyLevel = typeof HeatmapPointCompetencyLevel[keyof typeof HeatmapPointCompetencyLevel];
+
+
+export const HeatmapPointCompetencyLevel = {
+  not_attempted: 'not_attempted',
+  attempted: 'attempted',
+  practiced: 'practiced',
+  mastered: 'mastered',
+} as const;
+
+export interface HeatmapPoint {
+  lat: number;
+  lng: number;
+  maneuverId: number;
+  maneuverName: string;
+  competencyLevel: HeatmapPointCompetencyLevel;
 }
 
 export interface HandoverNote {
@@ -734,6 +779,10 @@ export interface TermsStatus {
 export type ListAssessmentsParams = {
 studentId?: number;
 instructorId?: number;
+};
+
+export type GetManeuverHeatmapParams = {
+maneuverId?: number;
 };
 
 export type ListAuditLogsParams = {

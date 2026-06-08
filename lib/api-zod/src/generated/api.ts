@@ -208,6 +208,11 @@ export const GetStudentProgressResponse = zod.object({
   "status": zod.enum(['in_progress', 'completed']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
   "createdAt": zod.string().optional()
 })).optional()
 })
@@ -355,6 +360,11 @@ export const ListAssessmentsResponseItem = zod.object({
   "status": zod.enum(['in_progress', 'completed']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListAssessmentsResponse = zod.array(ListAssessmentsResponseItem)
@@ -368,7 +378,12 @@ export const CreateAssessmentBody = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "confidenceNote": zod.string().optional(),
-  "focusAreasNext": zod.string().optional()
+  "focusAreasNext": zod.string().optional(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish()
 })
 
 
@@ -397,7 +412,9 @@ export const GetAssessmentResponse = zod.object({
   "maneuverName": zod.string().nullish(),
   "category": zod.string().nullish(),
   "competencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered']),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish()
 })),
   "createdAt": zod.string().optional()
 })
@@ -414,7 +431,12 @@ export const UpdateAssessmentBody = zod.object({
   "confidenceNote": zod.string().optional(),
   "focusAreasNext": zod.string().optional(),
   "status": zod.enum(['in_progress', 'completed']).optional(),
-  "durationMinutes": zod.number().optional()
+  "durationMinutes": zod.number().optional(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish()
 })
 
 export const UpdateAssessmentResponse = zod.object({
@@ -428,6 +450,11 @@ export const UpdateAssessmentResponse = zod.object({
   "status": zod.enum(['in_progress', 'completed']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -443,7 +470,9 @@ export const SaveManeuverResultsBody = zod.object({
   "results": zod.array(zod.object({
   "maneuverId": zod.number(),
   "competencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered']),
-  "notes": zod.string().optional()
+  "notes": zod.string().optional(),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish()
 }))
 })
 
@@ -454,9 +483,28 @@ export const SaveManeuverResultsResponseItem = zod.object({
   "maneuverName": zod.string().nullish(),
   "category": zod.string().nullish(),
   "competencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered']),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish()
 })
 export const SaveManeuverResultsResponse = zod.array(SaveManeuverResultsResponseItem)
+
+
+/**
+ * @summary Get maneuver location data for heatmap visualization
+ */
+export const GetManeuverHeatmapQueryParams = zod.object({
+  "maneuverId": zod.coerce.number().optional()
+})
+
+export const GetManeuverHeatmapResponseItem = zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "maneuverId": zod.number(),
+  "maneuverName": zod.string(),
+  "competencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered'])
+})
+export const GetManeuverHeatmapResponse = zod.array(GetManeuverHeatmapResponseItem)
 
 
 /**
@@ -520,6 +568,11 @@ export const GetHandoverResponse = zod.object({
   "status": zod.enum(['in_progress', 'completed']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
   "createdAt": zod.string().optional()
 }))
 })
@@ -635,6 +688,11 @@ export const GetInstructorDashboardResponse = zod.object({
   "status": zod.enum(['in_progress', 'completed']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
   "createdAt": zod.string().optional()
 })),
   "studentSummaries": zod.array(zod.object({
@@ -668,6 +726,11 @@ export const GetStudentDashboardResponse = zod.object({
   "status": zod.enum(['in_progress', 'completed']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
   "createdAt": zod.string().optional()
 })),
   "skillBreakdown": zod.array(zod.object({

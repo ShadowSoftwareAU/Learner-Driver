@@ -387,6 +387,26 @@ paths:
                 items:
                   $ref: "#/components/schemas/ManeuverResult"
 
+  /assessments/heatmap:
+    get:
+      operationId: getManeuverHeatmap
+      tags: [assessments]
+      summary: Get maneuver location data for heatmap visualization
+      parameters:
+        - name: maneuverId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Heatmap data points
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HeatmapPoint"
+
   # ─── Handover ─────────────────────────────────────────────────────────────────
   /handover/{studentId}:
     get:
@@ -1357,6 +1377,19 @@ components:
           type: ["string", "null"]
         focusAreasNext:
           type: ["string", "null"]
+        routePath:
+          type: array
+          nullable: true
+          items:
+            type: object
+            required: [lat, lng, ts]
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              ts:
+                type: integer
         createdAt:
           type: string
 
@@ -1374,6 +1407,19 @@ components:
           type: string
         focusAreasNext:
           type: string
+        routePath:
+          type: array
+          nullable: true
+          items:
+            type: object
+            required: [lat, lng, ts]
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              ts:
+                type: integer
 
     AssessmentUpdate:
       type: object
@@ -1387,6 +1433,19 @@ components:
           enum: [in_progress, completed]
         durationMinutes:
           type: integer
+        routePath:
+          type: array
+          nullable: true
+          items:
+            type: object
+            required: [lat, lng, ts]
+            properties:
+              lat:
+                type: number
+              lng:
+                type: number
+              ts:
+                type: integer
 
     AssessmentDetail:
       type: object
@@ -1439,6 +1498,10 @@ components:
           enum: [not_attempted, attempted, practiced, mastered]
         notes:
           type: ["string", "null"]
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
 
     ManeuverResultsBatch:
       type: object
@@ -1460,6 +1523,28 @@ components:
           enum: [not_attempted, attempted, practiced, mastered]
         notes:
           type: string
+        lat:
+          type: number
+          nullable: true
+        lng:
+          type: number
+          nullable: true
+
+    HeatmapPoint:
+      type: object
+      required: [lat, lng, maneuverId, maneuverName, competencyLevel]
+      properties:
+        lat:
+          type: number
+        lng:
+          type: number
+        maneuverId:
+          type: integer
+        maneuverName:
+          type: string
+        competencyLevel:
+          type: string
+          enum: [not_attempted, attempted, practiced, mastered]
 
     # ─── Handover ──────────────────────────────────────────────────────────────
     HandoverView:

@@ -1,7 +1,7 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2 } from "lucide-react";
+import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { ManeuverResultItemCompetencyLevel } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
 import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
+import AssessmentRouteMap from "@/components/AssessmentRouteMap";
 
 type GuidedStep = "setup" | "select" | "assess" | "summary";
 
@@ -42,6 +43,13 @@ export default function GuidedAssessment() {
   const [confidenceNote, setConfidenceNote] = useState("");
   const [focusAreas, setFocusAreas] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Geolocation tracking
+  const currentPositionRef = useRef<GeolocationCoordinates | null>(null);
+  const routePointsRef = useRef<Array<{ lat: number; lng: number; ts: number }>>([]);
+  const watchIdRef = useRef<number | null>(null);
+  const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [maneuverLocations, setManeuverLocations] = useState<Record<number, { lat: number; lng: number }>>({});
 
   const groupedManeuvers = useMemo(() => {
     if (!maneuvers) return {};
@@ -84,7 +92,44 @@ export default function GuidedAssessment() {
   const handleLevelSelect = (level: ManeuverResultItemCompetencyLevel) => {
     if (!currentManeuver) return;
     setResults(prev => ({ ...prev, [currentManeuver.id]: level }));
+    const pos = currentPositionRef.current;
+    if (pos) {
+      setManeuverLocations(prev => ({
+        ...prev,
+        [currentManeuver.id]: { lat: pos.latitude, lng: pos.longitude },
+      }));
+    }
   };
+
+  // Start GPS tracking when assess step begins, stop when leaving
+  useEffect(() => {
+    if (step !== "assess") return;
+    if (!navigator.geolocation) return;
+
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => { currentPositionRef.current = pos.coords; },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 3000 }
+    );
+
+    trackingIntervalRef.current = setInterval(() => {
+      const pos = currentPositionRef.current;
+      if (pos) {
+        routePointsRef.current.push({ lat: pos.latitude, lng: pos.longitude, ts: Date.now() });
+      }
+    }, 5000);
+
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
+      }
+      if (trackingIntervalRef.current !== null) {
+        clearInterval(trackingIntervalRef.current);
+        trackingIntervalRef.current = null;
+      }
+    };
+  }, [step]);
 
   const handleNext = () => {
     if (currentIndex < selectedManeuvers.length - 1) {
@@ -115,6 +160,7 @@ export default function GuidedAssessment() {
           durationMinutes: parseInt(duration),
           confidenceNote,
           focusAreasNext: focusAreas,
+          routePath: routePointsRef.current.length > 0 ? routePointsRef.current : undefined,
         }
       });
 
@@ -122,6 +168,8 @@ export default function GuidedAssessment() {
         maneuverId: parseInt(id),
         competencyLevel: level,
         notes: maneuverNotes[parseInt(id)] || undefined,
+        lat: maneuverLocations[parseInt(id)]?.lat,
+        lng: maneuverLocations[parseInt(id)]?.lng,
       }));
 
       if (maneuverResultsArray.length > 0) {
@@ -434,6 +482,28 @@ export default function GuidedAssessment() {
             notes={maneuverNotes}
             title="Lesson Breakdown"
           />
+
+          {(routePointsRef.current.length > 0 || Object.keys(maneuverLocations).length > 0) && (
+            <Card>
+              <CardHeader className="bg-gray-50 border-b p-6">
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="w-5 h-5 text-primary" />
+                  Lesson Route
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <AssessmentRouteMap
+                  routePath={routePointsRef.current}
+                  maneuverPoints={Object.entries(maneuverLocations).map(([id, loc]) => ({
+                    ...loc,
+                    maneuverId: parseInt(id),
+                    name: selectedManeuvers.find(m => m.id === parseInt(id))?.name ?? "Unknown",
+                    level: results[parseInt(id)] ?? "not_attempted",
+                  }))}
+                />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader className="bg-gray-50 border-b p-6">

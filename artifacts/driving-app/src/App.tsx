@@ -38,6 +38,7 @@ import AdminVerifications from "@/pages/admin/verifications";
 import InstructorAvailability from "@/pages/instructor/availability";
 import InstructorZones from "@/pages/instructor/zones";
 import InstructorBookings from "@/pages/instructor/bookings";
+import HeatmapPage from "@/pages/instructor/heatmap";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -328,6 +329,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/instructor/availability" component={() => <ProtectedRoute component={InstructorAvailability} gateInstructors />} />
           <Route path="/instructor/zones" component={() => <ProtectedRoute component={InstructorZones} gateInstructors />} />
           <Route path="/instructor/bookings" component={() => <ProtectedRoute component={InstructorBookings} gateInstructors />} />
+          <Route path="/instructor/heatmap" component={() => <ProtectedRoute component={HeatmapPage} gateInstructors />} />
 
           {/* Student routes */}
           <Route path="/student/dashboard" component={() => <ProtectedRoute component={StudentDashboard} />} />

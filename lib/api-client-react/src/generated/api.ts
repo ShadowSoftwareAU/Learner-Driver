@@ -33,11 +33,13 @@ import type {
   CreateAvailabilitySlot,
   CreateBooking,
   CreateZone,
+  GetManeuverHeatmapParams,
   GetUnreadNotificationCount200,
   HandoverNote,
   HandoverNoteInput,
   HandoverView,
   HealthStatus,
+  HeatmapPoint,
   Instructor,
   InstructorDashboard,
   InstructorUpdate,
@@ -1438,6 +1440,90 @@ export const useSaveManeuverResults = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getSaveManeuverResultsMutationOptions(options));
     }
+
+export const getGetManeuverHeatmapUrl = (params?: GetManeuverHeatmapParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/assessments/heatmap?${stringifiedParams}` : `/api/assessments/heatmap`
+}
+
+/**
+ * @summary Get maneuver location data for heatmap visualization
+ */
+export const getManeuverHeatmap = async (params?: GetManeuverHeatmapParams, options?: RequestInit): Promise<HeatmapPoint[]> => {
+
+  return customFetch<HeatmapPoint[]>(getGetManeuverHeatmapUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetManeuverHeatmapQueryKey = (params?: GetManeuverHeatmapParams,) => {
+    return [
+    `/api/assessments/heatmap`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetManeuverHeatmapQueryOptions = <TData = Awaited<ReturnType<typeof getManeuverHeatmap>>, TError = ErrorType<unknown>>(params?: GetManeuverHeatmapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getManeuverHeatmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetManeuverHeatmapQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getManeuverHeatmap>>> = ({ signal }) => getManeuverHeatmap(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getManeuverHeatmap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetManeuverHeatmapQueryResult = NonNullable<Awaited<ReturnType<typeof getManeuverHeatmap>>>
+export type GetManeuverHeatmapQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get maneuver location data for heatmap visualization
+ */
+
+export function useGetManeuverHeatmap<TData = Awaited<ReturnType<typeof getManeuverHeatmap>>, TError = ErrorType<unknown>>(
+ params?: GetManeuverHeatmapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getManeuverHeatmap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetManeuverHeatmapQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetHandoverUrl = (studentId: number,) => {
 

@@ -1,1 +1,2 @@
 - [Manual student profiles & instructor ownership](manual-student-profiles.md) — students.userId is nullable (account-less instructor-created learners); two instructorHasStudent() copies must stay in sync; /storage/objects now needs auth.
+- [GPS route & heatmap feature](gps-heatmap.md) — assessments.routePath (jsonb), maneuver_results.lat/lng; heatmap route must come BEFORE /:id in Express; Orval query options require queryKey alongside enabled.

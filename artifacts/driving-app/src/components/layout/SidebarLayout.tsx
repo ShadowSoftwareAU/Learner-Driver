@@ -41,6 +41,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Availability", href: "/instructor/availability", icon: Calendar },
       { label: "Teaching Zones", href: "/instructor/zones", icon: MapPin },
       { label: "My Verification", href: "/instructor/verification", icon: ShieldCheck },
+      { label: "Heatmap", href: "/instructor/heatmap", icon: MapPin },
     ],
     student: [
       { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
@@ -54,6 +55,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Verifications", href: "/admin/verifications", icon: ShieldCheck },
       { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
       { label: "Audit Log", href: "/admin/audit", icon: ShieldAlert },
+      { label: "Heatmap", href: "/instructor/heatmap", icon: MapPin },
     ],
     unassigned: [],
   };
