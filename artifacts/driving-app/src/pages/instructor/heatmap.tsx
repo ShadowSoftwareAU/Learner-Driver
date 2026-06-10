@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
@@ -72,29 +72,36 @@ function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: LatLngBounds) =
   return null;
 }
 
-function useBathroomData(enabled: boolean, bounds: LatLngBounds | null) {
+function useBathroomData(enabled: boolean) {
   const [bathrooms, setBathrooms] = useState<BathroomFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  // Node-ID keyed cache so panning accumulates results instead of replacing them
   const cacheRef = useRef<Map<number, BathroomFeature>>(new Map());
+  // Track enabled in a ref so the stable triggerFetch callback can read it
+  const enabledRef = useRef(enabled);
+  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
+  // Clear everything when the toggle is turned off
   useEffect(() => {
-    if (!enabled || !bounds) {
+    if (!enabled) {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (abortRef.current) abortRef.current.abort();
       cacheRef.current.clear();
       setBathrooms([]);
       setLoading(false);
-      return;
     }
+  }, [enabled]);
 
+  // Stable callback — never changes identity, so it is safe to pass as a prop
+  // without causing downstream re-renders or effect re-runs.
+  const triggerFetch = useCallback((bounds: LatLngBounds) => {
+    if (!enabledRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
-      // Cancel any in-flight request immediately
       if (abortRef.current) abortRef.current.abort();
       abortRef.current = new AbortController();
       const { signal } = abortRef.current;
-
       setLoading(true);
       try {
         const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
@@ -127,22 +134,19 @@ function useBathroomData(enabled: boolean, bounds: LatLngBounds | null) {
               qualityScore: score,
             };
           });
-        // Merge new nodes into the cache — don't evict existing ones
         for (const f of incoming) cacheRef.current.set(f.id, f);
         setBathrooms(Array.from(cacheRef.current.values()));
       } catch (err) {
-        // AbortError is expected when user pans before fetch completes; ignore silently
         if ((err as Error).name !== "AbortError") {
-          // On real errors keep existing markers visible; don't clear
+          // keep existing markers visible on real errors
         }
       } finally {
         if (!signal.aborted) setLoading(false);
       }
     }, 1500);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [enabled, bounds]);
+  }, []); // intentionally empty — reads enabledRef, never stale
 
-  return { bathrooms, loading };
+  return { bathrooms, loading, triggerFetch };
 }
 
 export default function HeatmapPage() {
@@ -151,7 +155,6 @@ export default function HeatmapPage() {
   const [showLayer, setShowLayer] = useState(true);
   const [showBathrooms, setShowBathrooms] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>("all");
-  const [mapBounds, setMapBounds] = useState<LatLngBounds | null>(null);
 
   const { data: maneuvers, isLoading: maneuversLoading } = useListManeuvers();
 
@@ -184,7 +187,7 @@ export default function HeatmapPage() {
     [heatmapData]
   );
 
-  const { bathrooms, loading: bathroomsLoading } = useBathroomData(showBathrooms, mapBounds);
+  const { bathrooms, loading: bathroomsLoading, triggerFetch: triggerBathroomFetch } = useBathroomData(showBathrooms);
 
   function toggleId(id: string) {
     setSelectedIds(prev =>
@@ -391,7 +394,7 @@ export default function HeatmapPage() {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
 
-                  <BoundsTracker onBoundsChange={setMapBounds} />
+                  <BoundsTracker onBoundsChange={triggerBathroomFetch} />
 
                   {showLayer && mapPoints.length > 0 && <FitPoints points={mapPoints} />}
 
