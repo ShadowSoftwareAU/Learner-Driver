@@ -79,9 +79,12 @@ function useBathroomData(enabled: boolean) {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const cacheRef = useRef<Map<number, BathroomFeature>>(new Map());
-  // Track enabled in a ref so the stable triggerFetch callback can read it
+  // Update synchronously during render so triggerFetch always sees the latest value
+  // (a useEffect would run after child effects, causing a race on initial toggle-on)
   const enabledRef = useRef(enabled);
-  useEffect(() => { enabledRef.current = enabled; }, [enabled]);
+  enabledRef.current = enabled;
+  // Remember the last bounds so we can re-fire when the toggle turns on
+  const lastBoundsRef = useRef<LatLngBounds | null>(null);
 
   // Clear everything when the toggle is turned off
   useEffect(() => {
@@ -97,6 +100,7 @@ function useBathroomData(enabled: boolean) {
   // Stable callback — never changes identity, so it is safe to pass as a prop
   // without causing downstream re-renders or effect re-runs.
   const triggerFetch = useCallback((bounds: LatLngBounds) => {
+    lastBoundsRef.current = bounds; // always record, even when disabled
     if (!enabledRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
@@ -144,8 +148,17 @@ function useBathroomData(enabled: boolean) {
       } finally {
         if (!signal.aborted) setLoading(false);
       }
-    }, 1500);
+    }, 600);
   }, []); // intentionally empty — reads enabledRef, never stale
+
+  // When the toggle turns on, re-fire immediately with the last known bounds.
+  // triggerFetch must be declared above this effect.
+  useEffect(() => {
+    if (enabled && lastBoundsRef.current) {
+      triggerFetch(lastBoundsRef.current);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled]);
 
   return { bathrooms, loading, triggerFetch };
 }
