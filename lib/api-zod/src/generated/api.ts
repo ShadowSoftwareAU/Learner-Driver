@@ -923,6 +923,7 @@ export const ListBookingsResponseItem = zod.object({
   "suburb": zod.string(),
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -946,6 +947,7 @@ export const CreateBookingBody = zod.object({
   "transmissionType": zod.enum(['auto', 'manual', 'either']).optional(),
   "suburb": zod.string(),
   "postcode": zod.string(),
+  "carType": zod.enum(['learner_car', 'trainer_car']).optional(),
   "studentNotes": zod.string().optional()
 })
 
@@ -968,6 +970,7 @@ export const GetBookingResponse = zod.object({
   "suburb": zod.string(),
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -1003,6 +1006,7 @@ export const UpdateBookingResponse = zod.object({
   "suburb": zod.string(),
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -1033,6 +1037,7 @@ export const ClaimBookingResponse = zod.object({
   "suburb": zod.string(),
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),

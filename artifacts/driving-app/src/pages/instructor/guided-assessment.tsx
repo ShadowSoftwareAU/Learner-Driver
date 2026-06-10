@@ -1,4 +1,5 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
+import { StudentAvatar } from "@/components/StudentAvatar";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin } from "lucide-react";
@@ -225,6 +226,18 @@ export default function GuidedAssessment() {
                     ))}
                   </SelectContent>
                 </Select>
+                {studentId && (() => {
+                  const s = students?.find(x => x.id.toString() === studentId);
+                  return s ? (
+                    <div className="flex items-center gap-3 mt-3 p-3 rounded-lg bg-muted/50 border border-border">
+                      <StudentAvatar fullName={s.fullName} headshotPath={s.headshotPath} className="w-12 h-12" textClassName="text-base" />
+                      <div className="min-w-0">
+                        <p className="font-semibold truncate">{s.fullName}</p>
+                        {s.totalHours != null && <p className="text-sm text-muted-foreground">{s.totalHours}h logged</p>}
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

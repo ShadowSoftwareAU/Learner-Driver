@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Search, User, MapPin, Car, Clock, Star } from "lucide-react";
+import { Loader2, Search, User, MapPin, Car, Clock, Star, GraduationCap } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DAY_NAMES } from "@/lib/enums";
 
@@ -47,6 +47,7 @@ export default function StudentSearch() {
   const [submitted, setSubmitted] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState<any>(null);
   const [bookingNotes, setBookingNotes] = useState("");
+  const [carType, setCarType] = useState<"trainer_car" | "learner_car">("trainer_car");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const searchEnabled = submitted && !!params.date && !!params.time;
@@ -82,6 +83,7 @@ export default function StudentSearch() {
   const handleBook = (instructor: any) => {
     setSelectedInstructor(instructor);
     setBookingNotes("");
+    setCarType("trainer_car");
     setDialogOpen(true);
   };
 
@@ -95,6 +97,7 @@ export default function StudentSearch() {
           ...(params.transmissionType ? { transmissionType: params.transmissionType } : {}),
           suburb: params.suburb || selectedInstructor?.zones?.[0]?.suburb || "",
           postcode: params.postcode || selectedInstructor?.zones?.[0]?.postcode || "",
+          carType,
           ...(bookingNotes ? { studentNotes: bookingNotes } : {}),
         },
       });
@@ -319,6 +322,30 @@ export default function StudentSearch() {
                 No instructors matched your search. Your request will be broadcast to all instructors in the system — the first to respond wins the booking.
               </p>
             )}
+            <div className="space-y-2">
+              <Label>Vehicle for this lesson</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCarType("trainer_car")}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm transition-colors ${carType === "trainer_car" ? "border-primary bg-primary/5 text-primary font-semibold" : "border-border text-muted-foreground hover:border-muted-foreground"}`}
+                >
+                  <Car className="w-6 h-6" />
+                  Driver Trainer's Car
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCarType("learner_car")}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm transition-colors ${carType === "learner_car" ? "border-primary bg-primary/5 text-primary font-semibold" : "border-border text-muted-foreground hover:border-muted-foreground"}`}
+                >
+                  <GraduationCap className="w-6 h-6" />
+                  Learner's Car
+                </button>
+              </div>
+              {carType === "learner_car" && (
+                <p className="text-xs text-muted-foreground">Your instructor will be notified that you're bringing your own vehicle.</p>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label>Notes for instructor (optional)</Label>
               <Textarea

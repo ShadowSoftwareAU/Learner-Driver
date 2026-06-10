@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CalendarCheck, Clock, MapPin, Car, CheckCircle2, XCircle, User } from "lucide-react";
+import { Loader2, CalendarCheck, Clock, MapPin, Car, CheckCircle2, XCircle, User, GraduationCap } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingStatus } from "@/lib/enums";
 import { format } from "date-fns";
@@ -76,6 +76,13 @@ function BookingCard({
               {booking.transmissionType}
             </div>
           )}
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            {booking.carType === "learner_car" ? (
+              <><GraduationCap className="w-3.5 h-3.5" /> Learner's car</>
+            ) : (
+              <><Car className="w-3.5 h-3.5" /> Trainer's car</>
+            )}
+          </div>
           {(booking.suburb || booking.postcode) && (
             <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
               <MapPin className="w-3.5 h-3.5" />

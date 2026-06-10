@@ -167,12 +167,15 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
 
-  // Only admins and the student themselves can edit student records
+  // Instructors may edit students they own; students may only edit themselves; admins can edit all
   if (user.role === "instructor") {
-    res.status(403).json({ error: "Instructors cannot edit student records" });
-    return;
-  }
-  if (user.role === "student") {
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+    if (!(await instructorHasStudent(instructor.id, id))) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  } else if (user.role === "student") {
     const [s] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, id));
     if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
   }

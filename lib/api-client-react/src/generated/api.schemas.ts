@@ -550,6 +550,17 @@ export const BookingItemStatus = {
   cancelled: 'cancelled',
 } as const;
 
+/**
+ * Whether the student is using their own car or the instructor's
+ */
+export type BookingItemCarType = typeof BookingItemCarType[keyof typeof BookingItemCarType];
+
+
+export const BookingItemCarType = {
+  learner_car: 'learner_car',
+  trainer_car: 'trainer_car',
+} as const;
+
 export interface BookingItem {
   id: number;
   studentId: number;
@@ -562,6 +573,8 @@ export interface BookingItem {
   suburb: string;
   postcode: string;
   status: BookingItemStatus;
+  /** Whether the student is using their own car or the instructor's */
+  carType: BookingItemCarType;
   /** @nullable */
   studentNotes?: string | null;
   /** @nullable */
@@ -605,6 +618,14 @@ export const CreateBookingTransmissionType = {
   either: 'either',
 } as const;
 
+export type CreateBookingCarType = typeof CreateBookingCarType[keyof typeof CreateBookingCarType];
+
+
+export const CreateBookingCarType = {
+  learner_car: 'learner_car',
+  trainer_car: 'trainer_car',
+} as const;
+
 export interface CreateBooking {
   requestedDate: string;
   requestedTime: string;
@@ -612,6 +633,7 @@ export interface CreateBooking {
   transmissionType?: CreateBookingTransmissionType;
   suburb: string;
   postcode: string;
+  carType?: CreateBookingCarType;
   studentNotes?: string;
 }
 

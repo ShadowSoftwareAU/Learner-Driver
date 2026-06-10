@@ -1,8 +1,8 @@
-import { lazy, Suspense, useMemo } from "react";
-import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, useGetHandover, useListBookings, getGetStudentQueryKey, getGetStudentProgressQueryKey } from "@workspace/api-client-react";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, useGetHandover, useListBookings, getGetStudentQueryKey, getGetStudentProgressQueryKey, useUpdateStudent } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock } from "lucide-react";
+import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock, Pencil, Car, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
@@ -10,6 +10,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { storageUrl } from "@/lib/upload";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { PhotoCaptureField } from "@/components/PhotoCaptureField";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
 
@@ -29,6 +36,15 @@ const PRIORITY_CONFIG: Record<string, { label: string; variant: "destructive" | 
 export default function InstructorStudentDetail() {
   const params = useParams();
   const id = parseInt(params.id || "0", 10);
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editFullName, setEditFullName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editHeadshotPath, setEditHeadshotPath] = useState<string | null>(null);
+  const updateStudent = useUpdateStudent();
 
   const { data: student, isLoading: isStudentLoading } = useGetStudent(id, { query: { enabled: !!id, queryKey: getGetStudentQueryKey(id) } });
   const { data: progress, isLoading: isProgressLoading } = useGetStudentProgress(id, { query: { enabled: !!id, queryKey: getGetStudentProgressQueryKey(id) } });
@@ -98,6 +114,19 @@ export default function InstructorStudentDetail() {
             </div>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
+            <Button
+              variant="outline"
+              className="flex-1 md:flex-none"
+              onClick={() => {
+                setEditFullName(student.fullName);
+                setEditPhone(student.phone ?? "");
+                setEditNotes(student.notes ?? "");
+                setEditHeadshotPath(student.headshotPath ?? null);
+                setEditOpen(true);
+              }}
+            >
+              <Pencil className="w-4 h-4 mr-2" /> Edit
+            </Button>
             <Link href={`/instructor/handover/${student.id}`}>
               <Button variant="outline" className="flex-1 md:flex-none">
                 <ExternalLink className="w-4 h-4 mr-2" /> Handover
@@ -189,6 +218,17 @@ export default function InstructorStudentDetail() {
                         <p className="text-xs text-muted-foreground truncate">
                           {b.suburb} {b.postcode} · {b.durationMinutes} min
                         </p>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          {b.carType === "learner_car" ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                              <GraduationCap className="w-3 h-3" /> Learner's Car
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                              <Car className="w-3 h-3" /> Trainer's Car
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Badge variant="outline" className="capitalize text-xs flex-shrink-0">
                         {b.status}
@@ -508,6 +548,67 @@ export default function InstructorStudentDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit student dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Student Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex justify-center">
+              <div className="flex flex-col items-center gap-2">
+                <StudentAvatar fullName={editFullName || student.fullName} headshotPath={editHeadshotPath} className="w-20 h-20" textClassName="text-2xl" />
+                <PhotoCaptureField
+                  label="Update photo"
+                  value={editHeadshotPath}
+                  onChange={setEditHeadshotPath}
+                  rounded
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Full Name</Label>
+              <Input value={editFullName} onChange={e => setEditFullName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Phone</Label>
+              <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="e.g. 0412 345 678" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notes</Label>
+              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} placeholder="Any notes about this student..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button
+              disabled={updateStudent.isPending || !editFullName.trim()}
+              onClick={async () => {
+                try {
+                  await updateStudent.mutateAsync({
+                    id,
+                    data: {
+                      fullName: editFullName,
+                      phone: editPhone || undefined,
+                      notes: editNotes || undefined,
+                      headshotPath: editHeadshotPath ?? undefined,
+                    },
+                  });
+                  await qc.invalidateQueries({ queryKey: getGetStudentQueryKey(id) });
+                  setEditOpen(false);
+                  toast({ title: "Saved", description: "Student profile updated." });
+                } catch {
+                  toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
+                }
+              }}
+            >
+              {updateStudent.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarLayout>
   );
 }

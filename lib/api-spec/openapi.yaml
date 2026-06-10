@@ -1847,7 +1847,7 @@ components:
 
     BookingItem:
       type: object
-      required: [id, studentId, requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, status, broadcastCount, createdAt]
+      required: [id, studentId, requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, status, broadcastCount, createdAt, carType]
       properties:
         id:
           type: integer
@@ -1871,6 +1871,10 @@ components:
         status:
           type: string
           enum: [pending, claimed, confirmed, completed, cancelled]
+        carType:
+          type: string
+          enum: [learner_car, trainer_car]
+          description: "Whether the student is using their own car or the instructor's"
         studentNotes:
           type: ["string", "null"]
         instructorNotes:
@@ -1916,6 +1920,9 @@ components:
           type: string
         postcode:
           type: string
+        carType:
+          type: string
+          enum: [learner_car, trainer_car]
         studentNotes:
           type: string
 

@@ -1,8 +1,7 @@
-import { useState, useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from "react-leaflet";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
-import type { LatLngTuple } from "leaflet";
+import type { LatLngBounds, LatLngTuple } from "leaflet";
 import { useQueries } from "@tanstack/react-query";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Layers, Check, ChevronsUpDown, X } from "lucide-react";
+import { Loader2, MapPin, Layers, Check, ChevronsUpDown, X, Toilet } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -31,6 +30,22 @@ const LEVEL_LABEL: Record<string, string> = {
   not_attempted: "Not Attempted",
 };
 
+interface BathroomFeature {
+  lat: number;
+  lng: number;
+  name: string;
+  fee: boolean;
+  wheelchair: boolean;
+  openingHours?: string;
+  qualityScore: number;
+}
+
+function bathroomColor(score: number) {
+  if (score >= 3) return "#0891b2"; // cyan-600 — well documented/accessible
+  if (score >= 1) return "#6366f1"; // indigo — some info
+  return "#9ca3af"; // gray — unknown
+}
+
 function FitPoints({ points }: { points: LatLngTuple[] }) {
   const map = useMap();
   useEffect(() => {
@@ -43,11 +58,75 @@ function FitPoints({ points }: { points: LatLngTuple[] }) {
   return null;
 }
 
+function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: LatLngBounds) => void }) {
+  const map = useMapEvents({
+    moveend: () => onBoundsChange(map.getBounds()),
+    zoomend: () => onBoundsChange(map.getBounds()),
+  });
+  useEffect(() => {
+    onBoundsChange(map.getBounds());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  return null;
+}
+
+function useBathroomData(enabled: boolean, bounds: LatLngBounds | null) {
+  const [bathrooms, setBathrooms] = useState<BathroomFeature[]>([]);
+  const [loading, setLoading] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!enabled || !bounds) { setBathrooms([]); return; }
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
+        const query = `[out:json];node["amenity"="toilets"](${s},${w},${n},${e});out tags;`;
+        const res = await fetch("https://overpass-api.de/api/interpreter", {
+          method: "POST",
+          body: query,
+          headers: { "Content-Type": "text/plain" },
+        });
+        const data = await res.json();
+        const features: BathroomFeature[] = (data.elements ?? []).map((el: any) => {
+          const t = el.tags ?? {};
+          let score = 0;
+          if (t.wheelchair === "yes") score++;
+          if (t.fee !== "yes") score++;
+          if (t.opening_hours) score++;
+          if (t.name || t.operator) score++;
+          return {
+            lat: el.lat,
+            lng: el.lon,
+            name: t.name || t.operator || "Public Toilet",
+            fee: t.fee === "yes",
+            wheelchair: t.wheelchair === "yes",
+            openingHours: t.opening_hours,
+            qualityScore: score,
+          };
+        });
+        setBathrooms(features);
+      } catch {
+        setBathrooms([]);
+      } finally {
+        setLoading(false);
+      }
+    }, 600);
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [enabled, bounds]);
+
+  return { bathrooms, loading };
+}
+
 export default function HeatmapPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
   const [showLayer, setShowLayer] = useState(true);
+  const [showBathrooms, setShowBathrooms] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>("all");
+  const [mapBounds, setMapBounds] = useState<LatLngBounds | null>(null);
 
   const { data: maneuvers, isLoading: maneuversLoading } = useListManeuvers();
 
@@ -79,6 +158,8 @@ export default function HeatmapPage() {
       }, {} as Record<string, number>),
     [heatmapData]
   );
+
+  const { bathrooms, loading: bathroomsLoading } = useBathroomData(showBathrooms, mapBounds);
 
   function toggleId(id: string) {
     setSelectedIds(prev =>
@@ -131,10 +212,7 @@ export default function HeatmapPage() {
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent
-                      className="z-[9999] p-0 w-[320px]"
-                      align="start"
-                    >
+                    <PopoverContent className="z-[9999] p-0 w-[320px]" align="start">
                       <Command>
                         <CommandInput placeholder="Search maneuvers..." />
                         <CommandList>
@@ -151,9 +229,7 @@ export default function HeatmapPage() {
                                 >
                                   <div className={cn(
                                     "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                    isSelected
-                                      ? "bg-primary text-primary-foreground"
-                                      : "opacity-50"
+                                    isSelected ? "bg-primary text-primary-foreground" : "opacity-50"
                                   )}>
                                     {isSelected && <Check className="h-3 w-3" />}
                                   </div>
@@ -186,17 +262,25 @@ export default function HeatmapPage() {
                 </Select>
               </div>
 
-              {/* Layer toggle */}
-              <div className="flex items-end gap-3 pb-0.5">
-                <Switch
-                  id="layer-toggle"
-                  checked={showLayer}
-                  onCheckedChange={setShowLayer}
-                />
-                <Label htmlFor="layer-toggle" className="flex items-center gap-1.5 cursor-pointer">
-                  <Layers className="w-4 h-4" />
-                  Show layer
-                </Label>
+              {/* Layer toggles */}
+              <div className="flex flex-col gap-2 justify-end pb-0.5">
+                <div className="flex items-center gap-2.5">
+                  <Switch id="layer-toggle" checked={showLayer} onCheckedChange={setShowLayer} />
+                  <Label htmlFor="layer-toggle" className="flex items-center gap-1.5 cursor-pointer">
+                    <Layers className="w-4 h-4" /> Maneuvers
+                  </Label>
+                </div>
+                <div className="flex items-center gap-2.5">
+                  <Switch id="bathroom-toggle" checked={showBathrooms} onCheckedChange={setShowBathrooms} />
+                  <Label htmlFor="bathroom-toggle" className="flex items-center gap-1.5 cursor-pointer">
+                    <Toilet className="w-4 h-4" />
+                    Public Toilets
+                    {bathroomsLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {showBathrooms && !bathroomsLoading && bathrooms.length > 0 && (
+                      <span className="text-xs text-muted-foreground">({bathrooms.length})</span>
+                    )}
+                  </Label>
+                </div>
               </div>
             </div>
 
@@ -266,6 +350,8 @@ export default function HeatmapPage() {
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
 
+                  <BoundsTracker onBoundsChange={setMapBounds} />
+
                   {showLayer && mapPoints.length > 0 && <FitPoints points={mapPoints} />}
 
                   {showLayer && filteredPoints.map((p, i) => (
@@ -286,6 +372,39 @@ export default function HeatmapPage() {
                           <p style={{ fontWeight: 700, marginBottom: 2 }}>{p.maneuverName}</p>
                           <p style={{ fontSize: 12, color: LEVEL_COLOR[p.competencyLevel] }}>
                             {LEVEL_LABEL[p.competencyLevel] ?? p.competencyLevel}
+                          </p>
+                        </div>
+                      </Popup>
+                    </CircleMarker>
+                  ))}
+
+                  {showBathrooms && bathrooms.map((b, i) => (
+                    <CircleMarker
+                      key={`bath-${i}`}
+                      center={[b.lat, b.lng]}
+                      radius={8}
+                      pathOptions={{
+                        color: bathroomColor(b.qualityScore),
+                        fillColor: bathroomColor(b.qualityScore),
+                        fillOpacity: 0.8,
+                        weight: 1.5,
+                        opacity: 1,
+                      }}
+                    >
+                      <Popup>
+                        <div style={{ minWidth: 160 }}>
+                          <p style={{ fontWeight: 700, marginBottom: 4 }}>{b.name}</p>
+                          <p style={{ fontSize: 11, marginBottom: 2 }}>
+                            {b.fee ? "💰 Paid entry" : "✅ Free"}
+                          </p>
+                          {b.wheelchair && (
+                            <p style={{ fontSize: 11, marginBottom: 2 }}>♿ Wheelchair accessible</p>
+                          )}
+                          {b.openingHours && (
+                            <p style={{ fontSize: 11, color: "#6b7280" }}>🕐 {b.openingHours}</p>
+                          )}
+                          <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
+                            OSM data · Quality: {b.qualityScore}/4
                           </p>
                         </div>
                       </Popup>
@@ -313,16 +432,32 @@ export default function HeatmapPage() {
           <CardHeader className="p-6">
             <CardTitle className="text-base">How to read this map</CardTitle>
           </CardHeader>
-          <CardContent className="p-6 pt-0 grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {["mastered", "practiced", "attempted", "not_attempted"].map(level => (
-              <div key={level} className="flex items-center gap-2">
-                <div
-                  className="w-4 h-4 rounded-full shrink-0"
-                  style={{ backgroundColor: LEVEL_COLOR[level] }}
-                />
-                <span className="text-sm text-muted-foreground">{LEVEL_LABEL[level]}</span>
+          <CardContent className="p-6 pt-0 space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {["mastered", "practiced", "attempted", "not_attempted"].map(level => (
+                <div key={level} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: LEVEL_COLOR[level] }} />
+                  <span className="text-sm text-muted-foreground">{LEVEL_LABEL[level]}</span>
+                </div>
+              ))}
+            </div>
+            {showBathrooms && (
+              <div className="border-t pt-3">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Public Toilet Quality (OSM data)</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { color: "#0891b2", label: "Well documented (3–4 tags)" },
+                    { color: "#6366f1", label: "Some info (1–2 tags)" },
+                    { color: "#9ca3af", label: "Unknown" },
+                  ].map(({ color, label }) => (
+                    <div key={color} className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: color }} />
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>

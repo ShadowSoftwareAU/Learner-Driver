@@ -6,7 +6,7 @@ import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CalendarX, Clock, Car, MapPin, User } from "lucide-react";
+import { Loader2, CalendarX, Clock, Car, MapPin, User, GraduationCap } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingStatus } from "@/lib/enums";
 import { format } from "date-fns";
@@ -118,6 +118,13 @@ export default function StudentBookings() {
                                 {b.transmissionType}
                               </div>
                             )}
+                            <div className="flex items-center gap-1.5 text-muted-foreground">
+                              {b.carType === "learner_car" ? (
+                                <><GraduationCap className="w-3.5 h-3.5" /> Learner's car</>
+                              ) : (
+                                <><Car className="w-3.5 h-3.5" /> Trainer's car</>
+                              )}
+                            </div>
                             {(b.suburb || b.postcode) && (
                               <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
                                 <MapPin className="w-3.5 h-3.5" />

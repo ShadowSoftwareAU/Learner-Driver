@@ -13,6 +13,7 @@ export const bookingsTable = pgTable("bookings", {
   suburb: text("suburb").notNull(),
   postcode: text("postcode").notNull(),
   status: text("status").notNull().default("pending"), // pending | claimed | confirmed | completed | cancelled
+  carType: text("car_type").notNull().default("trainer_car"), // learner_car | trainer_car
   studentNotes: text("student_notes"),
   instructorNotes: text("instructor_notes"),
   broadcastCount: integer("broadcast_count").notNull().default(0),

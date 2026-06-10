@@ -2,6 +2,7 @@ import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListS
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle } from "lucide-react";
+import { StudentAvatar } from "@/components/StudentAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,6 +140,18 @@ export default function NewAssessment() {
                   ))}
                 </SelectContent>
               </Select>
+              {studentId && (() => {
+                const s = students?.find(x => x.id.toString() === studentId);
+                return s ? (
+                  <div className="flex items-center gap-3 mt-3 p-3 rounded-lg bg-muted/50 border border-border">
+                    <StudentAvatar fullName={s.fullName} headshotPath={s.headshotPath} className="w-10 h-10" textClassName="text-sm" />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">{s.fullName}</p>
+                      {s.totalHours != null && <p className="text-xs text-muted-foreground">{s.totalHours}h logged</p>}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
             </div>
             <div className="space-y-2">
               <Label className="text-base">Date</Label>
