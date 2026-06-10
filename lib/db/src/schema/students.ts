@@ -6,6 +6,8 @@ export const studentsTable = pgTable("students", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").unique(),
   createdByInstructorId: integer("created_by_instructor_id"),
+  // Tenant scoping
+  schoolId: integer("school_id"),
   fullName: text("full_name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
@@ -23,6 +25,21 @@ export const studentsTable = pgTable("students", {
   region: text("region"),
   country: text("country").default("AU"),
   status: text("status").notNull().default("active"),
+  // Medical and allergy data — encrypted at rest (AES-256-GCM via crypto.ts)
+  // classification: restricted — only instructor/school_admin/super_admin may read
+  medicalConditionsEncrypted: text("medical_conditions_encrypted"),
+  allergiesEncrypted: text("allergies_encrypted"),
+  // Short safe preview, NOT full diagnosis detail. Example: "Medical info on file"
+  medicalConditionsPreview: text("medical_conditions_preview"),
+  allergiesPreview: text("allergies_preview"),
+  // Attendance tracking
+  noShowCount: integer("no_show_count").notNull().default(0),
+  attendanceReliabilityScore: integer("attendance_reliability_score"), // 0-100; 100 = no issues
+  // Viewer linking — unique code for parent/guardian/mentor access
+  viewerCode: text("viewer_code").unique(),
+  viewerCodeIssuedAt: timestamp("viewer_code_issued_at", { withTimezone: true }),
+  // Data classification label — default restricted for student PII
+  dataClassification: text("data_classification").notNull().default("restricted"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

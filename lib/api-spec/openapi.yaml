@@ -197,6 +197,76 @@ paths:
               schema:
                 $ref: "#/components/schemas/LessonPlan"
 
+  /students/{id}/medical:
+    get:
+      operationId: getStudentMedical
+      tags: [students]
+      summary: Get decrypted medical/allergy info (instructor/admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Decrypted medical data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentMedical"
+        "403":
+          description: Forbidden
+
+    patch:
+      operationId: updateStudentMedical
+      tags: [students]
+      summary: Update encrypted medical/allergy info for a student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentMedicalInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudentMedical"
+
+  /students/{id}/viewer-code:
+    post:
+      operationId: generateViewerCode
+      tags: [students]
+      summary: Generate (or regenerate) a viewer link code for a student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Viewer code issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [viewerCode, viewerCodeIssuedAt]
+                properties:
+                  viewerCode:
+                    type: string
+                  viewerCodeIssuedAt:
+                    type: string
+
   # ─── Instructors ─────────────────────────────────────────────────────────────
   /instructors:
     get:
@@ -846,6 +916,37 @@ paths:
         "200":
           description: Declined
 
+  /bookings/{id}/no-show:
+    post:
+      operationId: markNoShow
+      tags: [scheduling]
+      summary: Mark a confirmed booking as no-show; increments student no_show_count
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Marked no-show
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingItem"
+        "404":
+          description: Booking not found
+        "409":
+          description: Booking is not in a markable state
+
   # ─── Notifications ────────────────────────────────────────────────────────────
   /notifications:
     get:
@@ -1173,6 +1274,30 @@ components:
         status:
           type: string
           enum: [active, on_hold, completed]
+        # Medical — only decrypted for instructor/school_admin/super_admin. Null otherwise.
+        medicalConditions:
+          type: ["string", "null"]
+          description: "Decrypted medical conditions — only visible to authorised roles"
+        allergies:
+          type: ["string", "null"]
+          description: "Decrypted allergy info — only visible to authorised roles"
+        # Safe preview visible to all authorised viewers (e.g. 'Medical info on file')
+        medicalConditionsPreview:
+          type: ["string", "null"]
+        allergiesPreview:
+          type: ["string", "null"]
+        # Attendance tracking
+        noShowCount:
+          type: integer
+        attendanceReliabilityScore:
+          type: ["integer", "null"]
+          description: "0-100; 100 = perfect attendance"
+        # Viewer linking
+        viewerCode:
+          type: ["string", "null"]
+          description: "Unique code for parent/guardian linking (DRV-XXXXXXX)"
+        viewerCodeIssuedAt:
+          type: ["string", "null"]
         createdAt:
           type: string
 
@@ -1243,6 +1368,17 @@ components:
         status:
           type: string
           enum: [active, on_hold, completed]
+        # Medical — stored encrypted; preview is auto-derived if not supplied
+        medicalConditions:
+          type: string
+          description: "Plain text — server encrypts before storing"
+        allergies:
+          type: string
+          description: "Plain text — server encrypts before storing"
+        medicalConditionsPreview:
+          type: string
+        allergiesPreview:
+          type: string
 
     StudentProgress:
       type: object
@@ -1354,7 +1490,7 @@ components:
     # ─── Assessments ───────────────────────────────────────────────────────────
     Assessment:
       type: object
-      required: [id, studentId, instructorId, lessonDate, durationMinutes, status]
+      required: [id, studentId, instructorId, lessonDate, durationMinutes, status, pedalOperator]
       properties:
         id:
           type: integer
@@ -1373,6 +1509,11 @@ components:
         status:
           type: string
           enum: [in_progress, completed]
+        # Safety-critical: who controls the pedals during this lesson
+        pedalOperator:
+          type: string
+          enum: [student, instructor, shared]
+          description: "Who controls the pedals — student, instructor (dual control), or shared"
         confidenceNote:
           type: ["string", "null"]
         focusAreasNext:
@@ -1390,12 +1531,14 @@ components:
                 type: number
               ts:
                 type: integer
+        preLessonBriefingAcknowledgedAt:
+          type: ["string", "null"]
         createdAt:
           type: string
 
     AssessmentInput:
       type: object
-      required: [studentId, lessonDate, durationMinutes]
+      required: [studentId, lessonDate, durationMinutes, pedalOperator]
       properties:
         studentId:
           type: integer
@@ -1403,6 +1546,10 @@ components:
           type: string
         durationMinutes:
           type: integer
+        # Required — instructor must explicitly confirm pedal control before saving
+        pedalOperator:
+          type: string
+          enum: [student, instructor, shared]
         confidenceNote:
           type: string
         focusAreasNext:
@@ -1424,6 +1571,9 @@ components:
     AssessmentUpdate:
       type: object
       properties:
+        pedalOperator:
+          type: string
+          enum: [student, instructor, shared]
         confidenceNote:
           type: string
         focusAreasNext:
@@ -1446,10 +1596,13 @@ components:
                 type: number
               ts:
                 type: integer
+        acknowledgeBriefing:
+          type: boolean
+          description: "If true, records pre-lesson briefing acknowledged at now()"
 
     AssessmentDetail:
       type: object
-      required: [id, studentId, instructorId, lessonDate, durationMinutes, status, maneuverResults]
+      required: [id, studentId, instructorId, lessonDate, durationMinutes, status, pedalOperator, maneuverResults]
       properties:
         id:
           type: integer
@@ -1468,9 +1621,14 @@ components:
         status:
           type: string
           enum: [in_progress, completed]
+        pedalOperator:
+          type: string
+          enum: [student, instructor, shared]
         confidenceNote:
           type: ["string", "null"]
         focusAreasNext:
+          type: ["string", "null"]
+        preLessonBriefingAcknowledgedAt:
           type: ["string", "null"]
         maneuverResults:
           type: array
@@ -1574,7 +1732,7 @@ components:
 
     HandoverNote:
       type: object
-      required: [id, studentId, instructorId, note, createdAt]
+      required: [id, studentId, instructorId, note, isSafetyCritical, createdAt]
       properties:
         id:
           type: integer
@@ -1588,6 +1746,12 @@ components:
           type: string
         focusAreas:
           type: ["string", "null"]
+        isSafetyCritical:
+          type: boolean
+          description: "If true, this note is displayed prominently on the pre-lesson briefing card"
+        contentStatus:
+          type: string
+          enum: [approved, quarantined, under_review, released]
         createdAt:
           type: string
 
@@ -1599,6 +1763,8 @@ components:
           type: string
         focusAreas:
           type: string
+        isSafetyCritical:
+          type: boolean
 
     # ─── Intake ────────────────────────────────────────────────────────────────
     Intake:
@@ -1870,7 +2036,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, claimed, confirmed, completed, cancelled]
+          enum: [pending, claimed, confirmed, completed, cancelled, no_show]
         carType:
           type: string
           enum: [learner_car, trainer_car]
@@ -1884,6 +2050,12 @@ components:
         claimedAt:
           type: ["string", "null"]
         confirmedAt:
+          type: ["string", "null"]
+        cancelledAt:
+          type: ["string", "null"]
+        noShowMarkedAt:
+          type: ["string", "null"]
+        statusReason:
           type: ["string", "null"]
         createdAt:
           type: string
@@ -1899,8 +2071,10 @@ components:
       properties:
         status:
           type: string
-          enum: [pending, claimed, confirmed, completed, cancelled]
+          enum: [pending, claimed, confirmed, completed, cancelled, no_show]
         instructorNotes:
+          type: string
+        statusReason:
           type: string
 
     CreateBooking:

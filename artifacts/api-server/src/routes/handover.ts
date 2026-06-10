@@ -1,31 +1,25 @@
 import { Router } from "express";
 import { eq, desc, sql, and } from "drizzle-orm";
-import { db, studentsTable, handoverNotesTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, usersTable, bookingsTable } from "@workspace/db";
+import { db, studentsTable, handoverNotesTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, bookingsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
+import { canViewPrivateInstructorNotes, canViewRestrictedMedicalData } from "../lib/authz";
+import { scanContent } from "../lib/contentFiltering/scanContent";
+import { decrypt } from "../lib/crypto";
 
 const router = Router();
 
 async function instructorHasStudent(instructorId: number, studentId: number): Promise<boolean> {
-  const [created] = await db
-    .select({ id: studentsTable.id })
-    .from(studentsTable)
-    .where(and(eq(studentsTable.id, studentId), eq(studentsTable.createdByInstructorId, instructorId)))
-    .limit(1);
+  const [created] = await db.select({ id: studentsTable.id }).from(studentsTable)
+    .where(and(eq(studentsTable.id, studentId), eq(studentsTable.createdByInstructorId, instructorId))).limit(1);
   if (created) return true;
 
-  const [assessment] = await db
-    .select({ id: assessmentsTable.id })
-    .from(assessmentsTable)
-    .where(and(eq(assessmentsTable.instructorId, instructorId), eq(assessmentsTable.studentId, studentId)))
-    .limit(1);
+  const [assessment] = await db.select({ id: assessmentsTable.id }).from(assessmentsTable)
+    .where(and(eq(assessmentsTable.instructorId, instructorId), eq(assessmentsTable.studentId, studentId))).limit(1);
   if (assessment) return true;
 
-  const [booking] = await db
-    .select({ id: bookingsTable.id })
-    .from(bookingsTable)
-    .where(and(eq(bookingsTable.instructorId, instructorId), eq(bookingsTable.studentId, studentId)))
-    .limit(1);
+  const [booking] = await db.select({ id: bookingsTable.id }).from(bookingsTable)
+    .where(and(eq(bookingsTable.instructorId, instructorId), eq(bookingsTable.studentId, studentId))).limit(1);
   return !!booking;
 }
 
@@ -37,21 +31,23 @@ router.get("/handover/:studentId", requireAuth, async (req: any, res): Promise<v
     const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
     if (!instructor) { res.status(403).json({ error: "Instructor record not found" }); return; }
     if (!(await instructorHasStudent(instructor.id, studentId))) {
-      res.status(403).json({ error: "Access denied" });
-      return;
+      res.status(403).json({ error: "Access denied" }); return;
     }
   }
 
   const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, studentId));
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
 
-  const assessments = await db.select().from(assessmentsTable).where(eq(assessmentsTable.studentId, studentId)).orderBy(desc(assessmentsTable.lessonDate));
-  const assessmentIds = assessments.map(a => a.id);
+  const assessments = await db.select().from(assessmentsTable)
+    .where(eq(assessmentsTable.studentId, studentId))
+    .orderBy(desc(assessmentsTable.lessonDate));
 
+  const assessmentIds = assessments.map(a => a.id);
   const allManeuvers = await db.select().from(maneuversTable).orderBy(maneuversTable.sortOrder);
   let allResults: any[] = [];
   if (assessmentIds.length > 0) {
-    allResults = await db.select().from(maneuverResultsTable).where(sql`${maneuverResultsTable.assessmentId} = ANY(${sql.raw(`ARRAY[${assessmentIds.join(",")}]::integer[]`)})`);
+    allResults = await db.select().from(maneuverResultsTable)
+      .where(sql`${maneuverResultsTable.assessmentId} = ANY(${sql.raw(`ARRAY[${assessmentIds.join(",")}]::integer[]`)})`);
   }
 
   const bestLevel: Record<number, string> = {};
@@ -66,37 +62,100 @@ router.get("/handover/:studentId", requireAuth, async (req: any, res): Promise<v
   const categories = [...new Set(allManeuvers.map(m => m.category))];
   const skillBreakdown = categories.map(cat => {
     const catManeuvers = allManeuvers.filter(m => m.category === cat);
-    const mastered = catManeuvers.filter(m => bestLevel[m.id] === "mastered").length;
-    const practicing = catManeuvers.filter(m => bestLevel[m.id] === "practiced" || bestLevel[m.id] === "attempted").length;
-    const notStarted = catManeuvers.filter(m => !bestLevel[m.id] || bestLevel[m.id] === "not_attempted").length;
-    return { category: cat, total: catManeuvers.length, mastered, practicing, notStarted };
+    return {
+      category: cat,
+      total: catManeuvers.length,
+      mastered: catManeuvers.filter(m => bestLevel[m.id] === "mastered").length,
+      practicing: catManeuvers.filter(m => bestLevel[m.id] === "practiced" || bestLevel[m.id] === "attempted").length,
+      notStarted: catManeuvers.filter(m => !bestLevel[m.id] || bestLevel[m.id] === "not_attempted").length,
+    };
   });
 
-  const notes = await db.select({
-    id: handoverNotesTable.id, studentId: handoverNotesTable.studentId, instructorId: handoverNotesTable.instructorId,
-    note: handoverNotesTable.note, focusAreas: handoverNotesTable.focusAreas, createdAt: handoverNotesTable.createdAt,
+  // Only include notes visible to the caller
+  const showPrivateNotes = canViewPrivateInstructorNotes(user);
+
+  const notesQuery = await db.select({
+    id: handoverNotesTable.id,
+    studentId: handoverNotesTable.studentId,
+    instructorId: handoverNotesTable.instructorId,
+    note: handoverNotesTable.note,
+    focusAreas: handoverNotesTable.focusAreas,
+    isSafetyCritical: handoverNotesTable.isSafetyCritical,
+    contentStatus: handoverNotesTable.contentStatus,
+    createdAt: handoverNotesTable.createdAt,
     instructorName: instructorsTable.fullName,
   }).from(handoverNotesTable)
     .leftJoin(instructorsTable, eq(handoverNotesTable.instructorId, instructorsTable.id))
-    .where(eq(handoverNotesTable.studentId, studentId)).orderBy(desc(handoverNotesTable.createdAt));
+    .where(eq(handoverNotesTable.studentId, studentId))
+    .orderBy(desc(handoverNotesTable.createdAt));
 
-  await logAudit({ actorId: user.id, action: "view_handover", resourceType: "student", resourceId: studentId, studentId });
+  // Filter out quarantined notes from non-admin viewers
+  const notes = showPrivateNotes
+    ? notesQuery
+    : notesQuery.filter(n => n.contentStatus !== "quarantined");
+
+  // Latest pedal operator from most recent assessment
+  const latestAssessment = assessments[0];
+  const latestPedalOperator = latestAssessment?.pedalOperator ?? null;
+
+  // Medical info — decrypt only for authorised roles
+  const canSeeMedical = canViewRestrictedMedicalData(user);
+  let medicalConditions: string | null = null;
+  let allergies: string | null = null;
+  if (canSeeMedical) {
+    if (student.medicalConditionsEncrypted) medicalConditions = decrypt(student.medicalConditionsEncrypted);
+    if (student.allergiesEncrypted) allergies = decrypt(student.allergiesEncrypted);
+  }
+
+  // Safety-critical notes for the briefing card
+  const safetyCriticalNotes = notes.filter(n => n.isSafetyCritical);
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "view_handover",
+    resourceType: "student",
+    resourceId: studentId,
+    studentId,
+    result: "success",
+  }, req);
+
+  const recentAssessments = assessments.slice(0, 5).map(a => ({
+    id: a.id, studentId: a.studentId, instructorId: a.instructorId,
+    studentName: null, instructorName: null,
+    lessonDate: a.lessonDate, durationMinutes: a.durationMinutes,
+    status: a.status, pedalOperator: a.pedalOperator ?? "student",
+    confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext,
+    preLessonBriefingAcknowledgedAt: a.preLessonBriefingAcknowledgedAt ?? null,
+    createdAt: a.createdAt,
+  }));
 
   res.json({
-    student: formatStudent(student),
+    student: formatStudent(student, canSeeMedical, medicalConditions, allergies),
     totalHours: student.totalHours,
     completedManeuvers: Object.values(bestLevel).filter(l => l === "mastered").length,
     totalManeuvers: allManeuvers.length,
     skillBreakdown,
     notes,
-    recentAssessments: assessments.slice(0, 5).map(a => ({ id: a.id, studentId: a.studentId, instructorId: a.instructorId, studentName: null, instructorName: null, lessonDate: a.lessonDate, durationMinutes: a.durationMinutes, status: a.status, confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext, createdAt: a.createdAt })),
+    recentAssessments,
+    // Pre-lesson briefing payload
+    safetyBriefing: {
+      pedalOperator: latestPedalOperator,
+      safetyCriticalNotes,
+      medicalConditionsPreview: student.medicalConditionsPreview ?? null,
+      allergiesPreview: student.allergiesPreview ?? null,
+      // Full data only for authorised roles
+      medicalConditions: canSeeMedical ? medicalConditions : null,
+      allergies: canSeeMedical ? allergies : null,
+      latestFocusAreas: latestAssessment?.focusAreasNext ?? null,
+    },
   });
 });
 
 router.post("/handover/:studentId/notes", requireAuth, async (req: any, res): Promise<void> => {
   const studentId = parseInt(Array.isArray(req.params.studentId) ? req.params.studentId[0] : req.params.studentId, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { note, focusAreas } = req.body;
+  const { note, focusAreas, isSafetyCritical } = req.body;
   if (!note) { res.status(400).json({ error: "note required" }); return; }
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
@@ -104,19 +163,61 @@ router.post("/handover/:studentId/notes", requireAuth, async (req: any, res): Pr
     [instructor] = await db.insert(instructorsTable).values({ userId: user.id, fullName: user.name ?? "Instructor", email: user.email ?? "" }).returning();
   }
 
-  // Verify the instructor has a relationship with this student before writing a note
   if (!(await instructorHasStudent(instructor.id, studentId))) {
-    res.status(403).json({ error: "Access denied" });
+    res.status(403).json({ error: "Access denied" }); return;
+  }
+
+  // Scan note content before saving
+  const scan = await scanContent({
+    text: note + (focusAreas ? " " + focusAreas : ""),
+    contentType: "handover_note",
+    actorUserId: user.id,
+    studentId,
+    route: req.originalUrl,
+  });
+
+  if (scan.shouldBlock) {
+    res.status(451).json({ error: "Content blocked by moderation policy", moderationCaseId: scan.moderationCaseId });
     return;
   }
 
-  const [created] = await db.insert(handoverNotesTable).values({ studentId, instructorId: instructor.id, note, focusAreas: focusAreas ?? null }).returning();
-  await logAudit({ actorId: user.id, action: "add_handover_note", resourceType: "handover_note", resourceId: created.id, studentId });
+  const [created] = await db.insert(handoverNotesTable).values({
+    studentId,
+    instructorId: instructor.id,
+    note,
+    focusAreas: focusAreas ?? null,
+    isSafetyCritical: isSafetyCritical === true,
+    contentStatus: scan.contentStatus,
+    moderationCaseId: scan.moderationCaseId > 0 ? scan.moderationCaseId : null,
+  }).returning();
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "add_handover_note",
+    resourceType: "handover_note",
+    resourceId: created.id,
+    studentId,
+    result: scan.contentStatus === "approved" ? "success" : "flagged",
+  }, req);
+
   res.status(201).json({ ...created, instructorName: instructor.fullName });
 });
 
-function formatStudent(s: any) {
-  return { id: s.id, userId: s.userId, fullName: s.fullName, email: s.email, phone: s.phone, dateOfBirth: s.dateOfBirth, guardianName: s.guardianName, guardianPhone: s.guardianPhone, licenseNumber: s.licenseNumber, totalHours: s.totalHours, status: s.status, createdAt: s.createdAt };
+function formatStudent(s: any, canSeeMedical: boolean, medicalConditions: string | null, allergies: string | null) {
+  return {
+    id: s.id, userId: s.userId, fullName: s.fullName, email: s.email,
+    phone: s.phone, dateOfBirth: s.dateOfBirth,
+    guardianName: s.guardianName, guardianPhone: s.guardianPhone,
+    licenseNumber: s.licenseNumber, totalHours: s.totalHours, status: s.status,
+    medicalConditionsPreview: s.medicalConditionsPreview ?? null,
+    allergiesPreview: s.allergiesPreview ?? null,
+    medicalConditions: canSeeMedical ? medicalConditions : null,
+    allergies: canSeeMedical ? allergies : null,
+    noShowCount: s.noShowCount ?? 0,
+    attendanceReliabilityScore: s.attendanceReliabilityScore ?? null,
+    createdAt: s.createdAt,
+  };
 }
 
 export default router;

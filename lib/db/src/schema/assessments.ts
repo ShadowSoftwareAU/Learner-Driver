@@ -6,12 +6,21 @@ export const assessmentsTable = pgTable("assessments", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
   instructorId: integer("instructor_id").notNull(),
+  // Tenant scoping
+  schoolId: integer("school_id"),
   lessonDate: text("lesson_date").notNull(),
   durationMinutes: integer("duration_minutes").notNull(),
   status: text("status").notNull().default("in_progress"),
+  // Safety-critical: who controls the pedals during this lesson
+  pedalOperator: text("pedal_operator").notNull().default("student"), // instructor | student | shared
   confidenceNote: text("confidence_note"),
   focusAreasNext: text("focus_areas_next"),
   routePath: jsonb("route_path"),
+  // Safety flags JSON for structured safety annotations
+  safetyFlagsJson: jsonb("safety_flags_json"),
+  // Pre-lesson briefing acknowledgement
+  preLessonBriefingAcknowledgedAt: timestamp("pre_lesson_briefing_acknowledged_at", { withTimezone: true }),
+  preLessonBriefingAcknowledgedBy: integer("pre_lesson_briefing_acknowledged_by"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

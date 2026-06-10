@@ -11,3 +11,8 @@ export * from "./zones";
 export * from "./bookings";
 export * from "./lesson-types";
 export * from "./verification";
+export * from "./driving-schools";
+export * from "./viewers";
+export * from "./moderation";
+export * from "./subscriptions";
+export * from "./permissions";

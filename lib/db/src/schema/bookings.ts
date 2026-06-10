@@ -6,19 +6,34 @@ export const bookingsTable = pgTable("bookings", {
   id: serial("id").primaryKey(),
   studentId: integer("student_id").notNull(),
   instructorId: integer("instructor_id"), // null until claimed
+  // Tenant scoping
+  schoolId: integer("school_id"),
   requestedDate: text("requested_date").notNull(), // YYYY-MM-DD
   requestedTime: text("requested_time").notNull(), // HH:mm
   durationMinutes: integer("duration_minutes").notNull().default(60),
   transmissionType: text("transmission_type").notNull().default("auto"), // auto | manual | either
   suburb: text("suburb").notNull(),
   postcode: text("postcode").notNull(),
-  status: text("status").notNull().default("pending"), // pending | claimed | confirmed | completed | cancelled
+  // status includes no_show for attendance tracking
+  status: text("status").notNull().default("pending"), // pending | claimed | confirmed | completed | cancelled | no_show
   carType: text("car_type").notNull().default("trainer_car"), // learner_car | trainer_car
   studentNotes: text("student_notes"),
   instructorNotes: text("instructor_notes"),
   broadcastCount: integer("broadcast_count").notNull().default(0),
   claimedAt: timestamp("claimed_at", { withTimezone: true }),
   confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  // Cancellation tracking
+  cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
+  cancelledByUserId: integer("cancelled_by_user_id"),
+  // No-show tracking
+  noShowMarkedAt: timestamp("no_show_marked_at", { withTimezone: true }),
+  noShowMarkedByUserId: integer("no_show_marked_by_user_id"),
+  // Generic reason for status changes
+  statusReason: text("status_reason"),
+  // Calendar approval workflow
+  changeRequestedByUserId: integer("change_requested_by_user_id"),
+  changeRequestStatus: text("change_request_status"), // pending | approved | denied | none
+  requiresSchoolApproval: boolean("requires_school_approval").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -35,15 +50,31 @@ export const bookingBroadcastsTable = pgTable("booking_broadcasts", {
 export const notificationsTable = pgTable("notifications", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  type: text("type").notNull(), // booking_request | booking_claimed | booking_confirmed | booking_cancelled | lesson_reminder
+  // Tenant scoping
+  schoolId: integer("school_id"),
+  type: text("type").notNull(),
   title: text("title").notNull(),
   body: text("body").notNull(),
-  relatedId: integer("related_id"), // booking_id or assessment_id
+  relatedId: integer("related_id"),
+  relatedType: text("related_type"),
   isRead: boolean("is_read").notNull().default(false),
+  // Multi-channel delivery tracking
+  channel: text("channel").notNull().default("in_app"), // in_app | email | push | sms
+  deliveryStatus: text("delivery_status").notNull().default("pending"), // pending | sent | failed | suppressed | quarantined | read
+  deliveryProvider: text("delivery_provider"),
+  deliveryAttemptedAt: timestamp("delivery_attempted_at", { withTimezone: true }),
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+  readAt: timestamp("read_at", { withTimezone: true }),
+  priority: text("priority").notNull().default("normal"), // normal | high | urgent
+  metadataJson: text("metadata_json"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const insertBookingSchema = createInsertSchema(bookingsTable).omit({ id: true, createdAt: true, updatedAt: true, claimedAt: true, confirmedAt: true, instructorId: true });
+export const insertBookingSchema = createInsertSchema(bookingsTable).omit({
+  id: true, createdAt: true, updatedAt: true,
+  claimedAt: true, confirmedAt: true, instructorId: true,
+  cancelledAt: true, noShowMarkedAt: true,
+});
 export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Booking = typeof bookingsTable.$inferSelect;
 

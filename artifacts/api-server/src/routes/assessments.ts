@@ -3,8 +3,11 @@ import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
+import { scanContent } from "../lib/contentFiltering/scanContent";
 
 const router = Router();
+
+// ─── List ─────────────────────────────────────────────────────────────────────
 
 router.get("/assessments", requireAuth, async (req: any, res): Promise<void> => {
   const studentId = req.query.studentId ? parseInt(req.query.studentId as string, 10) : undefined;
@@ -12,7 +15,7 @@ router.get("/assessments", requireAuth, async (req: any, res): Promise<void> => 
 
   let rows;
 
-  if (user.role === "admin") {
+  if (user.role === "admin" || user.role === "school_admin" || user.role === "super_admin") {
     rows = await db.select().from(assessmentsTable).orderBy(desc(assessmentsTable.lessonDate));
     if (studentId) rows = rows.filter(r => r.studentId === studentId);
   } else if (user.role === "instructor") {
@@ -44,18 +47,46 @@ router.get("/assessments", requireAuth, async (req: any, res): Promise<void> => 
   res.json(enriched);
 });
 
+// ─── Create ───────────────────────────────────────────────────────────────────
+
 router.post("/assessments", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { studentId, lessonDate, durationMinutes, confidenceNote, focusAreasNext, routePath } = req.body;
-  if (!studentId || !lessonDate || !durationMinutes) { res.status(400).json({ error: "studentId, lessonDate, durationMinutes required" }); return; }
+  const { studentId, lessonDate, durationMinutes, confidenceNote, focusAreasNext, routePath, pedalOperator } = req.body;
+
+  if (!studentId || !lessonDate || !durationMinutes) {
+    res.status(400).json({ error: "studentId, lessonDate, durationMinutes required" });
+    return;
+  }
+  if (!pedalOperator || !["student", "instructor", "shared"].includes(pedalOperator)) {
+    res.status(400).json({ error: "pedalOperator required: student | instructor | shared" });
+    return;
+  }
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
     [instructor] = await db.insert(instructorsTable).values({ userId: user.id, fullName: user.name ?? "Instructor", email: user.email ?? "" }).returning();
   }
 
+  // Scan free-text fields before saving
+  const textsToScan = [confidenceNote, focusAreasNext].filter(Boolean).join(" ");
+  if (textsToScan) {
+    const scan = await scanContent({
+      text: textsToScan,
+      contentType: "assessment_note",
+      actorUserId: user.id,
+      studentId,
+      route: req.originalUrl,
+    });
+    if (scan.shouldBlock) {
+      res.status(451).json({ error: "Content blocked by moderation policy", moderationCaseId: scan.moderationCaseId });
+      return;
+    }
+  }
+
   const [a] = await db.insert(assessmentsTable).values({
-    studentId, instructorId: instructor.id, lessonDate, durationMinutes,
+    studentId, instructorId: instructor.id,
+    lessonDate, durationMinutes,
+    pedalOperator,
     confidenceNote: confidenceNote ?? null,
     focusAreasNext: focusAreasNext ?? null,
     routePath: routePath ?? null,
@@ -65,11 +96,19 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
   const hours = durationMinutes / 60;
   await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours} WHERE id = ${studentId}`);
 
-  await logAudit({ actorId: user.id, action: "create_assessment", resourceType: "assessment", resourceId: a.id, studentId: a.studentId });
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "create_assessment",
+    resourceType: "assessment",
+    resourceId: a.id,
+    studentId: a.studentId,
+  }, req);
+
   res.status(201).json(formatAssessment(a));
 });
 
-// IMPORTANT: heatmap route must come BEFORE /assessments/:id to avoid "heatmap" being parsed as :id
+// IMPORTANT: heatmap route must come BEFORE /assessments/:id
 router.get("/assessments/heatmap", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
   const maneuverId = req.query.maneuverId ? parseInt(req.query.maneuverId as string, 10) : undefined;
@@ -82,44 +121,26 @@ router.get("/assessments/heatmap", requireAuth, async (req: any, res): Promise<v
   const latNotNull = isNotNull(maneuverResultsTable.lat);
   const lngNotNull = isNotNull(maneuverResultsTable.lng);
 
-  if (user.role === "admin") {
+  if (user.role === "admin" || user.role === "school_admin" || user.role === "super_admin") {
     const conditions: any[] = [latNotNull, lngNotNull];
     if (maneuverId) conditions.push(eq(maneuverResultsTable.maneuverId, maneuverId));
-
     const results = await db
-      .select({
-        lat: maneuverResultsTable.lat,
-        lng: maneuverResultsTable.lng,
-        maneuverId: maneuverResultsTable.maneuverId,
-        maneuverName: maneuversTable.name,
-        competencyLevel: maneuverResultsTable.competencyLevel,
-      })
+      .select({ lat: maneuverResultsTable.lat, lng: maneuverResultsTable.lng, maneuverId: maneuverResultsTable.maneuverId, maneuverName: maneuversTable.name, competencyLevel: maneuverResultsTable.competencyLevel })
       .from(maneuverResultsTable)
       .leftJoin(maneuversTable, eq(maneuverResultsTable.maneuverId, maneuversTable.id))
       .where(and(...conditions));
-
     res.json(results);
     return;
   }
 
-  // Instructor: scope to their own assessments
   const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
   if (!instructor) { res.json([]); return; }
 
-  const conditions: any[] = [
-    latNotNull, lngNotNull,
-    eq(assessmentsTable.instructorId, instructor.id),
-  ];
+  const conditions: any[] = [latNotNull, lngNotNull, eq(assessmentsTable.instructorId, instructor.id)];
   if (maneuverId) conditions.push(eq(maneuverResultsTable.maneuverId, maneuverId));
 
   const results = await db
-    .select({
-      lat: maneuverResultsTable.lat,
-      lng: maneuverResultsTable.lng,
-      maneuverId: maneuverResultsTable.maneuverId,
-      maneuverName: maneuversTable.name,
-      competencyLevel: maneuverResultsTable.competencyLevel,
-    })
+    .select({ lat: maneuverResultsTable.lat, lng: maneuverResultsTable.lng, maneuverId: maneuverResultsTable.maneuverId, maneuverName: maneuversTable.name, competencyLevel: maneuverResultsTable.competencyLevel })
     .from(maneuverResultsTable)
     .innerJoin(assessmentsTable, eq(maneuverResultsTable.assessmentId, assessmentsTable.id))
     .leftJoin(maneuversTable, eq(maneuverResultsTable.maneuverId, maneuversTable.id))
@@ -127,6 +148,8 @@ router.get("/assessments/heatmap", requireAuth, async (req: any, res): Promise<v
 
   res.json(results);
 });
+
+// ─── Get one ──────────────────────────────────────────────────────────────────
 
 router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -136,16 +159,10 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
 
   if (user.role === "instructor") {
     const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
-    if (!instructor || a.instructorId !== instructor.id) {
-      res.status(403).json({ error: "Access denied" });
-      return;
-    }
+    if (!instructor || a.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
   } else if (user.role === "student") {
     const [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
-    if (!student || a.studentId !== student.id) {
-      res.status(403).json({ error: "Access denied" });
-      return;
-    }
+    if (!student || a.studentId !== student.id) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
   const results = await db.select({
@@ -159,7 +176,7 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
   const [student] = await db.select({ fullName: studentsTable.fullName }).from(studentsTable).where(eq(studentsTable.id, a.studentId));
   const [instructor] = await db.select({ fullName: instructorsTable.fullName }).from(instructorsTable).where(eq(instructorsTable.id, a.instructorId));
 
-  await logAudit({ actorId: user.id, action: "view_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId });
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "view_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
 
   res.json({
     ...formatAssessment(a),
@@ -169,32 +186,59 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
   });
 });
 
+// ─── Update ───────────────────────────────────────────────────────────────────
+
 router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
 
-  const [a] = await db.select({ instructorId: assessmentsTable.instructorId }).from(assessmentsTable).where(eq(assessmentsTable.id, id));
+  const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, id));
   if (!a) { res.status(404).json({ error: "Not found" }); return; }
 
   if (user.role === "instructor") {
     const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
-    if (!instructor || a.instructorId !== instructor.id) {
-      res.status(403).json({ error: "Access denied" });
+    if (!instructor || a.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
+  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, pedalOperator, acknowledgeBriefing } = req.body;
+
+  // Scan any updated free-text fields
+  const textsToScan = [confidenceNote, focusAreasNext].filter(Boolean).join(" ");
+  if (textsToScan) {
+    const scan = await scanContent({
+      text: textsToScan,
+      contentType: "assessment_note",
+      contentId: id,
+      actorUserId: user.id,
+      studentId: a.studentId,
+      route: req.originalUrl,
+    });
+    if (scan.shouldBlock) {
+      res.status(451).json({ error: "Content blocked by moderation policy", moderationCaseId: scan.moderationCaseId });
       return;
     }
   }
 
-  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath } = req.body;
   const updates: any = {};
   if (confidenceNote !== undefined) updates.confidenceNote = confidenceNote;
   if (focusAreasNext !== undefined) updates.focusAreasNext = focusAreasNext;
   if (status) updates.status = status;
   if (durationMinutes) updates.durationMinutes = durationMinutes;
   if (routePath !== undefined) updates.routePath = routePath;
+  if (pedalOperator && ["student", "instructor", "shared"].includes(pedalOperator)) {
+    updates.pedalOperator = pedalOperator;
+  }
+  if (acknowledgeBriefing === true && !a.preLessonBriefingAcknowledgedAt) {
+    updates.preLessonBriefingAcknowledgedAt = new Date();
+    updates.preLessonBriefingAcknowledgedBy = user.id;
+  }
+
   const [updated] = await db.update(assessmentsTable).set(updates).where(eq(assessmentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatAssessment(updated));
 });
+
+// ─── Maneuver results ─────────────────────────────────────────────────────────
 
 router.post("/assessments/:id/results", requireAuth, async (req: any, res): Promise<void> => {
   const assessmentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -206,13 +250,24 @@ router.post("/assessments/:id/results", requireAuth, async (req: any, res): Prom
     const [assessment] = await db.select({ instructorId: assessmentsTable.instructorId }).from(assessmentsTable).where(eq(assessmentsTable.id, assessmentId));
     const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
     if (!assessment || !instructor || assessment.instructorId !== instructor.id) {
-      res.status(403).json({ error: "Access denied" });
-      return;
+      res.status(403).json({ error: "Access denied" }); return;
     }
   }
 
   const saved = [];
   for (const r of results) {
+    // Scan per-maneuver notes
+    if (r.notes) {
+      const scan = await scanContent({
+        text: r.notes,
+        contentType: "assessment_note",
+        contentId: assessmentId,
+        actorUserId: user.id,
+        route: req.originalUrl,
+      });
+      if (scan.shouldBlock) continue; // skip quarantined result note but don't fail whole batch
+    }
+
     const existing = await db.select().from(maneuverResultsTable)
       .where(and(eq(maneuverResultsTable.assessmentId, assessmentId), eq(maneuverResultsTable.maneuverId, r.maneuverId)));
     const lat = (r.lat != null && isFinite(r.lat)) ? r.lat : null;
@@ -229,17 +284,27 @@ router.post("/assessments/:id/results", requireAuth, async (req: any, res): Prom
       saved.push(created);
     }
   }
-  await logAudit({ actorId: user.id, action: "save_maneuver_results", resourceType: "assessment", resourceId: assessmentId });
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "save_maneuver_results", resourceType: "assessment", resourceId: assessmentId }, req);
   res.json(saved);
 });
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function formatAssessment(a: any) {
   return {
-    id: a.id, studentId: a.studentId, instructorId: a.instructorId,
-    studentName: null, instructorName: null,
-    lessonDate: a.lessonDate, durationMinutes: a.durationMinutes,
-    status: a.status, confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext,
+    id: a.id,
+    studentId: a.studentId,
+    instructorId: a.instructorId,
+    studentName: null,
+    instructorName: null,
+    lessonDate: a.lessonDate,
+    durationMinutes: a.durationMinutes,
+    status: a.status,
+    pedalOperator: a.pedalOperator ?? "student",
+    confidenceNote: a.confidenceNote ?? null,
+    focusAreasNext: a.focusAreasNext ?? null,
     routePath: a.routePath ?? null,
+    preLessonBriefingAcknowledgedAt: a.preLessonBriefingAcknowledgedAt ?? null,
     createdAt: a.createdAt,
   };
 }
