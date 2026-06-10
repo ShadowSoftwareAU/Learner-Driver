@@ -1481,6 +1481,35 @@ export interface ToiletMyRating {
   comment?: string | null;
 }
 
+export interface GovToilet {
+  id: number;
+  /** @nullable */
+  govId?: string | null;
+  name: string;
+  lat: number;
+  lng: number;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  suburb?: string | null;
+  /** @nullable */
+  address?: string | null;
+  male: boolean;
+  female: boolean;
+  unisex: boolean;
+  wheelchairAccessible: boolean;
+  isOpen24h: boolean;
+  /** @nullable */
+  openingHours?: string | null;
+  paymentRequired: boolean;
+  mlakRequired: boolean;
+  babyChange: boolean;
+  showers: boolean;
+  drinkingWater: boolean;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export interface ToiletSummary {
   osmNodeId: number;
   /**
@@ -1680,5 +1709,12 @@ export type CreateModerationExport201 = {
 export type CreateOrUpdateSubscriptionBody = {
   planCode: string;
   schoolId?: number;
+};
+
+export type GetGovNearbyParams = {
+s: number;
+w: number;
+n: number;
+e: number;
 };
 

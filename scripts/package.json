@@ -7,6 +7,7 @@
     "hello": "tsx ./src/hello.ts",
     "seed-demo": "tsx ./src/seed-demo.ts",
     "seed-compliance": "tsx ./src/seed-compliance-criteria.ts",
+    "import-toilets": "tsx ./src/import-toilets.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

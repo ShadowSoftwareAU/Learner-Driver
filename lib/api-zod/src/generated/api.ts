@@ -1946,6 +1946,41 @@ export const ResetDemoDataResponse = zod.object({
 
 
 /**
+ * @summary Get government-sourced public toilets within a bounding box
+ */
+export const GetGovNearbyQueryParams = zod.object({
+  "s": zod.coerce.number(),
+  "w": zod.coerce.number(),
+  "n": zod.coerce.number(),
+  "e": zod.coerce.number()
+})
+
+export const GetGovNearbyResponseItem = zod.object({
+  "id": zod.number(),
+  "govId": zod.string().nullish(),
+  "name": zod.string(),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "state": zod.string().nullish(),
+  "suburb": zod.string().nullish(),
+  "address": zod.string().nullish(),
+  "male": zod.boolean(),
+  "female": zod.boolean(),
+  "unisex": zod.boolean(),
+  "wheelchairAccessible": zod.boolean(),
+  "isOpen24h": zod.boolean(),
+  "openingHours": zod.string().nullish(),
+  "paymentRequired": zod.boolean(),
+  "mlakRequired": zod.boolean(),
+  "babyChange": zod.boolean(),
+  "showers": zod.boolean(),
+  "drinkingWater": zod.boolean(),
+  "notes": zod.string().nullish()
+})
+export const GetGovNearbyResponse = zod.array(GetGovNearbyResponseItem)
+
+
+/**
  * @summary Get community cleanliness summary for a public toilet
  */
 export const GetToiletSummaryParams = zod.object({

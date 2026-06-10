@@ -15,7 +15,7 @@ import { Loader2, MapPin, Layers, Check, ChevronsUpDown, X, Toilet } from "lucid
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useListManeuvers, getGetManeuverHeatmapQueryOptions } from "@workspace/api-client-react";
+import { useListManeuvers, getGetManeuverHeatmapQueryOptions, getGovNearby } from "@workspace/api-client-react";
 import { ToiletRatingWidget } from "@/components/ToiletRatingWidget";
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -33,7 +33,8 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 interface BathroomFeature {
-  id: number;
+  id: number;          // positive = OSM node ID; negative = gov DB id (no OSM record)
+  source: "osm" | "gov";
   lat: number;
   lng: number;
   name: string;
@@ -41,6 +42,12 @@ interface BathroomFeature {
   wheelchair: boolean;
   openingHours?: string;
   qualityScore: number;
+  // Gov-sourced extras
+  babyChange?: boolean;
+  showers?: boolean;
+  drinkingWater?: boolean;
+  mlakRequired?: boolean;
+  address?: string;
 }
 
 function bathroomColor(score: number) {
@@ -78,9 +85,10 @@ function useBathroomData(enabled: boolean) {
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const cacheRef = useRef<Map<number, BathroomFeature>>(new Map());
+  // Separate caches for OSM and gov records so dedup can compare them cleanly
+  const osmCacheRef = useRef<Map<number, BathroomFeature>>(new Map());
+  const govCacheRef = useRef<Map<number, BathroomFeature>>(new Map());
   // Update synchronously during render so triggerFetch always sees the latest value
-  // (a useEffect would run after child effects, causing a race on initial toggle-on)
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   // Remember the last bounds so we can re-fire when the toggle turns on
@@ -91,16 +99,16 @@ function useBathroomData(enabled: boolean) {
     if (!enabled) {
       if (timerRef.current) clearTimeout(timerRef.current);
       if (abortRef.current) abortRef.current.abort();
-      cacheRef.current.clear();
+      osmCacheRef.current.clear();
+      govCacheRef.current.clear();
       setBathrooms([]);
       setLoading(false);
     }
   }, [enabled]);
 
-  // Stable callback — never changes identity, so it is safe to pass as a prop
-  // without causing downstream re-renders or effect re-runs.
+  // Stable callback — never changes identity
   const triggerFetch = useCallback((bounds: LatLngBounds) => {
-    lastBoundsRef.current = bounds; // always record, even when disabled
+    lastBoundsRef.current = bounds;
     if (!enabledRef.current) return;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
@@ -108,51 +116,102 @@ function useBathroomData(enabled: boolean) {
       abortRef.current = new AbortController();
       const { signal } = abortRef.current;
       setLoading(true);
-      try {
-        const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
-        const query = `[out:json];node["amenity"="toilets"](${s},${w},${n},${e});out;`;
-        const res = await fetch("https://overpass-api.de/api/interpreter", {
-          method: "POST",
-          body: query,
-          headers: { "Content-Type": "text/plain" },
-          signal,
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const incoming: BathroomFeature[] = (data.elements ?? [])
-          .filter((el: any) => el.lat != null && el.lon != null)
-          .map((el: any) => {
+      const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
+
+      await Promise.allSettled([
+        // ── OSM via Overpass (nodes + ways + relations) ──────────────────────
+        (async () => {
+          // Include ways/relations so we capture toilet blocks, not just nodes.
+          // `out center tags;` returns the centroid for non-node elements.
+          const query =
+            `[out:json][timeout:25];` +
+            `(node["amenity"="toilets"](${s},${w},${n},${e});` +
+            `way["amenity"="toilets"](${s},${w},${n},${e});` +
+            `relation["amenity"="toilets"](${s},${w},${n},${e}););` +
+            `out center tags;`;
+          const res = await fetch("https://overpass-api.de/api/interpreter", {
+            method: "POST",
+            body: query,
+            headers: { "Content-Type": "text/plain" },
+            signal,
+          });
+          if (!res.ok) return;
+          const data = await res.json();
+          for (const el of (data.elements ?? [])) {
+            // nodes: el.lat / el.lon; ways + relations: el.center.lat / el.center.lon
+            const lat: number | undefined = el.lat ?? el.center?.lat;
+            const lon: number | undefined = el.lon ?? el.center?.lon;
+            if (lat == null || lon == null) continue;
             const t = el.tags ?? {};
             let score = 0;
             if (t.wheelchair === "yes") score++;
             if (t.fee !== "yes") score++;
             if (t.opening_hours) score++;
             if (t.name || t.operator) score++;
-            return {
+            osmCacheRef.current.set(el.id as number, {
               id: el.id as number,
-              lat: el.lat as number,
-              lng: el.lon as number,
+              source: "osm",
+              lat,
+              lng: lon,
               name: t.name || t.operator || "Public Toilet",
               fee: t.fee === "yes",
               wheelchair: t.wheelchair === "yes",
               openingHours: t.opening_hours as string | undefined,
               qualityScore: score,
-            };
-          });
-        for (const f of incoming) cacheRef.current.set(f.id, f);
-        setBathrooms(Array.from(cacheRef.current.values()));
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          // keep existing markers visible on real errors
-        }
-      } finally {
-        if (!signal.aborted) setLoading(false);
+            });
+          }
+        })(),
+
+        // ── Government dataset (National Public Toilet Map) ──────────────────
+        (async () => {
+          try {
+            const govData = await getGovNearby({ s, w, n, e }, { signal });
+            // Rebuild gov cache for this viewport (govNearby returns all in bbox)
+            govCacheRef.current.clear();
+            for (const g of govData) {
+              let score = 0;
+              if (g.wheelchairAccessible) score++;
+              if (!g.paymentRequired) score++;
+              if (g.isOpen24h || g.openingHours) score++;
+              if (g.name) score++;
+              govCacheRef.current.set(-g.id, {
+                id: -g.id,
+                source: "gov",
+                lat: g.lat,
+                lng: g.lng,
+                name: g.name,
+                fee: g.paymentRequired,
+                wheelchair: g.wheelchairAccessible,
+                openingHours: g.isOpen24h ? "24 hours" : (g.openingHours ?? undefined),
+                qualityScore: score,
+                babyChange: g.babyChange,
+                showers: g.showers,
+                drinkingWater: g.drinkingWater,
+                mlakRequired: g.mlakRequired,
+                address: g.address ?? undefined,
+              });
+            }
+          } catch {
+            // Gov fetch may fail if the dataset hasn't been imported yet — silent fallback
+          }
+        })(),
+      ]);
+
+      if (!signal.aborted) {
+        // Merge OSM + gov, dropping gov records that have an OSM equivalent nearby.
+        // "nearby" = within ~75m (≈0.0007° at Brisbane latitude)
+        const osmArr = Array.from(osmCacheRef.current.values());
+        const govArr = Array.from(govCacheRef.current.values());
+        const deduped = govArr.filter(g =>
+          !osmArr.some(o => Math.abs(o.lat - g.lat) < 0.0007 && Math.abs(o.lng - g.lng) < 0.0007)
+        );
+        setBathrooms([...osmArr, ...deduped]);
+        setLoading(false);
       }
     }, 600);
-  }, []); // intentionally empty — reads enabledRef, never stale
+  }, []); // intentionally empty — reads refs, never stale
 
   // When the toggle turns on, re-fire immediately with the last known bounds.
-  // triggerFetch must be declared above this effect.
   useEffect(() => {
     if (enabled && lastBoundsRef.current) {
       triggerFetch(lastBoundsRef.current);
@@ -450,16 +509,43 @@ export default function HeatmapPage() {
                       }}
                     >
                       <Popup>
-                        <ToiletRatingWidget
-                          osmId={b.id}
-                          lat={b.lat}
-                          lng={b.lng}
-                          name={b.name}
-                          fee={b.fee}
-                          wheelchair={b.wheelchair}
-                          openingHours={b.openingHours}
-                          qualityScore={b.qualityScore}
-                        />
+                        {b.source === "osm" ? (
+                          <ToiletRatingWidget
+                            osmId={b.id}
+                            lat={b.lat}
+                            lng={b.lng}
+                            name={b.name}
+                            fee={b.fee}
+                            wheelchair={b.wheelchair}
+                            openingHours={b.openingHours}
+                            qualityScore={b.qualityScore}
+                          />
+                        ) : (
+                          <div style={{ minWidth: 200, maxWidth: 240, fontFamily: "inherit" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                              <span style={{ fontWeight: 700, fontSize: 13, flex: 1 }}>{b.name}</span>
+                              <span style={{ fontSize: 10, background: "#0ea5e9", color: "#fff", borderRadius: 4, padding: "1px 5px", whiteSpace: "nowrap" }}>Gov data</span>
+                            </div>
+                            {b.address && <p style={{ fontSize: 11, color: "#6b7280", margin: "0 0 4px" }}>{b.address}</p>}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 3, marginBottom: 6 }}>
+                              {b.wheelchair && <span style={{ fontSize: 10, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0", borderRadius: 4, padding: "1px 5px" }}>♿ Accessible</span>}
+                              {b.fee && <span style={{ fontSize: 10, background: "#fef9c3", color: "#854d0e", border: "1px solid #fde047", borderRadius: 4, padding: "1px 5px" }}>Paid</span>}
+                              {b.mlakRequired && <span style={{ fontSize: 10, background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca", borderRadius: 4, padding: "1px 5px" }}>MLAK key</span>}
+                              {b.babyChange && <span style={{ fontSize: 10, background: "#eff6ff", color: "#1e40af", border: "1px solid #bfdbfe", borderRadius: 4, padding: "1px 5px" }}>👶 Baby change</span>}
+                              {b.showers && <span style={{ fontSize: 10, background: "#f5f3ff", color: "#4c1d95", border: "1px solid #ddd6fe", borderRadius: 4, padding: "1px 5px" }}>🚿 Showers</span>}
+                              {b.drinkingWater && <span style={{ fontSize: 10, background: "#ecfeff", color: "#164e63", border: "1px solid #a5f3fc", borderRadius: 4, padding: "1px 5px" }}>💧 Drinking water</span>}
+                            </div>
+                            {b.openingHours && <p style={{ fontSize: 11, color: "#374151", margin: "0 0 6px" }}>🕐 {b.openingHours}</p>}
+                            <a
+                              href={`https://maps.google.com/?q=${b.lat},${b.lng}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ fontSize: 11, color: "#0ea5e9", textDecoration: "none" }}
+                            >
+                              Google Maps ↗
+                            </a>
+                          </div>
+                        )}
                       </Popup>
                     </CircleMarker>
                   ))}
@@ -497,7 +583,7 @@ export default function HeatmapPage() {
             </div>
             {showBathrooms && (
               <div className="border-t pt-3">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Public Toilet Quality (OSM data)</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Public Toilet Quality (OSM + Gov data)</p>
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { color: "#0891b2", label: "Well documented (3–4 tags)" },

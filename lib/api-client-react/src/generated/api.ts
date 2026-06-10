@@ -45,9 +45,11 @@ import type {
   EntitlementSummary,
   EscalateModerationCaseBody,
   GenerateViewerCode200,
+  GetGovNearbyParams,
   GetManeuverHeatmapParams,
   GetModerationCasesParams,
   GetUnreadNotificationCount200,
+  GovToilet,
   HandoverNote,
   HandoverNoteInput,
   HandoverView,
@@ -6541,6 +6543,90 @@ export const useResetDemoData = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getResetDemoDataMutationOptions(options));
     }
+
+export const getGetGovNearbyUrl = (params: GetGovNearbyParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/toilets/gov-nearby?${stringifiedParams}` : `/api/toilets/gov-nearby`
+}
+
+/**
+ * @summary Get government-sourced public toilets within a bounding box
+ */
+export const getGovNearby = async (params: GetGovNearbyParams, options?: RequestInit): Promise<GovToilet[]> => {
+
+  return customFetch<GovToilet[]>(getGetGovNearbyUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetGovNearbyQueryKey = (params?: GetGovNearbyParams,) => {
+    return [
+    `/api/toilets/gov-nearby`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetGovNearbyQueryOptions = <TData = Awaited<ReturnType<typeof getGovNearby>>, TError = ErrorType<unknown>>(params: GetGovNearbyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGovNearby>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetGovNearbyQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getGovNearby>>> = ({ signal }) => getGovNearby(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getGovNearby>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetGovNearbyQueryResult = NonNullable<Awaited<ReturnType<typeof getGovNearby>>>
+export type GetGovNearbyQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get government-sourced public toilets within a bounding box
+ */
+
+export function useGetGovNearby<TData = Awaited<ReturnType<typeof getGovNearby>>, TError = ErrorType<unknown>>(
+ params: GetGovNearbyParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getGovNearby>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetGovNearbyQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetToiletSummaryUrl = (osmId: number,) => {
 

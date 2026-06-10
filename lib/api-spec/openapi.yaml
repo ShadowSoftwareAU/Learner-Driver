@@ -1831,6 +1831,40 @@ paths:
 
   # ─── Toilets ──────────────────────────────────────────────────────────────
 
+  /toilets/gov-nearby:
+    get:
+      operationId: getGovNearby
+      tags: [toilets]
+      summary: Get government-sourced public toilets within a bounding box
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: s
+          in: query
+          required: true
+          schema: { type: number }
+        - name: w
+          in: query
+          required: true
+          schema: { type: number }
+        - name: n
+          in: query
+          required: true
+          schema: { type: number }
+        - name: e
+          in: query
+          required: true
+          schema: { type: number }
+      responses:
+        "200":
+          description: List of government-sourced toilet records in the bounding box
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GovToilet"
+
   /toilets/{osmId}/summary:
     get:
       operationId: getToiletSummary
@@ -3642,6 +3676,51 @@ components:
           minimum: 1
           maximum: 5
         comment:
+          type: ["string", "null"]
+
+    GovToilet:
+      type: object
+      required: [id, name, lat, lng, male, female, unisex, wheelchairAccessible, isOpen24h, paymentRequired, mlakRequired, babyChange, showers, drinkingWater]
+      properties:
+        id:
+          type: integer
+        govId:
+          type: ["string", "null"]
+        name:
+          type: string
+        lat:
+          type: number
+        lng:
+          type: number
+        state:
+          type: ["string", "null"]
+        suburb:
+          type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+        male:
+          type: boolean
+        female:
+          type: boolean
+        unisex:
+          type: boolean
+        wheelchairAccessible:
+          type: boolean
+        isOpen24h:
+          type: boolean
+        openingHours:
+          type: ["string", "null"]
+        paymentRequired:
+          type: boolean
+        mlakRequired:
+          type: boolean
+        babyChange:
+          type: boolean
+        showers:
+          type: boolean
+        drinkingWater:
+          type: boolean
+        notes:
           type: ["string", "null"]
 
     ToiletSummary:

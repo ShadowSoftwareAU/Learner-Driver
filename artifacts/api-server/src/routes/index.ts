@@ -25,6 +25,7 @@ import billingRouter from "./billing";
 import demoRouter from "./demo";
 import bookingApprovalsRouter from "./booking-approvals";
 import toiletsRouter from "./toilets";
+import govToiletsRouter from "./gov-toilets";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(billingRouter);
 router.use(demoRouter);
 router.use(bookingApprovalsRouter);
 router.use(toiletsRouter);
+router.use(govToiletsRouter);
 
 export default router;
