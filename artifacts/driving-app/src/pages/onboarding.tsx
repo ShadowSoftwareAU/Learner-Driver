@@ -184,7 +184,7 @@ export default function Onboarding() {
               <div className="space-y-3">
                 <PhotoCaptureField
                   label="Profile photo"
-                  description="Used as your profile picture across DriveTrack."
+                  description="Used as your profile picture across Learner Log."
                   value={headshotPath}
                   onChange={setHeadshotPath}
                   rounded
@@ -235,7 +235,7 @@ export default function Onboarding() {
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 p-6">
       <div className="max-w-3xl w-full">
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">Welcome to DriveTrack</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">Welcome to Learner Log</h1>
           <p className="text-muted-foreground text-lg">Select your role to get started.</p>
         </div>
 

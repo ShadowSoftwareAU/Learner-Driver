@@ -20,7 +20,7 @@ function getKey(): Buffer {
     throw new Error("FIELD_ENCRYPTION_KEY must be set in production");
   }
   // Dev-only deterministic fallback — never store real PII with this key
-  return Buffer.alloc(32, "drivetrack-dev-key-do-not-use-!!");
+  return Buffer.alloc(32, "learnerlog-dev-key-do-not-use-!!");
 }
 
 /**

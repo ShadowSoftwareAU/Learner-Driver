@@ -70,7 +70,7 @@ export default function NotificationPreferencesPage() {
             <h1 className="text-2xl font-bold tracking-tight">Notification Preferences</h1>
           </div>
           <p className="text-muted-foreground mt-1">
-            Control how and when DriveTrack contacts you.
+            Control how and when Learner Log contacts you.
           </p>
         </div>
 
@@ -95,7 +95,7 @@ export default function NotificationPreferencesPage() {
             <Row
               id="inAppEnabled"
               label="In-app notifications"
-              description="Alerts inside the DriveTrack app"
+              description="Alerts inside the Learner Log app"
               checked={prefs.inAppEnabled ?? true}
             />
           </CardContent>

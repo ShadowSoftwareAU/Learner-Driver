@@ -8,9 +8,9 @@ export default function Landing() {
       <header className="h-16 flex items-center justify-between px-6 md:px-12 border-b border-border bg-white sticky top-0 z-10">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            DT
+            LL
           </div>
-          <span className="font-bold text-xl tracking-tight text-foreground">DriveTrack</span>
+          <span className="font-bold text-xl tracking-tight text-foreground">Learner Log</span>
         </div>
         <div className="flex items-center gap-4">
           <Link href="/sign-in">
@@ -68,7 +68,7 @@ export default function Landing() {
       </main>
 
       <footer className="py-8 text-center text-muted-foreground text-sm border-t border-border">
-        <p>&copy; {new Date().getFullYear()} DriveTrack. Professional Driving Assessment.</p>
+        <p>&copy; {new Date().getFullYear()} Learner Log. Professional Driving Assessment.</p>
       </footer>
     </div>
   );

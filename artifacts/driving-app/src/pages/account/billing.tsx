@@ -54,7 +54,7 @@ export default function BillingPage() {
             <CreditCard className="w-5 h-5 text-primary" />
             <h1 className="text-2xl font-bold tracking-tight">Billing & Plan</h1>
           </div>
-          <p className="text-muted-foreground mt-1">Manage your DriveTrack subscription.</p>
+          <p className="text-muted-foreground mt-1">Manage your Learner Log subscription.</p>
         </div>
 
         <Card>

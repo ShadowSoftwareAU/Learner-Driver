@@ -1,4 +1,4 @@
-# DriveTrack
+# Learner Log
 
 A full-stack driving school assessment platform for Australian learner drivers, supporting three roles: Student, Instructor, and Admin.
 

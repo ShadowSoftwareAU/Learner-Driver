@@ -307,7 +307,7 @@ export default function InstructorVerification() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Instructor Verification</h1>
           <p className="text-muted-foreground mt-1">
-            Submit your credentials to be approved to accept bookings on DriveTrack.
+            Submit your credentials to be approved to accept bookings on Learner Log.
           </p>
         </div>
 

@@ -157,7 +157,7 @@ export default function InstructorStudentNew() {
             <CardContent className="space-y-3">
               <PhotoCaptureField
                 label="Student headshot"
-                description="Used as the student's profile picture across DriveTrack."
+                description="Used as the student's profile picture across Learner Log."
                 value={headshotPath}
                 onChange={setHeadshotPath}
                 rounded

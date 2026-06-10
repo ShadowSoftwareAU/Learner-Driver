@@ -8,7 +8,7 @@
  * Uses the native IDBDatabase API directly — no external dependency.
  */
 
-const DB_NAME = "drivetrack_lessons";
+const DB_NAME = "learnerlog_lessons";
 const STORE_NAME = "drafts";
 const DRAFT_KEY = "active";
 
