@@ -452,6 +452,8 @@ export default function HeatmapPage() {
                       <Popup>
                         <ToiletRatingWidget
                           osmId={b.id}
+                          lat={b.lat}
+                          lng={b.lng}
                           name={b.name}
                           fee={b.fee}
                           wheelchair={b.wheelchair}

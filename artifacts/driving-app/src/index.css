@@ -296,3 +296,12 @@
     inset: -1px;
   }
 }
+
+/* Leaflet: suppress the browser focus ring that appears on the map container
+   after it receives keyboard focus (e.g. after clicking to pan or zoom).
+   Leaflet adds tabindex="0" for keyboard nav; browsers default to a blue
+   outline on :focus which bleeds out of the card's overflow:hidden boundary. */
+.leaflet-container:focus,
+.leaflet-container:focus-visible {
+  outline: none;
+}

@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface ToiletRatingWidgetProps {
   osmId: number;
+  lat: number;
+  lng: number;
   name: string;
   fee: boolean;
   wheelchair: boolean;
@@ -63,6 +65,8 @@ const CLEANLINESS_LABELS: Record<number, string> = {
 
 export function ToiletRatingWidget({
   osmId,
+  lat,
+  lng,
   name,
   fee,
   wheelchair,
@@ -214,9 +218,17 @@ export function ToiletRatingWidget({
         </div>
       )}
 
-      <p style={{ fontSize: 9, color: "#d1d5db", marginTop: 8 }}>
-        OSM · quality score {qualityScore}/4
-      </p>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+        <p style={{ fontSize: 9, color: "#d1d5db" }}>OSM · quality score {qualityScore}/4</p>
+        <a
+          href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: 9, color: "#6b7280", textDecoration: "underline" }}
+        >
+          Google Maps ↗
+        </a>
+      </div>
     </div>
   );
 }
