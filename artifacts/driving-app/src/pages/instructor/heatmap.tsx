@@ -84,7 +84,7 @@ function useBathroomData(enabled: boolean, bounds: LatLngBounds | null) {
       setLoading(true);
       try {
         const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
-        const query = `[out:json];node["amenity"="toilets"](${s},${w},${n},${e});out tags;`;
+        const query = `[out:json];node["amenity"="toilets"](${s},${w},${n},${e});out;`;
         const res = await fetch("https://overpass-api.de/api/interpreter", {
           method: "POST",
           body: query,
@@ -371,7 +371,7 @@ export default function HeatmapPage() {
 
                   {showLayer && mapPoints.length > 0 && <FitPoints points={mapPoints} />}
 
-                  {showLayer && filteredPoints.map((p, i) => (
+                  {showLayer && filteredPoints.filter(p => p.lat != null && p.lng != null).map((p, i) => (
                     <CircleMarker
                       key={i}
                       center={[p.lat, p.lng]}
@@ -395,7 +395,7 @@ export default function HeatmapPage() {
                     </CircleMarker>
                   ))}
 
-                  {showBathrooms && bathrooms.map((b, i) => (
+                  {showBathrooms && bathrooms.filter(b => b.lat != null && b.lng != null).map((b, i) => (
                     <CircleMarker
                       key={`bath-${i}`}
                       center={[b.lat, b.lng]}
