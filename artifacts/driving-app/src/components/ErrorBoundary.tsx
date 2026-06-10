@@ -8,6 +8,8 @@
  */
 import { Component, ErrorInfo, ReactNode } from "react";
 
+const BASE_PATH = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
 interface Props {
   children: ReactNode;
   fallback?: ReactNode;
@@ -29,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     const level = this.props.level ?? "unknown";
     try {
-      fetch("/api/errors/client", {
+      fetch(`${BASE_PATH}/api/errors/client`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -174,6 +174,15 @@ export default function HeatmapPage() {
 
   const selectedManeuvers = (maneuvers ?? []).filter(m => selectedIds.includes(m.id.toString()));
 
+  const mapFallback = (
+    <div
+      className="flex items-center justify-center bg-muted/30 rounded-lg text-sm text-muted-foreground"
+      style={{ height: 500 }}
+    >
+      Map is temporarily unavailable. Try refreshing the page.
+    </div>
+  );
+
   return (
     <SidebarLayout>
       <div className="space-y-6 max-w-5xl mx-auto">
@@ -334,17 +343,19 @@ export default function HeatmapPage() {
 
         <Card>
           <CardContent className="p-0 overflow-hidden rounded-xl">
-            {heatmapLoading && selectedIds.length > 0 ? (
-              <div className="flex items-center justify-center" style={{ height: 500 }}>
-                <Loader2 className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <ErrorBoundary level="widget" fallback={
-                <div className="flex items-center justify-center bg-muted/30 rounded-lg text-sm text-muted-foreground" style={{ height: 500 }}>
-                  Map is temporarily unavailable. Try refreshing the page.
+            {/* Keep MapContainer always mounted — unmounting during a Leaflet zoom
+                animation causes "_leaflet_pos" crashes. Instead overlay the spinner. */}
+            <ErrorBoundary level="widget" fallback={mapFallback}>
+            <div style={{ position: "relative", height: 500 }}>
+              {heatmapLoading && selectedIds.length > 0 && (
+                <div
+                  className="flex items-center justify-center bg-background/60 backdrop-blur-sm z-[1000]"
+                  style={{ position: "absolute", inset: 0 }}
+                >
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
-              }>
-              <div style={{ height: 500 }}>
+              )}
+              <div style={{ height: "100%" }}>
                 <MapContainer
                   center={[-27.47, 153.03]}
                   zoom={11}
@@ -418,8 +429,8 @@ export default function HeatmapPage() {
                   ))}
                 </MapContainer>
               </div>
-              </ErrorBoundary>
-            )}
+            </div>
+            </ErrorBoundary>
           </CardContent>
         </Card>
 

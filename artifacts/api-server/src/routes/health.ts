@@ -8,4 +8,10 @@ router.get("/healthz", (_req, res) => {
   res.json(data);
 });
 
+router.post("/errors/client", (req, res) => {
+  const { level, message, stack, componentStack } = req.body ?? {};
+  req.log.warn({ level, message, stack, componentStack }, "client error boundary report");
+  res.status(204).end();
+});
+
 export default router;
