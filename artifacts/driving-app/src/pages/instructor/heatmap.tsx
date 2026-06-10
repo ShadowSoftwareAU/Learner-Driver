@@ -32,6 +32,7 @@ const LEVEL_LABEL: Record<string, string> = {
 };
 
 interface BathroomFeature {
+  id: number;
   lat: number;
   lng: number;
   name: string;
@@ -75,12 +76,25 @@ function useBathroomData(enabled: boolean, bounds: LatLngBounds | null) {
   const [bathrooms, setBathrooms] = useState<BathroomFeature[]>([]);
   const [loading, setLoading] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  // Node-ID keyed cache so panning accumulates results instead of replacing them
+  const cacheRef = useRef<Map<number, BathroomFeature>>(new Map());
 
   useEffect(() => {
-    if (!enabled || !bounds) { setBathrooms([]); return; }
+    if (!enabled || !bounds) {
+      cacheRef.current.clear();
+      setBathrooms([]);
+      setLoading(false);
+      return;
+    }
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
+      // Cancel any in-flight request immediately
+      if (abortRef.current) abortRef.current.abort();
+      abortRef.current = new AbortController();
+      const { signal } = abortRef.current;
+
       setLoading(true);
       try {
         const s = bounds.getSouth(), w = bounds.getWest(), n = bounds.getNorth(), e = bounds.getEast();
@@ -89,32 +103,42 @@ function useBathroomData(enabled: boolean, bounds: LatLngBounds | null) {
           method: "POST",
           body: query,
           headers: { "Content-Type": "text/plain" },
+          signal,
         });
+        if (!res.ok) return;
         const data = await res.json();
-        const features: BathroomFeature[] = (data.elements ?? []).map((el: any) => {
-          const t = el.tags ?? {};
-          let score = 0;
-          if (t.wheelchair === "yes") score++;
-          if (t.fee !== "yes") score++;
-          if (t.opening_hours) score++;
-          if (t.name || t.operator) score++;
-          return {
-            lat: el.lat,
-            lng: el.lon,
-            name: t.name || t.operator || "Public Toilet",
-            fee: t.fee === "yes",
-            wheelchair: t.wheelchair === "yes",
-            openingHours: t.opening_hours,
-            qualityScore: score,
-          };
-        });
-        setBathrooms(features);
-      } catch {
-        setBathrooms([]);
+        const incoming: BathroomFeature[] = (data.elements ?? [])
+          .filter((el: any) => el.lat != null && el.lon != null)
+          .map((el: any) => {
+            const t = el.tags ?? {};
+            let score = 0;
+            if (t.wheelchair === "yes") score++;
+            if (t.fee !== "yes") score++;
+            if (t.opening_hours) score++;
+            if (t.name || t.operator) score++;
+            return {
+              id: el.id as number,
+              lat: el.lat as number,
+              lng: el.lon as number,
+              name: t.name || t.operator || "Public Toilet",
+              fee: t.fee === "yes",
+              wheelchair: t.wheelchair === "yes",
+              openingHours: t.opening_hours as string | undefined,
+              qualityScore: score,
+            };
+          });
+        // Merge new nodes into the cache — don't evict existing ones
+        for (const f of incoming) cacheRef.current.set(f.id, f);
+        setBathrooms(Array.from(cacheRef.current.values()));
+      } catch (err) {
+        // AbortError is expected when user pans before fetch completes; ignore silently
+        if ((err as Error).name !== "AbortError") {
+          // On real errors keep existing markers visible; don't clear
+        }
       } finally {
-        setLoading(false);
+        if (!signal.aborted) setLoading(false);
       }
-    }, 600);
+    }, 1500);
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, [enabled, bounds]);
 
@@ -395,9 +419,9 @@ export default function HeatmapPage() {
                     </CircleMarker>
                   ))}
 
-                  {showBathrooms && bathrooms.filter(b => b.lat != null && b.lng != null).map((b, i) => (
+                  {showBathrooms && bathrooms.filter(b => b.lat != null && b.lng != null).map((b) => (
                     <CircleMarker
-                      key={`bath-${i}`}
+                      key={b.id}
                       center={[b.lat, b.lng]}
                       radius={8}
                       pathOptions={{
