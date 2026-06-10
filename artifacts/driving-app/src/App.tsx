@@ -41,6 +41,7 @@ import AdminHandoverNotes from "@/pages/admin/handover-notes";
 import AdminHandoverNoteDetail from "@/pages/admin/handover-note-detail";
 import AdminFeedback from "@/pages/admin/feedback";
 import StudentFeedback from "@/pages/student/feedback";
+import InstructorDetail from "@/pages/admin/instructor-detail";
 
 import InstructorAvailability from "@/pages/instructor/availability";
 import InstructorZones from "@/pages/instructor/zones";
@@ -411,6 +412,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/audit" component={() => <ProtectedRoute component={AdminAuditLog} />} />
           <Route path="/admin/bookings" component={() => <ProtectedRoute component={AdminBookings} />} />
           <Route path="/admin/verifications" component={() => <ProtectedRoute component={AdminVerifications} />} />
+          <Route path="/admin/instructors/:id" component={() => <ProtectedRoute component={InstructorDetail} />} />
           <Route path="/admin/handover-notes/:id" component={() => <ProtectedRoute component={AdminHandoverNoteDetail} />} />
           <Route path="/admin/handover-notes" component={() => <ProtectedRoute component={AdminHandoverNotes} />} />
           <Route path="/admin/feedback" component={() => <ProtectedRoute component={AdminFeedback} />} />

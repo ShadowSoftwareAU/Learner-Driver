@@ -338,6 +338,10 @@ export const GenerateViewerCodeResponse = zod.object({
 /**
  * @summary List all instructors (admin only)
  */
+export const ListInstructorsQueryParams = zod.object({
+  "trainingCategory": zod.coerce.string().optional().describe('Filter by training category')
+})
+
 export const ListInstructorsResponseItem = zod.object({
   "id": zod.number(),
   "userId": zod.number(),
@@ -349,14 +353,27 @@ export const ListInstructorsResponseItem = zod.object({
   "vehicleModel": zod.string().nullish(),
   "vehicleYear": zod.number().nullish(),
   "qualifications": zod.string().nullish(),
+  "trainingCategories": zod.array(zod.string()).optional(),
+  "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
+  "primaryVehicle": zod.union([zod.object({
+  "id": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string().optional()
 })
 export const ListInstructorsResponse = zod.array(ListInstructorsResponseItem)
 
 
 /**
- * @summary Get instructor profile
+ * @summary Get instructor profile with vehicles and stats
  */
 export const GetInstructorParams = zod.object({
   "id": zod.coerce.number()
@@ -373,9 +390,53 @@ export const GetInstructorResponse = zod.object({
   "vehicleModel": zod.string().nullish(),
   "vehicleYear": zod.number().nullish(),
   "qualifications": zod.string().nullish(),
+  "trainingCategories": zod.array(zod.string()).optional(),
+  "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
+  "primaryVehicle": zod.union([zod.object({
+  "id": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string().optional()
-})
+}).and(zod.object({
+  "vehicles": zod.array(zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "regoExpiry": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "insuranceProvider": zod.string().nullish(),
+  "insurancePolicyNumber": zod.string().nullish(),
+  "insuranceType": zod.string().nullish(),
+  "insuranceExpiry": zod.string().nullish(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})).optional(),
+  "stats": zod.object({
+  "activeStudents": zod.number().optional(),
+  "totalAssessments": zod.number().optional(),
+  "completedAssessments": zod.number().optional(),
+  "totalFeedback": zod.number().optional(),
+  "avgOverall": zod.number().nullish(),
+  "recommendRate": zod.number().nullish()
+}).optional()
+}))
 
 
 /**
@@ -406,8 +467,162 @@ export const UpdateInstructorResponse = zod.object({
   "vehicleModel": zod.string().nullish(),
   "vehicleYear": zod.number().nullish(),
   "qualifications": zod.string().nullish(),
+  "trainingCategories": zod.array(zod.string()).optional(),
+  "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
+  "primaryVehicle": zod.union([zod.object({
+  "id": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional()
+}),zod.null()]).optional(),
   "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary List vehicles registered to this instructor
+ */
+export const ListInstructorVehiclesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListInstructorVehiclesResponseItem = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "regoExpiry": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "insuranceProvider": zod.string().nullish(),
+  "insurancePolicyNumber": zod.string().nullish(),
+  "insuranceType": zod.string().nullish(),
+  "insuranceExpiry": zod.string().nullish(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+export const ListInstructorVehiclesResponse = zod.array(ListInstructorVehiclesResponseItem)
+
+
+/**
+ * @summary Register a new vehicle for this instructor
+ */
+export const AddInstructorVehicleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddInstructorVehicleBody = zod.object({
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']).optional(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().optional(),
+  "colour": zod.string().optional(),
+  "rego": zod.string().optional(),
+  "regoState": zod.string().optional(),
+  "regoExpiry": zod.string().optional(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "insuranceProvider": zod.string().optional(),
+  "insurancePolicyNumber": zod.string().optional(),
+  "insuranceType": zod.string().optional(),
+  "insuranceExpiry": zod.string().optional(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Update a vehicle record
+ */
+export const UpdateInstructorVehicleParams = zod.object({
+  "id": zod.coerce.number(),
+  "vehicleId": zod.coerce.number()
+})
+
+export const UpdateInstructorVehicleBody = zod.object({
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']).optional(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().optional(),
+  "colour": zod.string().optional(),
+  "rego": zod.string().optional(),
+  "regoState": zod.string().optional(),
+  "regoExpiry": zod.string().optional(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "insuranceProvider": zod.string().optional(),
+  "insurancePolicyNumber": zod.string().optional(),
+  "insuranceType": zod.string().optional(),
+  "insuranceExpiry": zod.string().optional(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateInstructorVehicleResponse = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "regoExpiry": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "insuranceProvider": zod.string().nullish(),
+  "insurancePolicyNumber": zod.string().nullish(),
+  "insuranceType": zod.string().nullish(),
+  "insuranceExpiry": zod.string().nullish(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Remove a vehicle record
+ */
+export const DeleteInstructorVehicleParams = zod.object({
+  "id": zod.coerce.number(),
+  "vehicleId": zod.coerce.number()
+})
+
+export const DeleteInstructorVehicleResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Set the training categories this instructor is qualified to teach
+ */
+export const UpdateInstructorTrainingCategoriesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateInstructorTrainingCategoriesBody = zod.object({
+  "trainingCategories": zod.array(zod.string())
+})
+
+export const UpdateInstructorTrainingCategoriesResponse = zod.object({
+  "trainingCategories": zod.array(zod.string()).optional()
 })
 
 
@@ -1036,6 +1251,7 @@ export const ListBookingsResponseItem = zod.object({
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -1063,6 +1279,7 @@ export const CreateBookingBody = zod.object({
   "suburb": zod.string(),
   "postcode": zod.string(),
   "carType": zod.enum(['learner_car', 'trainer_car']).optional(),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().optional()
 })
 
@@ -1086,6 +1303,7 @@ export const GetBookingResponse = zod.object({
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -1111,7 +1329,8 @@ export const UpdateBookingParams = zod.object({
 export const UpdateBookingBody = zod.object({
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']).optional(),
   "instructorNotes": zod.string().optional(),
-  "statusReason": zod.string().optional()
+  "statusReason": zod.string().optional(),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional()
 })
 
 export const UpdateBookingResponse = zod.object({
@@ -1126,6 +1345,7 @@ export const UpdateBookingResponse = zod.object({
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -1160,6 +1380,7 @@ export const ClaimBookingResponse = zod.object({
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
@@ -1206,6 +1427,7 @@ export const MarkNoShowResponse = zod.object({
   "postcode": zod.string(),
   "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
+  "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),

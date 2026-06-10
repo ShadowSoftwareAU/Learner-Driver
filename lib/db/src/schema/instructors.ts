@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -13,6 +13,7 @@ export const instructorsTable = pgTable("instructors", {
   vehicleModel: text("vehicle_model"),
   vehicleYear: integer("vehicle_year"),
   qualifications: text("qualifications"),
+  trainingCategories: jsonb("training_categories").$type<string[]>().default([]),
   // School relationship flags
   // true = sole trader/independent; false = managed by a driving school
   isIndependent: boolean("is_independent").notNull().default(true),

@@ -255,6 +255,34 @@ export interface StudentProgress {
   recentAssessments?: Assessment[];
 }
 
+export type InstructorVehicleSummaryVehicleType = typeof InstructorVehicleSummaryVehicleType[keyof typeof InstructorVehicleSummaryVehicleType];
+
+
+export const InstructorVehicleSummaryVehicleType = {
+  car: 'car',
+  motorbike: 'motorbike',
+  mr_truck: 'mr_truck',
+  hr_truck: 'hr_truck',
+  hc_truck: 'hc_truck',
+  mc_truck: 'mc_truck',
+} as const;
+
+export interface InstructorVehicleSummary {
+  id: number;
+  vehicleType: InstructorVehicleSummaryVehicleType;
+  make: string;
+  model: string;
+  /** @nullable */
+  year?: number | null;
+  /** @nullable */
+  colour?: string | null;
+  /** @nullable */
+  rego?: string | null;
+  /** @nullable */
+  regoState?: string | null;
+  isDualControl?: boolean;
+}
+
 export interface Instructor {
   id: number;
   userId: number;
@@ -272,8 +300,120 @@ export interface Instructor {
   vehicleYear?: number | null;
   /** @nullable */
   qualifications?: string | null;
+  trainingCategories?: string[];
+  isIndependent?: boolean;
   activeStudents?: number;
+  primaryVehicle?: InstructorVehicleSummary | null;
   createdAt?: string;
+}
+
+export type InstructorDetailStats = {
+  activeStudents?: number;
+  totalAssessments?: number;
+  completedAssessments?: number;
+  totalFeedback?: number;
+  /** @nullable */
+  avgOverall?: number | null;
+  /** @nullable */
+  recommendRate?: number | null;
+};
+
+export type InstructorVehicleVehicleType = typeof InstructorVehicleVehicleType[keyof typeof InstructorVehicleVehicleType];
+
+
+export const InstructorVehicleVehicleType = {
+  car: 'car',
+  motorbike: 'motorbike',
+  mr_truck: 'mr_truck',
+  hr_truck: 'hr_truck',
+  hc_truck: 'hc_truck',
+  mc_truck: 'mc_truck',
+} as const;
+
+export type InstructorVehicleStatus = typeof InstructorVehicleStatus[keyof typeof InstructorVehicleStatus];
+
+
+export const InstructorVehicleStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export interface InstructorVehicle {
+  id: number;
+  instructorId: number;
+  vehicleType: InstructorVehicleVehicleType;
+  make: string;
+  model: string;
+  /** @nullable */
+  year?: number | null;
+  /** @nullable */
+  colour?: string | null;
+  /** @nullable */
+  rego?: string | null;
+  /** @nullable */
+  regoState?: string | null;
+  /** @nullable */
+  regoExpiry?: string | null;
+  isDualControl?: boolean;
+  isOwnerOperator?: boolean;
+  isPrimary?: boolean;
+  /** @nullable */
+  insuranceProvider?: string | null;
+  /** @nullable */
+  insurancePolicyNumber?: string | null;
+  /** @nullable */
+  insuranceType?: string | null;
+  /** @nullable */
+  insuranceExpiry?: string | null;
+  status?: InstructorVehicleStatus;
+  /** @nullable */
+  notes?: string | null;
+  createdAt?: string;
+}
+
+export type InstructorDetail = Instructor & {
+  vehicles?: InstructorVehicle[];
+  stats?: InstructorDetailStats;
+};
+
+export type InstructorVehicleInputVehicleType = typeof InstructorVehicleInputVehicleType[keyof typeof InstructorVehicleInputVehicleType];
+
+
+export const InstructorVehicleInputVehicleType = {
+  car: 'car',
+  motorbike: 'motorbike',
+  mr_truck: 'mr_truck',
+  hr_truck: 'hr_truck',
+  hc_truck: 'hc_truck',
+  mc_truck: 'mc_truck',
+} as const;
+
+export type InstructorVehicleInputStatus = typeof InstructorVehicleInputStatus[keyof typeof InstructorVehicleInputStatus];
+
+
+export const InstructorVehicleInputStatus = {
+  active: 'active',
+  inactive: 'inactive',
+} as const;
+
+export interface InstructorVehicleInput {
+  vehicleType?: InstructorVehicleInputVehicleType;
+  make: string;
+  model: string;
+  year?: number;
+  colour?: string;
+  rego?: string;
+  regoState?: string;
+  regoExpiry?: string;
+  isDualControl?: boolean;
+  isOwnerOperator?: boolean;
+  isPrimary?: boolean;
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+  insuranceType?: string;
+  insuranceExpiry?: string;
+  status?: InstructorVehicleInputStatus;
+  notes?: string;
 }
 
 export interface InstructorUpdate {
@@ -681,6 +821,24 @@ export const BookingItemCarType = {
   trainer_car: 'trainer_car',
 } as const;
 
+/**
+ * The licence class category this lesson targets
+ */
+export type BookingItemTrainingCategory = typeof BookingItemTrainingCategory[keyof typeof BookingItemTrainingCategory];
+
+
+export const BookingItemTrainingCategory = {
+  car_learner: 'car_learner',
+  car_probationary: 'car_probationary',
+  q_ride_re: 'q_ride_re',
+  q_ride_r: 'q_ride_r',
+  q_ride_re_to_r: 'q_ride_re_to_r',
+  mr: 'mr',
+  hr: 'hr',
+  hc: 'hc',
+  mc: 'mc',
+} as const;
+
 export interface BookingItem {
   id: number;
   studentId: number;
@@ -695,6 +853,8 @@ export interface BookingItem {
   status: BookingItemStatus;
   /** Whether the student is using their own car or the instructor's */
   carType: BookingItemCarType;
+  /** The licence class category this lesson targets */
+  trainingCategory?: BookingItemTrainingCategory;
   /** @nullable */
   studentNotes?: string | null;
   /** @nullable */
@@ -731,10 +891,26 @@ export const PatchBookingInputStatus = {
   no_show: 'no_show',
 } as const;
 
+export type PatchBookingInputTrainingCategory = typeof PatchBookingInputTrainingCategory[keyof typeof PatchBookingInputTrainingCategory];
+
+
+export const PatchBookingInputTrainingCategory = {
+  car_learner: 'car_learner',
+  car_probationary: 'car_probationary',
+  q_ride_re: 'q_ride_re',
+  q_ride_r: 'q_ride_r',
+  q_ride_re_to_r: 'q_ride_re_to_r',
+  mr: 'mr',
+  hr: 'hr',
+  hc: 'hc',
+  mc: 'mc',
+} as const;
+
 export interface PatchBookingInput {
   status?: PatchBookingInputStatus;
   instructorNotes?: string;
   statusReason?: string;
+  trainingCategory?: PatchBookingInputTrainingCategory;
 }
 
 export type CreateBookingTransmissionType = typeof CreateBookingTransmissionType[keyof typeof CreateBookingTransmissionType];
@@ -754,6 +930,24 @@ export const CreateBookingCarType = {
   trainer_car: 'trainer_car',
 } as const;
 
+/**
+ * The licence class category this lesson targets
+ */
+export type CreateBookingTrainingCategory = typeof CreateBookingTrainingCategory[keyof typeof CreateBookingTrainingCategory];
+
+
+export const CreateBookingTrainingCategory = {
+  car_learner: 'car_learner',
+  car_probationary: 'car_probationary',
+  q_ride_re: 'q_ride_re',
+  q_ride_r: 'q_ride_r',
+  q_ride_re_to_r: 'q_ride_re_to_r',
+  mr: 'mr',
+  hr: 'hr',
+  hc: 'hc',
+  mc: 'mc',
+} as const;
+
 export interface CreateBooking {
   requestedDate: string;
   requestedTime: string;
@@ -762,6 +956,8 @@ export interface CreateBooking {
   suburb: string;
   postcode: string;
   carType?: CreateBookingCarType;
+  /** The licence class category this lesson targets */
+  trainingCategory?: CreateBookingTrainingCategory;
   studentNotes?: string;
 }
 
@@ -1721,6 +1917,25 @@ export interface SchoolFeedbackSettings {
 export type GenerateViewerCode200 = {
   viewerCode: string;
   viewerCodeIssuedAt: string;
+};
+
+export type ListInstructorsParams = {
+/**
+ * Filter by training category
+ */
+trainingCategory?: string;
+};
+
+export type DeleteInstructorVehicle200 = {
+  ok?: boolean;
+};
+
+export type UpdateInstructorTrainingCategoriesBody = {
+  trainingCategories: string[];
+};
+
+export type UpdateInstructorTrainingCategories200 = {
+  trainingCategories?: string[];
 };
 
 export type ListAssessmentsParams = {

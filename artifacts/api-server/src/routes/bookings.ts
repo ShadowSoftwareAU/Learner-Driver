@@ -102,7 +102,7 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
     [student] = await db.insert(studentsTable).values({ userId: user.id, fullName: user.name ?? "Student", email: user.email ?? "" }).returning();
   }
 
-  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType } = req.body;
+  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory } = req.body;
   if (!requestedDate || !requestedTime || !suburb || !postcode) {
     res.status(400).json({ error: "requestedDate, requestedTime, suburb, postcode are required" }); return;
   }
@@ -115,6 +115,7 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
     transmissionType: transmissionType ?? "auto",
     suburb, postcode,
     carType: carType ?? "trainer_car",
+    trainingCategory: trainingCategory ?? "car_learner",
     studentNotes: studentNotes ?? null,
     status: "pending",
     broadcastCount: 0,
@@ -425,9 +426,12 @@ function formatBooking(b: any) {
     durationMinutes: b.durationMinutes, transmissionType: b.transmissionType,
     suburb: b.suburb, postcode: b.postcode, status: b.status,
     carType: b.carType ?? "trainer_car",
+    trainingCategory: b.trainingCategory ?? "car_learner",
     studentNotes: b.studentNotes, instructorNotes: b.instructorNotes,
     broadcastCount: b.broadcastCount, claimedAt: b.claimedAt,
-    confirmedAt: b.confirmedAt, createdAt: b.createdAt,
+    confirmedAt: b.confirmedAt, cancelledAt: b.cancelledAt,
+    noShowMarkedAt: b.noShowMarkedAt, statusReason: b.statusReason,
+    createdAt: b.createdAt,
     studentName: null, instructorName: null,
   };
 }

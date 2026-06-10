@@ -19,3 +19,4 @@ export * from "./permissions";
 export * from "./toilet-ratings";
 export * from "./public-toilets";
 export * from "./feedback";
+export * from "./instructor-vehicles";

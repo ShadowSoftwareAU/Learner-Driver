@@ -38,6 +38,7 @@ import type {
   CreateModerationExport201,
   CreateOrUpdateSubscriptionBody,
   CreateZone,
+  DeleteInstructorVehicle200,
   DemoResetInput,
   DemoResetResult,
   DemoStatus,
@@ -59,8 +60,11 @@ import type {
   HeatmapPoint,
   Instructor,
   InstructorDashboard,
+  InstructorDetail,
   InstructorFeedbackSummary,
   InstructorUpdate,
+  InstructorVehicle,
+  InstructorVehicleInput,
   InstructorVerification,
   InstructorZone,
   Intake,
@@ -74,6 +78,7 @@ import type {
   ListAuditLogsParams,
   ListBookingChangeRequestsParams,
   ListBookingsParams,
+  ListInstructorsParams,
   ListNotificationsParams,
   Maneuver,
   ManeuverResult,
@@ -118,6 +123,8 @@ import type {
   ToiletRateInput,
   ToiletSubmitInput,
   ToiletSummary,
+  UpdateInstructorTrainingCategories200,
+  UpdateInstructorTrainingCategoriesBody,
   UserProfile,
   VerificationStatusResponse,
   VerificationWithDocs,
@@ -1033,20 +1040,27 @@ export const useGenerateViewerCode = <TError = ErrorType<unknown>,
       return useMutation(getGenerateViewerCodeMutationOptions(options));
     }
 
-export const getListInstructorsUrl = () => {
+export const getListInstructorsUrl = (params?: ListInstructorsParams,) => {
+  const normalizedParams = new URLSearchParams();
 
+  Object.entries(params || {}).forEach(([key, value]) => {
 
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
 
+  const stringifiedParams = normalizedParams.toString();
 
-  return `/api/instructors`
+  return stringifiedParams.length > 0 ? `/api/instructors?${stringifiedParams}` : `/api/instructors`
 }
 
 /**
  * @summary List all instructors (admin only)
  */
-export const listInstructors = async ( options?: RequestInit): Promise<Instructor[]> => {
+export const listInstructors = async (params?: ListInstructorsParams, options?: RequestInit): Promise<Instructor[]> => {
 
-  return customFetch<Instructor[]>(getListInstructorsUrl(),
+  return customFetch<Instructor[]>(getListInstructorsUrl(params),
   {
     ...options,
     method: 'GET'
@@ -1059,23 +1073,23 @@ export const listInstructors = async ( options?: RequestInit): Promise<Instructo
 
 
 
-export const getListInstructorsQueryKey = () => {
+export const getListInstructorsQueryKey = (params?: ListInstructorsParams,) => {
     return [
-    `/api/instructors`
+    `/api/instructors`, ...(params ? [params] : [])
     ] as const;
     }
 
 
-export const getListInstructorsQueryOptions = <TData = Awaited<ReturnType<typeof listInstructors>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListInstructorsQueryOptions = <TData = Awaited<ReturnType<typeof listInstructors>>, TError = ErrorType<unknown>>(params?: ListInstructorsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListInstructorsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListInstructorsQueryKey(params);
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstructors>>> = ({ signal }) => listInstructors({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstructors>>> = ({ signal }) => listInstructors(params, { signal, ...requestOptions });
 
 
 
@@ -1093,11 +1107,11 @@ export type ListInstructorsQueryError = ErrorType<unknown>
  */
 
 export function useListInstructors<TData = Awaited<ReturnType<typeof listInstructors>>, TError = ErrorType<unknown>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+ params?: ListInstructorsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructors>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListInstructorsQueryOptions(options)
+  const queryOptions = getListInstructorsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -1119,11 +1133,11 @@ export const getGetInstructorUrl = (id: number,) => {
 }
 
 /**
- * @summary Get instructor profile
+ * @summary Get instructor profile with vehicles and stats
  */
-export const getInstructor = async (id: number, options?: RequestInit): Promise<Instructor> => {
+export const getInstructor = async (id: number, options?: RequestInit): Promise<InstructorDetail> => {
 
-  return customFetch<Instructor>(getGetInstructorUrl(id),
+  return customFetch<InstructorDetail>(getGetInstructorUrl(id),
   {
     ...options,
     method: 'GET'
@@ -1166,7 +1180,7 @@ export type GetInstructorQueryError = ErrorType<unknown>
 
 
 /**
- * @summary Get instructor profile
+ * @summary Get instructor profile with vehicles and stats
  */
 
 export function useGetInstructor<TData = Awaited<ReturnType<typeof getInstructor>>, TError = ErrorType<unknown>>(
@@ -1257,6 +1271,373 @@ export const useUpdateInstructor = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateInstructorMutationOptions(options));
+    }
+
+export const getListInstructorVehiclesUrl = (id: number,) => {
+
+
+
+
+  return `/api/instructors/${id}/vehicles`
+}
+
+/**
+ * @summary List vehicles registered to this instructor
+ */
+export const listInstructorVehicles = async (id: number, options?: RequestInit): Promise<InstructorVehicle[]> => {
+
+  return customFetch<InstructorVehicle[]>(getListInstructorVehiclesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInstructorVehiclesQueryKey = (id: number,) => {
+    return [
+    `/api/instructors/${id}/vehicles`
+    ] as const;
+    }
+
+
+export const getListInstructorVehiclesQueryOptions = <TData = Awaited<ReturnType<typeof listInstructorVehicles>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructorVehicles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInstructorVehiclesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstructorVehicles>>> = ({ signal }) => listInstructorVehicles(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInstructorVehicles>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInstructorVehiclesQueryResult = NonNullable<Awaited<ReturnType<typeof listInstructorVehicles>>>
+export type ListInstructorVehiclesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List vehicles registered to this instructor
+ */
+
+export function useListInstructorVehicles<TData = Awaited<ReturnType<typeof listInstructorVehicles>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructorVehicles>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInstructorVehiclesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddInstructorVehicleUrl = (id: number,) => {
+
+
+
+
+  return `/api/instructors/${id}/vehicles`
+}
+
+/**
+ * @summary Register a new vehicle for this instructor
+ */
+export const addInstructorVehicle = async (id: number,
+    instructorVehicleInput: InstructorVehicleInput, options?: RequestInit): Promise<InstructorVehicle> => {
+
+  return customFetch<InstructorVehicle>(getAddInstructorVehicleUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      instructorVehicleInput,)
+  }
+);}
+
+
+
+
+export const getAddInstructorVehicleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInstructorVehicle>>, TError,{id: number;data: BodyType<InstructorVehicleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addInstructorVehicle>>, TError,{id: number;data: BodyType<InstructorVehicleInput>}, TContext> => {
+
+const mutationKey = ['addInstructorVehicle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addInstructorVehicle>>, {id: number;data: BodyType<InstructorVehicleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addInstructorVehicle(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddInstructorVehicleMutationResult = NonNullable<Awaited<ReturnType<typeof addInstructorVehicle>>>
+    export type AddInstructorVehicleMutationBody = BodyType<InstructorVehicleInput>
+    export type AddInstructorVehicleMutationError = ErrorType<void>
+
+    /**
+ * @summary Register a new vehicle for this instructor
+ */
+export const useAddInstructorVehicle = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addInstructorVehicle>>, TError,{id: number;data: BodyType<InstructorVehicleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addInstructorVehicle>>,
+        TError,
+        {id: number;data: BodyType<InstructorVehicleInput>},
+        TContext
+      > => {
+      return useMutation(getAddInstructorVehicleMutationOptions(options));
+    }
+
+export const getUpdateInstructorVehicleUrl = (id: number,
+    vehicleId: number,) => {
+
+
+
+
+  return `/api/instructors/${id}/vehicles/${vehicleId}`
+}
+
+/**
+ * @summary Update a vehicle record
+ */
+export const updateInstructorVehicle = async (id: number,
+    vehicleId: number,
+    instructorVehicleInput: InstructorVehicleInput, options?: RequestInit): Promise<InstructorVehicle> => {
+
+  return customFetch<InstructorVehicle>(getUpdateInstructorVehicleUrl(id,vehicleId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      instructorVehicleInput,)
+  }
+);}
+
+
+
+
+export const getUpdateInstructorVehicleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstructorVehicle>>, TError,{id: number;vehicleId: number;data: BodyType<InstructorVehicleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInstructorVehicle>>, TError,{id: number;vehicleId: number;data: BodyType<InstructorVehicleInput>}, TContext> => {
+
+const mutationKey = ['updateInstructorVehicle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInstructorVehicle>>, {id: number;vehicleId: number;data: BodyType<InstructorVehicleInput>}> = (props) => {
+          const {id,vehicleId,data} = props ?? {};
+
+          return  updateInstructorVehicle(id,vehicleId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInstructorVehicleMutationResult = NonNullable<Awaited<ReturnType<typeof updateInstructorVehicle>>>
+    export type UpdateInstructorVehicleMutationBody = BodyType<InstructorVehicleInput>
+    export type UpdateInstructorVehicleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a vehicle record
+ */
+export const useUpdateInstructorVehicle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstructorVehicle>>, TError,{id: number;vehicleId: number;data: BodyType<InstructorVehicleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInstructorVehicle>>,
+        TError,
+        {id: number;vehicleId: number;data: BodyType<InstructorVehicleInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateInstructorVehicleMutationOptions(options));
+    }
+
+export const getDeleteInstructorVehicleUrl = (id: number,
+    vehicleId: number,) => {
+
+
+
+
+  return `/api/instructors/${id}/vehicles/${vehicleId}`
+}
+
+/**
+ * @summary Remove a vehicle record
+ */
+export const deleteInstructorVehicle = async (id: number,
+    vehicleId: number, options?: RequestInit): Promise<DeleteInstructorVehicle200> => {
+
+  return customFetch<DeleteInstructorVehicle200>(getDeleteInstructorVehicleUrl(id,vehicleId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteInstructorVehicleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInstructorVehicle>>, TError,{id: number;vehicleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteInstructorVehicle>>, TError,{id: number;vehicleId: number}, TContext> => {
+
+const mutationKey = ['deleteInstructorVehicle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteInstructorVehicle>>, {id: number;vehicleId: number}> = (props) => {
+          const {id,vehicleId} = props ?? {};
+
+          return  deleteInstructorVehicle(id,vehicleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteInstructorVehicleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteInstructorVehicle>>>
+
+    export type DeleteInstructorVehicleMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Remove a vehicle record
+ */
+export const useDeleteInstructorVehicle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteInstructorVehicle>>, TError,{id: number;vehicleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteInstructorVehicle>>,
+        TError,
+        {id: number;vehicleId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteInstructorVehicleMutationOptions(options));
+    }
+
+export const getUpdateInstructorTrainingCategoriesUrl = (id: number,) => {
+
+
+
+
+  return `/api/instructors/${id}/training-categories`
+}
+
+/**
+ * @summary Set the training categories this instructor is qualified to teach
+ */
+export const updateInstructorTrainingCategories = async (id: number,
+    updateInstructorTrainingCategoriesBody: UpdateInstructorTrainingCategoriesBody, options?: RequestInit): Promise<UpdateInstructorTrainingCategories200> => {
+
+  return customFetch<UpdateInstructorTrainingCategories200>(getUpdateInstructorTrainingCategoriesUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateInstructorTrainingCategoriesBody,)
+  }
+);}
+
+
+
+
+export const getUpdateInstructorTrainingCategoriesMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstructorTrainingCategories>>, TError,{id: number;data: BodyType<UpdateInstructorTrainingCategoriesBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInstructorTrainingCategories>>, TError,{id: number;data: BodyType<UpdateInstructorTrainingCategoriesBody>}, TContext> => {
+
+const mutationKey = ['updateInstructorTrainingCategories'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInstructorTrainingCategories>>, {id: number;data: BodyType<UpdateInstructorTrainingCategoriesBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateInstructorTrainingCategories(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInstructorTrainingCategoriesMutationResult = NonNullable<Awaited<ReturnType<typeof updateInstructorTrainingCategories>>>
+    export type UpdateInstructorTrainingCategoriesMutationBody = BodyType<UpdateInstructorTrainingCategoriesBody>
+    export type UpdateInstructorTrainingCategoriesMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Set the training categories this instructor is qualified to teach
+ */
+export const useUpdateInstructorTrainingCategories = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstructorTrainingCategories>>, TError,{id: number;data: BodyType<UpdateInstructorTrainingCategoriesBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInstructorTrainingCategories>>,
+        TError,
+        {id: number;data: BodyType<UpdateInstructorTrainingCategoriesBody>},
+        TContext
+      > => {
+      return useMutation(getUpdateInstructorTrainingCategoriesMutationOptions(options));
     }
 
 export const getListManeuversUrl = () => {

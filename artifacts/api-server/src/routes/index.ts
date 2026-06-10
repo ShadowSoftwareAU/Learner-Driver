@@ -28,6 +28,7 @@ import toiletsRouter from "./toilets";
 import govToiletsRouter from "./gov-toilets";
 import feedbackRouter from "./feedback";
 import handoverAuditRouter from "./handover-audit";
+import instructorVehiclesRouter from "./instructor-vehicles";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(toiletsRouter);
 router.use(govToiletsRouter);
 router.use(feedbackRouter);
 router.use(handoverAuditRouter);
+router.use(instructorVehiclesRouter);
 
 export default router;

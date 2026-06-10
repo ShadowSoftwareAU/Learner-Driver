@@ -285,6 +285,11 @@ paths:
       operationId: listInstructors
       tags: [instructors]
       summary: List all instructors (admin only)
+      parameters:
+        - name: trainingCategory
+          in: query
+          schema: { type: string }
+          description: Filter by training category
       responses:
         "200":
           description: List of instructors
@@ -299,7 +304,7 @@ paths:
     get:
       operationId: getInstructor
       tags: [instructors]
-      summary: Get instructor profile
+      summary: Get instructor profile with vehicles and stats
       parameters:
         - name: id
           in: path
@@ -312,7 +317,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Instructor"
+                $ref: "#/components/schemas/InstructorDetail"
 
     patch:
       operationId: updateInstructor
@@ -337,6 +342,133 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Instructor"
+
+  /instructors/{id}/vehicles:
+    get:
+      operationId: listInstructorVehicles
+      tags: [instructors]
+      summary: List vehicles registered to this instructor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstructorVehicle"
+    post:
+      operationId: addInstructorVehicle
+      tags: [instructors]
+      summary: Register a new vehicle for this instructor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstructorVehicleInput"
+      responses:
+        "201":
+          description: Created vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorVehicle"
+        "400": { description: Validation error }
+        "403": { description: Access denied }
+
+  /instructors/{id}/vehicles/{vehicleId}:
+    patch:
+      operationId: updateInstructorVehicle
+      tags: [instructors]
+      summary: Update a vehicle record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstructorVehicleInput"
+      responses:
+        "200":
+          description: Updated vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorVehicle"
+    delete:
+      operationId: deleteInstructorVehicle
+      tags: [instructors]
+      summary: Remove a vehicle record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+
+  /instructors/{id}/training-categories:
+    patch:
+      operationId: updateInstructorTrainingCategories
+      tags: [instructors]
+      summary: Set the training categories this instructor is qualified to teach
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trainingCategories]
+              properties:
+                trainingCategories:
+                  type: array
+                  items: { type: string }
+      responses:
+        "200":
+          description: Updated categories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trainingCategories:
+                    type: array
+                    items: { type: string }
 
   # ─── Maneuvers / Competencies ─────────────────────────────────────────────────
   /maneuvers:
@@ -2416,9 +2548,155 @@ components:
           type: ["integer", "null"]
         qualifications:
           type: ["string", "null"]
+        trainingCategories:
+          type: array
+          items: { type: string }
+        isIndependent:
+          type: boolean
         activeStudents:
           type: integer
+        primaryVehicle:
+          oneOf:
+            - $ref: "#/components/schemas/InstructorVehicleSummary"
+            - type: "null"
         createdAt:
+          type: string
+
+    InstructorDetail:
+      allOf:
+        - $ref: "#/components/schemas/Instructor"
+        - type: object
+          properties:
+            vehicles:
+              type: array
+              items:
+                $ref: "#/components/schemas/InstructorVehicle"
+            stats:
+              type: object
+              properties:
+                activeStudents:
+                  type: integer
+                totalAssessments:
+                  type: integer
+                completedAssessments:
+                  type: integer
+                totalFeedback:
+                  type: integer
+                avgOverall:
+                  type: ["number", "null"]
+                recommendRate:
+                  type: ["integer", "null"]
+
+    InstructorVehicleSummary:
+      type: object
+      required: [id, vehicleType, make, model]
+      properties:
+        id:
+          type: integer
+        vehicleType:
+          type: string
+          enum: [car, motorbike, mr_truck, hr_truck, hc_truck, mc_truck]
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: ["integer", "null"]
+        colour:
+          type: ["string", "null"]
+        rego:
+          type: ["string", "null"]
+        regoState:
+          type: ["string", "null"]
+        isDualControl:
+          type: boolean
+
+    InstructorVehicle:
+      type: object
+      required: [id, instructorId, vehicleType, make, model]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        vehicleType:
+          type: string
+          enum: [car, motorbike, mr_truck, hr_truck, hc_truck, mc_truck]
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: ["integer", "null"]
+        colour:
+          type: ["string", "null"]
+        rego:
+          type: ["string", "null"]
+        regoState:
+          type: ["string", "null"]
+        regoExpiry:
+          type: ["string", "null"]
+        isDualControl:
+          type: boolean
+        isOwnerOperator:
+          type: boolean
+        isPrimary:
+          type: boolean
+        insuranceProvider:
+          type: ["string", "null"]
+        insurancePolicyNumber:
+          type: ["string", "null"]
+        insuranceType:
+          type: ["string", "null"]
+        insuranceExpiry:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, inactive]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    InstructorVehicleInput:
+      type: object
+      required: [make, model]
+      properties:
+        vehicleType:
+          type: string
+          enum: [car, motorbike, mr_truck, hr_truck, hc_truck, mc_truck]
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: integer
+        colour:
+          type: string
+        rego:
+          type: string
+        regoState:
+          type: string
+        regoExpiry:
+          type: string
+        isDualControl:
+          type: boolean
+        isOwnerOperator:
+          type: boolean
+        isPrimary:
+          type: boolean
+        insuranceProvider:
+          type: string
+        insurancePolicyNumber:
+          type: string
+        insuranceType:
+          type: string
+        insuranceExpiry:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive]
+        notes:
           type: string
 
     InstructorUpdate:
@@ -3016,6 +3294,10 @@ components:
           type: string
           enum: [learner_car, trainer_car]
           description: "Whether the student is using their own car or the instructor's"
+        trainingCategory:
+          type: string
+          enum: [car_learner, car_probationary, q_ride_re, q_ride_r, q_ride_re_to_r, mr, hr, hc, mc]
+          description: "The licence class category this lesson targets"
         studentNotes:
           type: ["string", "null"]
         instructorNotes:
@@ -3051,6 +3333,9 @@ components:
           type: string
         statusReason:
           type: string
+        trainingCategory:
+          type: string
+          enum: [car_learner, car_probationary, q_ride_re, q_ride_r, q_ride_re_to_r, mr, hr, hc, mc]
 
     CreateBooking:
       type: object
@@ -3072,6 +3357,10 @@ components:
         carType:
           type: string
           enum: [learner_car, trainer_car]
+        trainingCategory:
+          type: string
+          enum: [car_learner, car_probationary, q_ride_re, q_ride_r, q_ride_re_to_r, mr, hr, hc, mc]
+          description: "The licence class category this lesson targets"
         studentNotes:
           type: string
 

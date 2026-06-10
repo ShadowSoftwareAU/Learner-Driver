@@ -17,6 +17,7 @@ export const bookingsTable = pgTable("bookings", {
   // status includes no_show for attendance tracking
   status: text("status").notNull().default("pending"), // pending | claimed | confirmed | completed | cancelled | no_show
   carType: text("car_type").notNull().default("trainer_car"), // learner_car | trainer_car
+  trainingCategory: text("training_category").notNull().default("car_learner"), // car_learner | car_probationary | q_ride_re | q_ride_r | mr | hr | hc | mc
   studentNotes: text("student_notes"),
   instructorNotes: text("instructor_notes"),
   broadcastCount: integer("broadcast_count").notNull().default(0),
