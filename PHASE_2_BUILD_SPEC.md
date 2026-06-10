@@ -219,12 +219,27 @@ Add columns:
 - `pedalControlDefault` text nullable if a per-student default is desired, otherwise omit
 - `viewerCode` text unique nullable
 - `viewerCodeIssuedAt` timestamptz nullable
+- `usiEncrypted` text nullable
+- `usiLastVerifiedAt` timestamptz nullable
+- `licenseNumberEncrypted` text nullable
+- `licenseCardNumberEncrypted` text nullable
+- `licenseJurisdiction` text nullable
+- `licenseCountryCode` text not null default `AU`
+- `stateOrProvince` text nullable
+- `postcode` text nullable
+- `dedupeFingerprint` text nullable
+- `possibleDuplicateGroupId` text nullable
+- `identityVerificationStatus` text nullable
+- `identityVerificationProvider` text nullable
+- `identityVerifiedAt` timestamptz nullable
 - `dataClassification` text not null default `restricted`
 
 Notes:
 - use encrypted columns for full medical/allergy values
 - preview fields can hold short masked/plain summary for fast UI display if the team does not want to decrypt on every list render
 - `viewerCode` is the unique student linking code used by parents/mentors/viewers
+- `usiEncrypted` stores the Unique Student Identifier where applicable for Australian flows
+- `dedupeFingerprint` supports duplicate-student detection without exposing raw identifiers broadly
 
 ## 5.3 `assessments` table changes
 Add columns:
@@ -352,10 +367,12 @@ Fields:
 - `viewerUserId` FK `users.id`
 - `studentId` FK `students.id`
 - `schoolId` FK nullable
-- `relationshipType` text nullable, examples `parent | guardian | mentor | support_worker | other`
+- `relationshipType` text nullable, examples `parent | guardian | mentor | support_worker | agency_case_worker | school_mentor | other`
+- `relationshipOrganisationName` text nullable
 - `linkStatus` text default `active`
 - `linkedAt`
 - `linkedByUserId` nullable
+- `accessScope` text default `standard_viewer`
 - unique `(viewerUserId, studentId)`
 
 ## 6.4 `viewer_link_requests`
@@ -382,7 +399,8 @@ Fields:
 - `userId` FK unique
 - `emailEnabled` boolean default `true`
 - `pushEnabled` boolean default `true`
-- `inAppEnabled` boolean default `true`- `smsEnabled` boolean default `false`
+- `inAppEnabled` boolean default `true`
+- `smsEnabled` boolean default `false`
 - `bookingEmails` boolean default `true`
 - `bookingPush` boolean default `true`
 - `safeguardingAlerts` boolean default `true`
@@ -529,6 +547,67 @@ Fields:
 - `notes` text nullable
 - `resetScope` text `full_demo | bookings_only | students_only`
 - `createdAt`
+
+## 6.16 `student_identity_checks`
+Stores document, licence, and student-identity verification outcomes.
+
+Fields:
+- `id`
+- `studentId` FK
+- `schoolId` FK nullable
+- `provider` text
+- `checkType` text `drivers_licence_dvs | document_authenticity | biometric_match | usi_match | duplicate_screen | wwcc | blue_card | other`
+- `status` text `pending | passed | failed | inconclusive | manual_review_required`
+- `requestPayloadJson` jsonb nullable
+- `resultPayloadJson` jsonb nullable
+- `referenceNumber` text nullable
+- `checkedAt` timestamptz nullable
+- `reviewedByUserId` nullable
+- `createdAt`
+
+## 6.17 `duplicate_student_alerts`
+Tracks possible duplicate student records for manual review.
+
+Fields:
+- `id`
+- `studentId` FK
+- `matchedStudentId` FK
+- `schoolId` FK nullable
+- `matchScore` integer
+- `matchReasonsJson` jsonb
+- `status` text `open | confirmed_duplicate | dismissed | merged`
+- `reviewedByUserId` nullable
+- `reviewedAt` timestamptz nullable
+- `createdAt`
+
+## 6.18 `organisation_accounts`
+Supports agencies, public schools, private schools, and future non-driving-school referrers creating or linking instructors and viewers.
+
+Fields:
+- `id`
+- `organisationType` text `driving_school | secondary_school_public | secondary_school_private | agency | government_program | other`
+- `name` text
+- `abn` text nullable
+- `countryCode` text not null default `AU`
+- `stateOrProvince` text nullable
+- `postcode` text nullable
+- `parentSchoolId` FK nullable
+- `contractOwnerUserId` FK nullable
+- `status` text default `active`
+- `createdAt`
+- `updatedAt`
+
+## 6.19 `organisation_instructors`
+Maps instructors to external agencies or secondary schools when they create or sponsor instructor access.
+
+Fields:
+- `id`
+- `organisationId` FK
+- `instructorId` FK
+- `roleWithinOrganisation` text default `instructor`
+- `status` text default `active`
+- `createdAt`
+- unique `(organisationId, instructorId)`
 
 ---
 
@@ -2029,3 +2108,216 @@ If current code conflicts with this spec:
 - do not break current instructor/student flows while adding school, viewer, and super-admin capabilities
 
 This build will be judged not just on functionality, but on safety posture, auditability, multi-tenant correctness, and real-world usability for driving instructors during active lessons.
+
+
+# 29. Student Identity, Duplicate Detection, and Government Validation Layer
+
+## 29.1 Purpose
+Phase 2 must treat student creation and onboarding as a controlled identity workflow, not just a form submit.
+This is required for:
+- child safety
+- duplicate record prevention
+- school and agency trust
+- future government adoption
+- fraud resistance when licence photos are uploaded
+
+## 29.2 Expanded organisation model
+The viewer and instructor model must support more than driving schools.
+Phase 2 should explicitly support:
+- driving schools
+- secondary schools, public
+- secondary schools, private
+- agencies
+- government-funded mentor programs
+- support organisations
+
+These organisations may:
+- create or sponsor instructor accounts
+- create or sponsor viewer accounts
+- link mentors or agency staff to a student in a constrained viewer role
+- operate under a school-owned or government-owned tenancy structure
+
+## 29.3 Viewer role enhancement for schools and agencies
+The `viewer` role must not be limited to parents.
+Supported viewer personas in Phase 2:
+- parent
+- guardian
+- school mentor
+- agency case worker
+- support worker
+- government program mentor
+
+Rules:
+- each viewer link must carry a relationship type
+- each viewer link may optionally carry an organisation name or organisation id
+- viewer data access remains least-privilege
+- agency and school viewers can only see the specific students they are linked to
+- they must never inherit full school-admin visibility
+
+## 29.4 Student duplicate-detection rules
+On student creation or significant identity updates, run duplicate checks before final save.
+
+Known values to compare:
+- full legal name
+- preferred name
+- date of birth
+- mobile number
+- email
+- encrypted USI match
+- encrypted driver licence number match
+- licence card number match where used in jurisdiction
+- postcode
+- state or province
+- country code
+- school or organisation context
+
+System behaviour:
+- exact high-risk matches should block auto-create and require manual review
+- medium-confidence matches should warn and require user confirmation
+- low-confidence matches should allow create but open an internal duplicate alert
+
+## 29.5 Geography-aware duplicate logic
+Because the product may scale globally later, duplicate logic must consider geography, not just identifier strings.
+
+Required logic:
+- compare `countryCode` first
+- compare `stateOrProvince` second
+- compare `postcode` third
+- if licence numbers match but jurisdictions differ widely, mark as `manual_review_required`, not automatic duplicate
+- if licence numbers match and jurisdiction plus postcode are geographically close, raise severity
+- if the country is not Australia, do not assume Australian licence formats or rules
+
+Recommendation:
+Use a weighted duplicate score with explainable reasons, for example:
+- same licence number and same state: +60
+- same DOB and same surname: +20
+- same postcode: +10
+- same mobile/email: +20
+- same USI: +80
+
+Threshold suggestion:
+- 80+: block and require merge/review
+- 50-79: strong warning and duplicate alert
+- 25-49: soft alert only
+
+## 29.6 USI integration posture
+USI should be accounted for in the local data model and onboarding flow because it is a strong Australian education identifier.
+
+However, Replit build should treat USI integration as:
+- Phase 2 architecture-ready
+- optional and feature-flagged
+- Australia-only for now
+
+Requirements:
+- add optional USI field to student onboarding for Australian students
+- store encrypted at rest
+- validate format locally before any external check
+- log whether the USI was user-entered, school-entered, or system-verified
+- design the interface so another country-specific student identifier can be added later
+
+Important product note:
+USI is useful as a dedupe and student identity anchor, but final live integration depends on whether DriveTrack qualifies for access to official USI system capabilities as an authorised training or education participant. Treat external USI verification as a configurable integration, not a hard dependency for launch.
+
+## 29.7 Driver licence verification requirements
+Driver licence validation should happen in layers.
+
+Layer 1, local validation:
+- required fields present
+- jurisdiction selected
+- licence number format rule matched for that jurisdiction where rules exist
+- card number captured for jurisdictions that require it
+- front/back image upload present where required
+
+Layer 2, duplicate and consistency validation:
+- licence number checked against existing students
+- DOB and name checked against entered licence metadata
+- geography-aware duplicate scoring performed
+
+Layer 3, authoritative external validation:
+- validate Australian licence against DVS-capable provider
+- capture result code, provider reference number, and timestamp
+- if result is inconclusive or failed, move to manual review workflow
+
+Layer 4, document authenticity:
+- OCR and document-authenticity checks on front/back image
+- selfie or face match optional later, but architecture should allow it
+
+## 29.8 Recommended provider direction
+For Australia right now, the cleanest direction is to integrate with a provider that already supports the Australian Government Document Verification Service, plus image authenticity and KYC workflow tooling.
+
+Best-fit categories:
+- DVS gateway providers for authoritative licence validation
+- document verification providers with OCR, fake-ID detection, and biometric match
+- WWCC / Blue Card verification providers for instructor or staff safeguarding
+
+Strong options to evaluate:
+- `Global Data` for direct Australian driver licence validation against DVS, including licence number, card number, DOB, and state checks
+- `Sumsub` for broader KYC flow, document authenticity, OCR, biometrics, and announced Australia DVS support
+- `IDV Pacific` for document validation, licence checks, OCR workflow, API access, and manual helpdesk review backup
+- `Australia Post Digital iD`, `GBG greenID`, `Equifax IDMatrix`, or `FrankieOne` if enterprise-grade procurement or government alignment becomes more important than startup speed
+
+Recommendation:
+- for the quickest Phase 2 path, use a DVS-capable provider plus a document-authenticity provider, or pick one provider that can do both well
+- if you want one broader vendor from the start, `Sumsub` is attractive because it combines document capture, fraud tooling, and DVS support
+- if you want a more Australia-specific licence-first path, `Global Data` looks strong for direct DVS licence validation
+
+## 29.9 Working with Children and Blue Card checks
+This is mainly an instructor, mentor, support worker, and agency staff requirement, not a student requirement.
+
+Phase 2 must support automatic or semi-automatic verification workflow for:
+- Queensland Blue Card
+- other Australian Working With Children Check regimes where available
+- future international equivalents via pluggable verification providers
+
+Practical direction:
+- store WWCC or Blue Card number, issue number, expiry, state, and holder name
+- verify against official portal or a specialist business service where allowed
+- store status and last checked timestamp
+- monitor for expiry and eligibility status change
+
+Provider direction:
+- `Backy Check` appears to support WWCC or Blue Card validity checking and monitoring across most Australian states
+- Queensland-specific validation can be aligned to the Queensland Government validation portal workflow
+
+Important constraint:
+- do not claim direct government API access unless procurement and access are confirmed
+- build the system with provider abstraction so a direct official integration can replace an intermediary later
+
+## 29.10 Required onboarding workflow changes
+Student creation flow must become:
+1. collect student core details
+2. collect country, state or province, postcode
+3. collect optional USI for AU students
+4. collect driver licence metadata and images
+5. run local format validation
+6. run duplicate check
+7. if risk score high, pause and require manual review or merge selection
+8. if configured, send to external DVS or KYC provider
+9. save verification result to `student_identity_checks`
+10. complete student create or mark pending verification
+
+## 29.11 API and service design
+Add service layer examples:
+- `artifacts/api-server/src/lib/identity/duplicateDetection.ts`
+- `artifacts/api-server/src/lib/identity/dvsProvider.ts`
+- `artifacts/api-server/src/lib/identity/usiProvider.ts`
+- `artifacts/api-server/src/lib/identity/documentVerification.ts`
+- `artifacts/api-server/src/lib/identity/wwccProvider.ts`
+
+Suggested endpoints:
+- `POST /students/identity-checks/duplicate-preview`
+- `POST /students/identity-checks/licence-verify`
+- `POST /students/identity-checks/usi-verify`
+- `POST /students/identity-checks/wwcc-verify`
+- `GET /students/:id/identity-checks`
+- `GET /duplicate-students/alerts`
+- `PATCH /duplicate-students/alerts/:id`
+
+## 29.12 Acceptance criteria
+- student onboarding supports school, agency, and secondary-school contexts
+- viewer links support parent, mentor, school, and agency relationships
+- duplicate detection runs before student creation completes
+- system uses country, state or province, and postcode to reduce false duplicate decisions
+- licence validation architecture supports DVS-backed verification and document-authenticity checks
+- safeguarding checks support WWCC or Blue Card verification for relevant staff roles
+- all identity results are audited and stored in dedicated verification tables
