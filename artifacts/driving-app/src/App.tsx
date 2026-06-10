@@ -40,6 +40,20 @@ import InstructorZones from "@/pages/instructor/zones";
 import InstructorBookings from "@/pages/instructor/bookings";
 import HeatmapPage from "@/pages/instructor/heatmap";
 
+import NotificationPreferencesPage from "@/pages/account/notifications";
+import BillingPage from "@/pages/account/billing";
+
+import ModerationDashboard from "@/pages/super-admin/moderation";
+import ModerationCaseDetail from "@/pages/super-admin/moderation-case";
+import DemoManagement from "@/pages/super-admin/demo";
+
+import SchoolAdminDashboard from "@/pages/school-admin/dashboard";
+import SchoolSettings from "@/pages/school-admin/settings";
+import BookingApprovals from "@/pages/school-admin/booking-approvals";
+
+import ViewerDashboard from "@/pages/viewer/dashboard";
+import ViewerStudentDetail from "@/pages/viewer/student-detail";
+
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -236,6 +250,12 @@ function DashboardRedirect() {
       return <Redirect to="/student/dashboard" />;
     case "admin":
       return <Redirect to="/admin/dashboard" />;
+    case "school_admin":
+      return <Redirect to="/school-admin/dashboard" />;
+    case "viewer":
+      return <Redirect to="/viewer/dashboard" />;
+    case "super_admin":
+      return <Redirect to="/super-admin/moderation" />;
     default:
       return <Redirect to="/onboarding" />;
   }
@@ -343,6 +363,24 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/audit" component={() => <ProtectedRoute component={AdminAuditLog} />} />
           <Route path="/admin/bookings" component={() => <ProtectedRoute component={AdminBookings} />} />
           <Route path="/admin/verifications" component={() => <ProtectedRoute component={AdminVerifications} />} />
+
+          {/* Account routes */}
+          <Route path="/account/notifications" component={() => <ProtectedRoute component={NotificationPreferencesPage} />} />
+          <Route path="/account/billing" component={() => <ProtectedRoute component={BillingPage} />} />
+
+          {/* Super-admin routes */}
+          <Route path="/super-admin/moderation/:id" component={() => <ProtectedRoute component={ModerationCaseDetail} />} />
+          <Route path="/super-admin/moderation" component={() => <ProtectedRoute component={ModerationDashboard} />} />
+          <Route path="/super-admin/demo" component={() => <ProtectedRoute component={DemoManagement} />} />
+
+          {/* School-admin routes */}
+          <Route path="/school-admin/dashboard" component={() => <ProtectedRoute component={SchoolAdminDashboard} />} />
+          <Route path="/school-admin/settings" component={() => <ProtectedRoute component={SchoolSettings} />} />
+          <Route path="/school-admin/booking-approvals" component={() => <ProtectedRoute component={BookingApprovals} />} />
+
+          {/* Viewer routes */}
+          <Route path="/viewer/dashboard" component={() => <ProtectedRoute component={ViewerDashboard} />} />
+          <Route path="/viewer/students/:id" component={() => <ProtectedRoute component={ViewerStudentDetail} />} />
 
           <Route component={NotFound} />
         </Switch>

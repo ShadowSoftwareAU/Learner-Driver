@@ -3,6 +3,7 @@
  * All quarantined content must flow through here before storage decisions.
  * Retention: 7 years minimum — do NOT hard-delete cases or events.
  */
+import { eq } from "drizzle-orm";
 import { db, moderationCasesTable, moderatedContentEventsTable, auditLogsTable } from "@workspace/db";
 import type { ScanResult } from "./ruleSets";
 import { logger } from "../logger";
@@ -113,7 +114,7 @@ export async function processScanResult(opts: {
 export async function releaseCase(caseId: number, reviewedByUserId: number, outcome: string): Promise<void> {
   await db.update(moderationCasesTable)
     .set({ status: "released", reviewOutcome: outcome, reviewedByUserId, reviewedAt: new Date() })
-    .where((t, { eq }) => eq(t.id, caseId));
+    .where(eq(moderationCasesTable.id, caseId));
 
   await db.insert(moderatedContentEventsTable).values({
     moderationCaseId: caseId,

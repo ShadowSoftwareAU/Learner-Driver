@@ -179,7 +179,7 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
     await db.update(bookingsTable).set({ broadcastCount }).where(eq(bookingsTable.id, booking.id));
   }
 
-  await logAudit({ actorId: user.id, action: "create_booking", resourceType: "booking", resourceId: booking.id, studentId: student.id });
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "create_booking", resourceType: "booking", resourceId: booking.id, studentId: student.id }, req);
 
   // Notify the student their request was sent
   await db.insert(notificationsTable).values({
@@ -230,7 +230,7 @@ router.post("/bookings/:id/claim", requireAuth, async (req: any, res): Promise<v
     });
   }
 
-  await logAudit({ actorId: user.id, action: "claim_booking", resourceType: "booking", resourceId: bookingId });
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "claim_booking", resourceType: "booking", resourceId: bookingId }, req);
   res.json(formatBooking(claimed));
 });
 
@@ -343,7 +343,63 @@ router.patch("/bookings/:id", requireAuth, async (req: any, res): Promise<void> 
     }
   }
 
-  await logAudit({ actorId: user.id, action: `update_booking_${status ?? "notes"}`, resourceType: "booking", resourceId: id });
+  await logAudit({ actorId: user.id, actorRole: user.role, action: `update_booking_${status ?? "notes"}`, resourceType: "booking", resourceId: id }, req);
+  res.json(formatBooking(updated));
+});
+
+// ─── No-show ──────────────────────────────────────────────────────────────────
+
+router.post("/bookings/:id/no-show", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const [booking] = await db.select().from(bookingsTable).where(eq(bookingsTable.id, id));
+  if (!booking) { res.status(404).json({ error: "Not found" }); return; }
+
+  // Only the assigned instructor or an admin can mark no-show
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor || booking.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
+  } else if (user.role === "student") {
+    res.status(403).json({ error: "Students cannot mark no-show" }); return;
+  }
+
+  const [updated] = await db.update(bookingsTable).set({
+    status: "no_show",
+    noShowMarkedAt: new Date(),
+    noShowMarkedByUserId: user.id,
+    statusReason: (req.body.reason as string | undefined) ?? null,
+  }).where(eq(bookingsTable.id, id)).returning();
+
+  // Increment student no-show count and recalculate reliability score
+  const [student] = await db.select({ id: studentsTable.id, noShowCount: studentsTable.noShowCount, userId: studentsTable.userId })
+    .from(studentsTable).where(eq(studentsTable.id, booking.studentId));
+
+  if (student) {
+    const newNoShowCount = (student.noShowCount ?? 0) + 1;
+    // Simple reliability score: starts at 100, -10 per no-show, floor 0
+    const score = Math.max(0, 100 - newNoShowCount * 10);
+    await db.update(studentsTable).set({ noShowCount: newNoShowCount, attendanceReliabilityScore: score })
+      .where(eq(studentsTable.id, student.id));
+
+    // Notify student if they have an account
+    if (student.userId) {
+      await db.insert(notificationsTable).values({
+        userId: student.userId,
+        type: "booking_no_show",
+        title: "Lesson marked as no-show",
+        body: `Your lesson on ${booking.requestedDate} at ${booking.requestedTime} was marked as no-show.`,
+        relatedId: id,
+        relatedType: "booking",
+        channel: "in_app",
+        deliveryStatus: "sent",
+        deliveredAt: new Date(),
+        isRead: false,
+      });
+    }
+  }
+
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "mark_no_show", resourceType: "booking", resourceId: id, studentId: booking.studentId }, req);
   res.json(formatBooking(updated));
 });
 

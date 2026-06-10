@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CalendarCheck, Clock, MapPin, Car, CheckCircle2, XCircle, User, GraduationCap } from "lucide-react";
+import { Loader2, CalendarCheck, Clock, MapPin, Car, CheckCircle2, XCircle, User, GraduationCap, UserX } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { BookingStatus } from "@/lib/enums";
 import { format } from "date-fns";
@@ -24,6 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
   confirmed: "bg-green-100 text-green-800 border-green-200",
   completed: "bg-gray-100 text-gray-800 border-gray-200",
   cancelled: "bg-red-100 text-red-800 border-red-200",
+  no_show: "bg-orange-100 text-orange-800 border-orange-200",
 };
 
 function BookingCard({
@@ -31,12 +32,14 @@ function BookingCard({
   onClaim,
   onDecline,
   onComplete,
+  onNoShow,
   loading,
 }: {
   booking: any;
   onClaim?: () => void;
   onDecline?: () => void;
   onComplete?: () => void;
+  onNoShow?: () => void;
   loading: boolean;
 }) {
   return (
@@ -97,8 +100,8 @@ function BookingCard({
           </p>
         )}
 
-        {(onClaim || onDecline || onComplete) && (
-          <div className="flex gap-2 pt-1">
+        {(onClaim || onDecline || onComplete || onNoShow) && (
+          <div className="flex flex-wrap gap-2 pt-1">
             {onClaim && (
               <Button size="sm" onClick={onClaim} disabled={loading} className="gap-1.5">
                 {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
@@ -115,6 +118,12 @@ function BookingCard({
               <Button size="sm" variant="outline" onClick={onComplete} disabled={loading} className="gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Mark Complete
+              </Button>
+            )}
+            {onNoShow && (
+              <Button size="sm" variant="outline" onClick={onNoShow} disabled={loading} className="gap-1.5 text-orange-700 border-orange-300 hover:bg-orange-50">
+                <UserX className="w-3.5 h-3.5" />
+                No-Show
               </Button>
             )}
           </div>
@@ -182,6 +191,20 @@ export default function InstructorBookings() {
     }
   };
 
+  const handleNoShow = async (id: number) => {
+    setActionId(id);
+    try {
+      const res = await fetch(`/api/bookings/${id}/no-show`, { method: "POST", credentials: "include" });
+      if (!res.ok) throw new Error();
+      await invalidate();
+      toast({ title: "Marked as no-show.", description: "Attendance score updated for this student." });
+    } catch {
+      toast({ title: "Failed to mark no-show.", variant: "destructive" });
+    } finally {
+      setActionId(null);
+    }
+  };
+
   // Sort: pending & upcoming chronological (soonest first); past reverse chronological
   const byRequestedAsc = (a: any, b: any) => {
     const ad = `${a.requestedDate}T${a.requestedTime ?? "00:00"}`;
@@ -198,7 +221,7 @@ export default function InstructorBookings() {
         .filter((b) => b.status === BookingStatus.claimed || b.status === BookingStatus.confirmed)
         .sort(byRequestedAsc),
       past: all
-        .filter((b) => b.status === BookingStatus.completed || b.status === BookingStatus.cancelled)
+        .filter((b) => b.status === BookingStatus.completed || b.status === BookingStatus.cancelled || b.status === BookingStatus.no_show)
         .sort(byRequestedDesc),
     };
   }, [allBookings]);
@@ -251,14 +274,19 @@ export default function InstructorBookings() {
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold">Upcoming Lessons</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {active.map((b: any) => (
-                    <BookingCard
-                      key={b.id}
-                      booking={b}
-                      onComplete={() => handleComplete(b.id)}
-                      loading={actionId === b.id}
-                    />
-                  ))}
+                  {active.map((b: any) => {
+                    const lessonDt = new Date(`${b.requestedDate}T${b.requestedTime ?? "00:00"}`);
+                    const isPast = lessonDt.getTime() < Date.now();
+                    return (
+                      <BookingCard
+                        key={b.id}
+                        booking={b}
+                        onComplete={() => handleComplete(b.id)}
+                        onNoShow={isPast ? () => handleNoShow(b.id) : undefined}
+                        loading={actionId === b.id}
+                      />
+                    );
+                  })}
                 </div>
               </section>
             )}

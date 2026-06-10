@@ -11,11 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useLocation, Link } from "wouter";
 import { useState, useMemo } from "react";
-import { ManeuverResultItemCompetencyLevel } from "@/lib/enums";
+import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
 import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
+import { PedalControlSelector } from "@/components/PedalControlSelector";
 
 export default function NewAssessment() {
   const [, setLocation] = useLocation();
@@ -29,6 +30,7 @@ export default function NewAssessment() {
   const [duration, setDuration] = useState("60");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
+  const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
   const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>({});
   const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>({});
   const [expandedManeuver, setExpandedManeuver] = useState<number | null>(null);
@@ -62,6 +64,10 @@ export default function NewAssessment() {
       toast({ title: "Error", description: "Please select a student", variant: "destructive" });
       return;
     }
+    if (!pedalOperator) {
+      toast({ title: "Pedal control required", description: "Please select who controls the pedals for this lesson.", variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -70,6 +76,7 @@ export default function NewAssessment() {
           studentId: parseInt(studentId),
           lessonDate: new Date(date).toISOString(),
           durationMinutes: parseInt(duration),
+          pedalOperator: pedalOperator || undefined,
           confidenceNote,
           focusAreasNext: focusAreas,
         }
@@ -161,6 +168,15 @@ export default function NewAssessment() {
               <Label className="text-base">Duration (mins)</Label>
               <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} className="h-16 text-base" />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="p-6 pb-4">
+            <CardTitle>Pedal Control</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 pt-0">
+            <PedalControlSelector value={pedalOperator} onChange={setPedalOperator} />
           </CardContent>
         </Card>
 
@@ -310,7 +326,7 @@ export default function NewAssessment() {
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
           <Button variant="outline" onClick={() => setLocation("/instructor/students")} className="h-16 text-base px-6">Cancel</Button>
-          <Button onClick={handleSave} disabled={isSubmitting || !studentId} className="h-16 text-base px-6">
+          <Button onClick={handleSave} disabled={isSubmitting || !studentId || !pedalOperator} className="h-16 text-base px-6">
             {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
             Save Assessment
           </Button>

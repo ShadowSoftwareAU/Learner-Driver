@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { PhotoCaptureField } from "@/components/PhotoCaptureField";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { AttendanceReliabilityBadge } from "@/components/AttendanceReliabilityBadge";
+import { MedicalInfoCard } from "@/components/MedicalInfoCard";
 
 const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
 
@@ -110,7 +112,15 @@ export default function InstructorStudentDetail() {
                   {student.status?.replace('_', ' ')}
                 </Badge>
               </h1>
-              <p className="text-muted-foreground">{student.email} {student.phone ? `• ${student.phone}` : ''}</p>
+              <div className="flex items-center gap-3 flex-wrap mt-1">
+                <p className="text-muted-foreground">{student.email} {student.phone ? `• ${student.phone}` : ''}</p>
+                {(student as any).noShowCount != null && (
+                  <AttendanceReliabilityBadge
+                    noShowCount={(student as any).noShowCount}
+                    attendanceReliabilityScore={(student as any).attendanceReliabilityScore}
+                  />
+                )}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 w-full md:w-auto">
@@ -254,6 +264,9 @@ export default function InstructorStudentDetail() {
               Handover Notes
             </TabsTrigger>
             <TabsTrigger value="intake" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Intake Info</TabsTrigger>
+            <TabsTrigger value="medical" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
+              🛡 Medical
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="progress" className="pt-6">
@@ -545,6 +558,16 @@ export default function InstructorStudentDetail() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="medical" className="pt-6">
+            <MedicalInfoCard
+              studentId={id}
+              preview={{
+                medicalConditionsPreview: (student as any).medicalConditionsPreview,
+                allergiesPreview: (student as any).allergiesPreview,
+              }}
+            />
           </TabsContent>
         </Tabs>
       </div>

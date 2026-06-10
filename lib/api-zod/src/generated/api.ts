@@ -24,7 +24,7 @@ export const GetMeResponse = zod.object({
   "clerkId": zod.string(),
   "email": zod.string(),
   "name": zod.string().nullish(),
-  "role": zod.enum(['student', 'instructor', 'admin', 'unassigned']),
+  "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin', 'unassigned']),
   "createdAt": zod.string().optional()
 })
 
@@ -33,7 +33,7 @@ export const GetMeResponse = zod.object({
  * @summary Set or update user role (admin only in prod; open for onboarding)
  */
 export const UpdateMyRoleBody = zod.object({
-  "role": zod.enum(['student', 'instructor', 'admin'])
+  "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin'])
 })
 
 export const UpdateMyRoleResponse = zod.object({
@@ -41,7 +41,7 @@ export const UpdateMyRoleResponse = zod.object({
   "clerkId": zod.string(),
   "email": zod.string(),
   "name": zod.string().nullish(),
-  "role": zod.enum(['student', 'instructor', 'admin', 'unassigned']),
+  "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin', 'unassigned']),
   "createdAt": zod.string().optional()
 })
 
@@ -70,6 +70,14 @@ export const ListStudentsResponseItem = zod.object({
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().nullish().describe('Decrypted medical conditions — only visible to authorised roles'),
+  "allergies": zod.string().nullish().describe('Decrypted allergy info — only visible to authorised roles'),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
+  "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
+  "viewerCodeIssuedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListStudentsResponse = zod.array(ListStudentsResponseItem)
@@ -125,6 +133,14 @@ export const GetStudentResponse = zod.object({
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().nullish().describe('Decrypted medical conditions — only visible to authorised roles'),
+  "allergies": zod.string().nullish().describe('Decrypted allergy info — only visible to authorised roles'),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
+  "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
+  "viewerCodeIssuedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -150,7 +166,11 @@ export const UpdateStudentBody = zod.object({
   "notes": zod.string().optional(),
   "region": zod.string().optional(),
   "country": zod.string().optional(),
-  "status": zod.enum(['active', 'on_hold', 'completed']).optional()
+  "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().optional().describe('Plain text — server encrypts before storing'),
+  "allergies": zod.string().optional().describe('Plain text — server encrypts before storing'),
+  "medicalConditionsPreview": zod.string().optional(),
+  "allergiesPreview": zod.string().optional()
 })
 
 export const UpdateStudentResponse = zod.object({
@@ -174,6 +194,14 @@ export const UpdateStudentResponse = zod.object({
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().nullish().describe('Decrypted medical conditions — only visible to authorised roles'),
+  "allergies": zod.string().nullish().describe('Decrypted allergy info — only visible to authorised roles'),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
+  "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
+  "viewerCodeIssuedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -206,6 +234,7 @@ export const GetStudentProgressResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "routePath": zod.array(zod.object({
@@ -213,6 +242,7 @@ export const GetStudentProgressResponse = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })).optional()
 })
@@ -246,6 +276,58 @@ export const GetStudentLessonPlanResponse = zod.object({
 }))
 })),
   "summary": zod.string()
+})
+
+
+/**
+ * @summary Get decrypted medical/allergy info (instructor/admin only)
+ */
+export const GetStudentMedicalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStudentMedicalResponse = zod.object({
+  "studentId": zod.number(),
+  "medicalConditions": zod.string().nullish(),
+  "allergies": zod.string().nullish(),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "dataClassification": zod.enum(['restricted', 'confidential', 'internal'])
+})
+
+
+/**
+ * @summary Update encrypted medical/allergy info for a student
+ */
+export const UpdateStudentMedicalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateStudentMedicalBody = zod.object({
+  "medicalConditions": zod.string().nullish(),
+  "allergies": zod.string().nullish()
+})
+
+export const UpdateStudentMedicalResponse = zod.object({
+  "studentId": zod.number(),
+  "medicalConditions": zod.string().nullish(),
+  "allergies": zod.string().nullish(),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "dataClassification": zod.enum(['restricted', 'confidential', 'internal'])
+})
+
+
+/**
+ * @summary Generate (or regenerate) a viewer link code for a student
+ */
+export const GenerateViewerCodeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GenerateViewerCodeResponse = zod.object({
+  "viewerCode": zod.string(),
+  "viewerCodeIssuedAt": zod.string()
 })
 
 
@@ -358,6 +440,7 @@ export const ListAssessmentsResponseItem = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "routePath": zod.array(zod.object({
@@ -365,6 +448,7 @@ export const ListAssessmentsResponseItem = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 export const ListAssessmentsResponse = zod.array(ListAssessmentsResponseItem)
@@ -377,6 +461,7 @@ export const CreateAssessmentBody = zod.object({
   "studentId": zod.number(),
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']),
   "confidenceNote": zod.string().optional(),
   "focusAreasNext": zod.string().optional(),
   "routePath": zod.array(zod.object({
@@ -403,8 +488,10 @@ export const GetAssessmentResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "maneuverResults": zod.array(zod.object({
   "id": zod.number(),
   "assessmentId": zod.number(),
@@ -428,6 +515,7 @@ export const UpdateAssessmentParams = zod.object({
 })
 
 export const UpdateAssessmentBody = zod.object({
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).optional(),
   "confidenceNote": zod.string().optional(),
   "focusAreasNext": zod.string().optional(),
   "status": zod.enum(['in_progress', 'completed']).optional(),
@@ -436,7 +524,8 @@ export const UpdateAssessmentBody = zod.object({
   "lat": zod.number(),
   "lng": zod.number(),
   "ts": zod.number()
-})).nullish()
+})).nullish(),
+  "acknowledgeBriefing": zod.boolean().optional().describe('If true, records pre-lesson briefing acknowledged at now()')
 })
 
 export const UpdateAssessmentResponse = zod.object({
@@ -448,6 +537,7 @@ export const UpdateAssessmentResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "routePath": zod.array(zod.object({
@@ -455,6 +545,7 @@ export const UpdateAssessmentResponse = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -536,6 +627,14 @@ export const GetHandoverResponse = zod.object({
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().nullish().describe('Decrypted medical conditions — only visible to authorised roles'),
+  "allergies": zod.string().nullish().describe('Decrypted allergy info — only visible to authorised roles'),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
+  "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
+  "viewerCodeIssuedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 }),
   "totalHours": zod.number(),
@@ -555,6 +654,8 @@ export const GetHandoverResponse = zod.object({
   "instructorName": zod.string().nullish(),
   "note": zod.string(),
   "focusAreas": zod.string().nullish(),
+  "isSafetyCritical": zod.boolean().describe('If true, this note is displayed prominently on the pre-lesson briefing card'),
+  "contentStatus": zod.enum(['approved', 'quarantined', 'under_review', 'released']).optional(),
   "createdAt": zod.string()
 })),
   "recentAssessments": zod.array(zod.object({
@@ -566,6 +667,7 @@ export const GetHandoverResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "routePath": zod.array(zod.object({
@@ -573,6 +675,7 @@ export const GetHandoverResponse = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 }))
 })
@@ -587,7 +690,8 @@ export const AddHandoverNoteParams = zod.object({
 
 export const AddHandoverNoteBody = zod.object({
   "note": zod.string(),
-  "focusAreas": zod.string().optional()
+  "focusAreas": zod.string().optional(),
+  "isSafetyCritical": zod.boolean().optional()
 })
 
 
@@ -686,6 +790,7 @@ export const GetInstructorDashboardResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "routePath": zod.array(zod.object({
@@ -693,6 +798,7 @@ export const GetInstructorDashboardResponse = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })),
   "studentSummaries": zod.array(zod.object({
@@ -724,6 +830,7 @@ export const GetStudentDashboardResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "routePath": zod.array(zod.object({
@@ -731,6 +838,7 @@ export const GetStudentDashboardResponse = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })),
   "skillBreakdown": zod.array(zod.object({
@@ -922,13 +1030,16 @@ export const ListBookingsResponseItem = zod.object({
   "transmissionType": zod.enum(['auto', 'manual', 'either']),
   "suburb": zod.string(),
   "postcode": zod.string(),
-  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
   "claimedAt": zod.string().nullish(),
   "confirmedAt": zod.string().nullish(),
+  "cancelledAt": zod.string().nullish(),
+  "noShowMarkedAt": zod.string().nullish(),
+  "statusReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -969,13 +1080,16 @@ export const GetBookingResponse = zod.object({
   "transmissionType": zod.enum(['auto', 'manual', 'either']),
   "suburb": zod.string(),
   "postcode": zod.string(),
-  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
   "claimedAt": zod.string().nullish(),
   "confirmedAt": zod.string().nullish(),
+  "cancelledAt": zod.string().nullish(),
+  "noShowMarkedAt": zod.string().nullish(),
+  "statusReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -991,8 +1105,9 @@ export const UpdateBookingParams = zod.object({
 })
 
 export const UpdateBookingBody = zod.object({
-  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']).optional(),
-  "instructorNotes": zod.string().optional()
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']).optional(),
+  "instructorNotes": zod.string().optional(),
+  "statusReason": zod.string().optional()
 })
 
 export const UpdateBookingResponse = zod.object({
@@ -1005,13 +1120,16 @@ export const UpdateBookingResponse = zod.object({
   "transmissionType": zod.enum(['auto', 'manual', 'either']),
   "suburb": zod.string(),
   "postcode": zod.string(),
-  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
   "claimedAt": zod.string().nullish(),
   "confirmedAt": zod.string().nullish(),
+  "cancelledAt": zod.string().nullish(),
+  "noShowMarkedAt": zod.string().nullish(),
+  "statusReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -1036,13 +1154,16 @@ export const ClaimBookingResponse = zod.object({
   "transmissionType": zod.enum(['auto', 'manual', 'either']),
   "suburb": zod.string(),
   "postcode": zod.string(),
-  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled']),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
   "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
   "studentNotes": zod.string().nullish(),
   "instructorNotes": zod.string().nullish(),
   "broadcastCount": zod.number(),
   "claimedAt": zod.string().nullish(),
   "confirmedAt": zod.string().nullish(),
+  "cancelledAt": zod.string().nullish(),
+  "noShowMarkedAt": zod.string().nullish(),
+  "statusReason": zod.string().nullish(),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -1055,6 +1176,109 @@ export const ClaimBookingResponse = zod.object({
  */
 export const DeclineBookingParams = zod.object({
   "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Mark a confirmed booking as no-show; increments student no_show_count
+ */
+export const MarkNoShowParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkNoShowBody = zod.object({
+  "reason": zod.string().optional()
+})
+
+export const MarkNoShowResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number().nullish(),
+  "requestedDate": zod.string(),
+  "requestedTime": zod.string(),
+  "durationMinutes": zod.number(),
+  "transmissionType": zod.enum(['auto', 'manual', 'either']),
+  "suburb": zod.string(),
+  "postcode": zod.string(),
+  "status": zod.enum(['pending', 'claimed', 'confirmed', 'completed', 'cancelled', 'no_show']),
+  "carType": zod.enum(['learner_car', 'trainer_car']).describe('Whether the student is using their own car or the instructor\'s'),
+  "studentNotes": zod.string().nullish(),
+  "instructorNotes": zod.string().nullish(),
+  "broadcastCount": zod.number(),
+  "claimedAt": zod.string().nullish(),
+  "confirmedAt": zod.string().nullish(),
+  "cancelledAt": zod.string().nullish(),
+  "noShowMarkedAt": zod.string().nullish(),
+  "statusReason": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "instructorPhone": zod.string().nullish()
+})
+
+
+/**
+ * @summary List booking change requests (school-admin view)
+ */
+export const ListBookingChangeRequestsQueryParams = zod.object({
+  "status": zod.enum(['pending', 'approved', 'denied', 'withdrawn']).optional()
+})
+
+export const ListBookingChangeRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "bookingId": zod.number(),
+  "requestedByUserId": zod.number(),
+  "requestType": zod.enum(['cancel', 'reschedule', 'update']),
+  "requestedDate": zod.string().nullish(),
+  "requestedTime": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['pending', 'approved', 'denied', 'withdrawn']),
+  "reviewedByUserId": zod.number().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+export const ListBookingChangeRequestsResponse = zod.array(ListBookingChangeRequestsResponseItem)
+
+
+/**
+ * @summary Submit a change request for a booking
+ */
+export const CreateBookingChangeRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const CreateBookingChangeRequestBody = zod.object({
+  "requestType": zod.enum(['cancel', 'reschedule', 'availability_override']),
+  "requestedPayloadJson": zod.object({
+
+}).passthrough().optional()
+})
+
+
+/**
+ * @summary Approve or deny a booking change request (school-admin only)
+ */
+export const ReviewBookingChangeRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewBookingChangeRequestBody = zod.object({
+  "decision": zod.enum(['approved', 'denied']),
+  "reviewNotes": zod.string().optional()
+})
+
+export const ReviewBookingChangeRequestResponse = zod.object({
+  "id": zod.number(),
+  "bookingId": zod.number(),
+  "requestedByUserId": zod.number(),
+  "requestType": zod.enum(['cancel', 'reschedule', 'update']),
+  "requestedDate": zod.string().nullish(),
+  "requestedTime": zod.string().nullish(),
+  "reason": zod.string().nullish(),
+  "status": zod.enum(['pending', 'approved', 'denied', 'withdrawn']),
+  "reviewedByUserId": zod.number().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional()
 })
 
 
@@ -1220,6 +1444,504 @@ export const GetTermsStatusResponse = zod.object({
   "accepted": zod.boolean(),
   "version": zod.string(),
   "acceptedAt": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get current user notification preferences
+ */
+export const GetNotificationPreferencesResponse = zod.object({
+  "userId": zod.number(),
+  "inAppEnabled": zod.boolean().optional(),
+  "emailEnabled": zod.boolean().optional(),
+  "pushEnabled": zod.boolean().optional(),
+  "bookingEmails": zod.boolean().optional(),
+  "bookingPush": zod.boolean().optional(),
+  "safeguardingAlerts": zod.boolean().optional(),
+  "marketingEnabled": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Update notification preferences
+ */
+export const UpdateNotificationPreferencesBody = zod.object({
+  "emailEnabled": zod.boolean().optional(),
+  "pushEnabled": zod.boolean().optional(),
+  "inAppEnabled": zod.boolean().optional(),
+  "smsEnabled": zod.boolean().optional(),
+  "bookingEmails": zod.boolean().optional(),
+  "bookingPush": zod.boolean().optional(),
+  "safeguardingAlerts": zod.boolean().optional(),
+  "marketingEnabled": zod.boolean().optional()
+})
+
+export const UpdateNotificationPreferencesResponse = zod.object({
+  "userId": zod.number(),
+  "inAppEnabled": zod.boolean().optional(),
+  "emailEnabled": zod.boolean().optional(),
+  "pushEnabled": zod.boolean().optional(),
+  "bookingEmails": zod.boolean().optional(),
+  "bookingPush": zod.boolean().optional(),
+  "safeguardingAlerts": zod.boolean().optional(),
+  "marketingEnabled": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Register a push token for this device
+ */
+export const RegisterPushTokenBody = zod.object({
+  "token": zod.string(),
+  "platform": zod.enum(['ios', 'android', 'web']),
+  "deviceId": zod.string().optional()
+})
+
+
+/**
+ * @summary Revoke a push token
+ */
+export const RevokePushTokenParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RevokePushTokenResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().nullish()
+})
+
+
+/**
+ * @summary Create a driving school (super_admin only)
+ */
+export const CreateSchoolBody = zod.object({
+  "name": zod.string(),
+  "abn": zod.string().optional(),
+  "billingContactEmail": zod.string().optional(),
+  "billingContactName": zod.string().optional(),
+  "billingContactPhone": zod.string().optional(),
+  "seatLimit": zod.number().optional()
+})
+
+
+/**
+ * @summary Get the school associated with the current user
+ */
+export const GetMySchoolResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "abn": zod.string().nullish(),
+  "contactEmail": zod.string().nullish(),
+  "contactPhone": zod.string().nullish(),
+  "addressLine1": zod.string().nullish(),
+  "suburb": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "logoPath": zod.string().nullish(),
+  "primaryColor": zod.string().nullish(),
+  "secondaryColor": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Get a school by id
+ */
+export const GetSchoolParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetSchoolResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "abn": zod.string().nullish(),
+  "contactEmail": zod.string().nullish(),
+  "contactPhone": zod.string().nullish(),
+  "addressLine1": zod.string().nullish(),
+  "suburb": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "logoPath": zod.string().nullish(),
+  "primaryColor": zod.string().nullish(),
+  "secondaryColor": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Update school settings
+ */
+export const UpdateSchoolParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateSchoolBody = zod.object({
+  "name": zod.string().optional(),
+  "abn": zod.string().optional(),
+  "logoPath": zod.string().optional(),
+  "primaryColor": zod.string().optional(),
+  "secondaryColor": zod.string().optional(),
+  "billingContactEmail": zod.string().optional(),
+  "billingContactName": zod.string().optional(),
+  "billingContactPhone": zod.string().optional(),
+  "seatLimit": zod.number().optional()
+})
+
+export const UpdateSchoolResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "abn": zod.string().nullish(),
+  "contactEmail": zod.string().nullish(),
+  "contactPhone": zod.string().nullish(),
+  "addressLine1": zod.string().nullish(),
+  "suburb": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "postcode": zod.string().nullish(),
+  "logoPath": zod.string().nullish(),
+  "primaryColor": zod.string().nullish(),
+  "secondaryColor": zod.string().nullish(),
+  "isActive": zod.boolean().optional(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Add instructor to school
+ */
+export const AddSchoolInstructorParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AddSchoolInstructorBody = zod.object({
+  "instructorId": zod.number(),
+  "roleWithinSchool": zod.enum(['instructor', 'school_admin']).optional(),
+  "isPrimary": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Remove instructor from school
+ */
+export const RemoveSchoolInstructorParams = zod.object({
+  "id": zod.coerce.number(),
+  "instructorId": zod.coerce.number()
+})
+
+export const RemoveSchoolInstructorResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().nullish()
+})
+
+
+/**
+ * @summary Assign a user as school admin (super_admin only)
+ */
+export const AssignSchoolAdminParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AssignSchoolAdminBody = zod.object({
+  "userId": zod.number(),
+  "role": zod.enum(['school_admin', 'instructor']).optional()
+})
+
+export const AssignSchoolAdminResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().nullish()
+})
+
+
+/**
+ * @summary Link to a student using a viewer code
+ */
+export const RequestViewerLinkBody = zod.object({
+  "code": zod.string().describe('Student viewer code (e.g. DRV-7KQ9X2)'),
+  "relationshipType": zod.enum(['parent', 'guardian', 'mentor', 'support_worker', 'agency_case_worker', 'school_mentor', 'other']).optional()
+})
+
+
+/**
+ * @summary Get students linked to the current viewer
+ */
+export const GetViewerStudentsResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "totalHours": zod.number().nullish(),
+  "headshotPath": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish(),
+  "relationshipType": zod.string().nullish(),
+  "linkedAt": zod.string().optional()
+})
+export const GetViewerStudentsResponse = zod.array(GetViewerStudentsResponseItem)
+
+
+/**
+ * @summary Get sanitised student dashboard for a viewer
+ */
+export const GetViewerStudentDashboardParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetViewerStudentDashboardResponse = zod.object({
+  "student": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "totalHours": zod.number().nullish(),
+  "headshotPath": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish(),
+  "relationshipType": zod.string().nullish(),
+  "linkedAt": zod.string().optional()
+}),
+  "recentAssessments": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "lessonDate": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "pedalOperator": zod.string().optional(),
+  "focusAreasNext": zod.string().nullish(),
+  "totalHoursThisLesson": zod.number().nullish()
+})),
+  "upcomingBookings": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "scheduledAt": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "status": zod.string().optional(),
+  "pickupAddress": zod.string().nullish()
+})),
+  "link": zod.object({
+  "relationshipType": zod.string().nullish(),
+  "linkedAt": zod.string().optional()
+}).optional()
+})
+
+
+/**
+ * @summary List moderation cases (super_admin only)
+ */
+export const GetModerationCasesQueryParams = zod.object({
+  "status": zod.coerce.string().optional(),
+  "severity": zod.coerce.string().optional(),
+  "schoolId": zod.coerce.number().optional(),
+  "contentType": zod.coerce.string().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const GetModerationCasesResponseItem = zod.object({
+  "id": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "status": zod.enum(['open', 'under_review', 'escalated', 'released', 'closed']),
+  "severity": zod.enum(['low', 'medium', 'high', 'critical']),
+  "contentType": zod.string(),
+  "contentId": zod.number().nullish(),
+  "actorUserId": zod.number().nullish(),
+  "targetUserId": zod.number().nullish(),
+  "studentId": zod.number().nullish(),
+  "rawExcerpt": zod.string().nullish(),
+  "ruleHitsJson": zod.object({
+
+}).passthrough().nullish(),
+  "reviewOutcome": zod.string().nullish(),
+  "reviewedByUserId": zod.number().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "legalHold": zod.boolean().optional(),
+  "createdAt": zod.string().optional()
+})
+export const GetModerationCasesResponse = zod.array(GetModerationCasesResponseItem)
+
+
+/**
+ * @summary Get a moderation case with its event history
+ */
+export const GetModerationCaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetModerationCaseResponse = zod.object({
+  "id": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "status": zod.enum(['open', 'under_review', 'escalated', 'released', 'closed']),
+  "severity": zod.enum(['low', 'medium', 'high', 'critical']),
+  "contentType": zod.string(),
+  "contentId": zod.number().nullish(),
+  "actorUserId": zod.number().nullish(),
+  "targetUserId": zod.number().nullish(),
+  "studentId": zod.number().nullish(),
+  "rawExcerpt": zod.string().nullish(),
+  "ruleHitsJson": zod.object({
+
+}).passthrough().nullish(),
+  "reviewOutcome": zod.string().nullish(),
+  "reviewedByUserId": zod.number().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "legalHold": zod.boolean().optional(),
+  "createdAt": zod.string().optional()
+}).and(zod.object({
+  "events": zod.array(zod.object({
+  "id": zod.number(),
+  "moderationCaseId": zod.number(),
+  "eventType": zod.enum(['detected', 'quarantined', 'reviewed', 'released', 'escalated', 'exported', 'closed']),
+  "payloadJson": zod.object({
+
+}).passthrough().nullish(),
+  "createdAt": zod.string().optional()
+})).optional()
+}))
+
+
+/**
+ * @summary Update case status, legalHold, or reviewOutcome
+ */
+export const UpdateModerationCaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateModerationCaseBody = zod.object({
+  "status": zod.enum(['open', 'under_review', 'escalated', 'released', 'closed']).optional(),
+  "reviewOutcome": zod.string().optional(),
+  "legalHold": zod.boolean().optional()
+})
+
+export const UpdateModerationCaseResponse = zod.object({
+  "id": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "status": zod.enum(['open', 'under_review', 'escalated', 'released', 'closed']),
+  "severity": zod.enum(['low', 'medium', 'high', 'critical']),
+  "contentType": zod.string(),
+  "contentId": zod.number().nullish(),
+  "actorUserId": zod.number().nullish(),
+  "targetUserId": zod.number().nullish(),
+  "studentId": zod.number().nullish(),
+  "rawExcerpt": zod.string().nullish(),
+  "ruleHitsJson": zod.object({
+
+}).passthrough().nullish(),
+  "reviewOutcome": zod.string().nullish(),
+  "reviewedByUserId": zod.number().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "legalHold": zod.boolean().optional(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Release quarantined content after review
+ */
+export const ReleaseModerationCaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReleaseModerationCaseBody = zod.object({
+  "outcome": zod.string().optional()
+})
+
+export const ReleaseModerationCaseResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().nullish()
+})
+
+
+/**
+ * @summary Escalate a moderation case
+ */
+export const EscalateModerationCaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const EscalateModerationCaseBody = zod.object({
+  "reason": zod.string().optional()
+})
+
+export const EscalateModerationCaseResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().nullish()
+})
+
+
+/**
+ * @summary Create a law enforcement evidence export (super_admin only)
+ */
+export const CreateModerationExportBody = zod.object({
+  "caseIds": zod.array(zod.number()),
+  "reason": zod.string(),
+  "schoolId": zod.number().optional()
+})
+
+
+/**
+ * @summary Get current subscription and pricing info
+ */
+export const GetMySubscriptionResponse = zod.object({
+  "planCode": zod.string(),
+  "status": zod.string(),
+  "billingProvider": zod.string().nullish(),
+  "seatCount": zod.number().nullish(),
+  "renewalAt": zod.string().nullish(),
+  "enforcementEnabled": zod.boolean().optional(),
+  "pricingInfo": zod.object({
+  "viewer": zod.number().optional(),
+  "independentInstructor": zod.number().optional(),
+  "schoolBase": zod.number().optional(),
+  "schoolAdditionalSeat": zod.number().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Create or update a subscription (stub)
+ */
+export const CreateOrUpdateSubscriptionBody = zod.object({
+  "planCode": zod.string(),
+  "schoolId": zod.number().optional()
+})
+
+
+/**
+ * @summary Get merged feature entitlements for the current user/school
+ */
+export const GetMyEntitlementsResponseItem = zod.object({
+  "featureKey": zod.string(),
+  "isEnabled": zod.boolean(),
+  "source": zod.enum(['plan', 'promo', 'manual', 'default']).optional()
+})
+export const GetMyEntitlementsResponse = zod.array(GetMyEntitlementsResponseItem)
+
+
+/**
+ * @summary Stripe webhook endpoint (stub)
+ */
+export const StripeWebhookResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string().nullish()
+})
+
+
+/**
+ * @summary Get demo mode status (super_admin only)
+ */
+export const GetDemoStatusResponse = zod.object({
+  "demoModeEnabled": zod.boolean(),
+  "demoSchoolId": zod.number().nullish(),
+  "lastReset": zod.object({
+
+}).passthrough().nullish()
+})
+
+
+/**
+ * @summary Reset demo school data (super_admin only, feature-flagged)
+ */
+export const ResetDemoDataBody = zod.object({
+  "resetScope": zod.enum(['full_demo', 'bookings_only', 'students_only']).optional(),
+  "notes": zod.string().optional()
+})
+
+export const ResetDemoDataResponse = zod.object({
+  "ok": zod.boolean(),
+  "resetId": zod.number().optional(),
+  "scope": zod.string()
 })
 
 

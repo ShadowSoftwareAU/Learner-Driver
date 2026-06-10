@@ -16,6 +16,9 @@ export const UserProfileRole = {
   student: 'student',
   instructor: 'instructor',
   admin: 'admin',
+  school_admin: 'school_admin',
+  viewer: 'viewer',
+  super_admin: 'super_admin',
   unassigned: 'unassigned',
 } as const;
 
@@ -36,6 +39,9 @@ export const RoleUpdateRole = {
   student: 'student',
   instructor: 'instructor',
   admin: 'admin',
+  school_admin: 'school_admin',
+  viewer: 'viewer',
+  super_admin: 'super_admin',
 } as const;
 
 export interface RoleUpdate {
@@ -87,6 +93,33 @@ export interface Student {
   country?: string | null;
   totalHours?: number;
   status?: StudentStatus;
+  /**
+     * Decrypted medical conditions — only visible to authorised roles
+     * @nullable
+     */
+  medicalConditions?: string | null;
+  /**
+     * Decrypted allergy info — only visible to authorised roles
+     * @nullable
+     */
+  allergies?: string | null;
+  /** @nullable */
+  medicalConditionsPreview?: string | null;
+  /** @nullable */
+  allergiesPreview?: string | null;
+  noShowCount?: number;
+  /**
+     * 0-100; 100 = perfect attendance
+     * @nullable
+     */
+  attendanceReliabilityScore?: number | null;
+  /**
+     * Unique code for parent/guardian linking (DRV-XXXXXXX)
+     * @nullable
+     */
+  viewerCode?: string | null;
+  /** @nullable */
+  viewerCodeIssuedAt?: string | null;
   createdAt?: string;
 }
 
@@ -132,6 +165,12 @@ export interface StudentUpdate {
   region?: string;
   country?: string;
   status?: StudentUpdateStatus;
+  /** Plain text — server encrypts before storing */
+  medicalConditions?: string;
+  /** Plain text — server encrypts before storing */
+  allergies?: string;
+  medicalConditionsPreview?: string;
+  allergiesPreview?: string;
 }
 
 export interface SkillBreakdownItem {
@@ -148,6 +187,18 @@ export type AssessmentStatus = typeof AssessmentStatus[keyof typeof AssessmentSt
 export const AssessmentStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
+} as const;
+
+/**
+ * Who controls the pedals — student, instructor (dual control), or shared
+ */
+export type AssessmentPedalOperator = typeof AssessmentPedalOperator[keyof typeof AssessmentPedalOperator];
+
+
+export const AssessmentPedalOperator = {
+  student: 'student',
+  instructor: 'instructor',
+  shared: 'shared',
 } as const;
 
 export type AssessmentRoutePathItem = {
@@ -167,11 +218,15 @@ export interface Assessment {
   lessonDate: string;
   durationMinutes: number;
   status: AssessmentStatus;
+  /** Who controls the pedals — student, instructor (dual control), or shared */
+  pedalOperator: AssessmentPedalOperator;
   /** @nullable */
   confidenceNote?: string | null;
   /** @nullable */
   focusAreasNext?: string | null;
   routePath?: AssessmentRoutePathItem[] | null;
+  /** @nullable */
+  preLessonBriefingAcknowledgedAt?: string | null;
   createdAt?: string;
 }
 
@@ -236,6 +291,15 @@ export interface Maneuver {
   masteryDefinition?: string | null;
 }
 
+export type AssessmentInputPedalOperator = typeof AssessmentInputPedalOperator[keyof typeof AssessmentInputPedalOperator];
+
+
+export const AssessmentInputPedalOperator = {
+  student: 'student',
+  instructor: 'instructor',
+  shared: 'shared',
+} as const;
+
 export type AssessmentInputRoutePathItem = {
   lat: number;
   lng: number;
@@ -246,10 +310,20 @@ export interface AssessmentInput {
   studentId: number;
   lessonDate: string;
   durationMinutes: number;
+  pedalOperator: AssessmentInputPedalOperator;
   confidenceNote?: string;
   focusAreasNext?: string;
   routePath?: AssessmentInputRoutePathItem[] | null;
 }
+
+export type AssessmentUpdatePedalOperator = typeof AssessmentUpdatePedalOperator[keyof typeof AssessmentUpdatePedalOperator];
+
+
+export const AssessmentUpdatePedalOperator = {
+  student: 'student',
+  instructor: 'instructor',
+  shared: 'shared',
+} as const;
 
 export type AssessmentUpdateStatus = typeof AssessmentUpdateStatus[keyof typeof AssessmentUpdateStatus];
 
@@ -266,11 +340,14 @@ export type AssessmentUpdateRoutePathItem = {
 };
 
 export interface AssessmentUpdate {
+  pedalOperator?: AssessmentUpdatePedalOperator;
   confidenceNote?: string;
   focusAreasNext?: string;
   status?: AssessmentUpdateStatus;
   durationMinutes?: number;
   routePath?: AssessmentUpdateRoutePathItem[] | null;
+  /** If true, records pre-lesson briefing acknowledged at now() */
+  acknowledgeBriefing?: boolean;
 }
 
 export type AssessmentDetailStatus = typeof AssessmentDetailStatus[keyof typeof AssessmentDetailStatus];
@@ -279,6 +356,15 @@ export type AssessmentDetailStatus = typeof AssessmentDetailStatus[keyof typeof 
 export const AssessmentDetailStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
+} as const;
+
+export type AssessmentDetailPedalOperator = typeof AssessmentDetailPedalOperator[keyof typeof AssessmentDetailPedalOperator];
+
+
+export const AssessmentDetailPedalOperator = {
+  student: 'student',
+  instructor: 'instructor',
+  shared: 'shared',
 } as const;
 
 export type ManeuverResultCompetencyLevel = typeof ManeuverResultCompetencyLevel[keyof typeof ManeuverResultCompetencyLevel];
@@ -319,10 +405,13 @@ export interface AssessmentDetail {
   lessonDate: string;
   durationMinutes: number;
   status: AssessmentDetailStatus;
+  pedalOperator: AssessmentDetailPedalOperator;
   /** @nullable */
   confidenceNote?: string | null;
   /** @nullable */
   focusAreasNext?: string | null;
+  /** @nullable */
+  preLessonBriefingAcknowledgedAt?: string | null;
   maneuverResults: ManeuverResult[];
   createdAt?: string;
 }
@@ -367,6 +456,16 @@ export interface HeatmapPoint {
   competencyLevel: HeatmapPointCompetencyLevel;
 }
 
+export type HandoverNoteContentStatus = typeof HandoverNoteContentStatus[keyof typeof HandoverNoteContentStatus];
+
+
+export const HandoverNoteContentStatus = {
+  approved: 'approved',
+  quarantined: 'quarantined',
+  under_review: 'under_review',
+  released: 'released',
+} as const;
+
 export interface HandoverNote {
   id: number;
   studentId: number;
@@ -376,6 +475,9 @@ export interface HandoverNote {
   note: string;
   /** @nullable */
   focusAreas?: string | null;
+  /** If true, this note is displayed prominently on the pre-lesson briefing card */
+  isSafetyCritical: boolean;
+  contentStatus?: HandoverNoteContentStatus;
   createdAt: string;
 }
 
@@ -392,6 +494,7 @@ export interface HandoverView {
 export interface HandoverNoteInput {
   note: string;
   focusAreas?: string;
+  isSafetyCritical?: boolean;
 }
 
 export interface Intake {
@@ -548,6 +651,7 @@ export const BookingItemStatus = {
   confirmed: 'confirmed',
   completed: 'completed',
   cancelled: 'cancelled',
+  no_show: 'no_show',
 } as const;
 
 /**
@@ -584,6 +688,12 @@ export interface BookingItem {
   claimedAt?: string | null;
   /** @nullable */
   confirmedAt?: string | null;
+  /** @nullable */
+  cancelledAt?: string | null;
+  /** @nullable */
+  noShowMarkedAt?: string | null;
+  /** @nullable */
+  statusReason?: string | null;
   createdAt: string;
   /** @nullable */
   studentName?: string | null;
@@ -602,11 +712,13 @@ export const PatchBookingInputStatus = {
   confirmed: 'confirmed',
   completed: 'completed',
   cancelled: 'cancelled',
+  no_show: 'no_show',
 } as const;
 
 export interface PatchBookingInput {
   status?: PatchBookingInputStatus;
   instructorNotes?: string;
+  statusReason?: string;
 }
 
 export type CreateBookingTransmissionType = typeof CreateBookingTransmissionType[keyof typeof CreateBookingTransmissionType];
@@ -798,6 +910,572 @@ export interface TermsStatus {
   acceptedAt?: string | null;
 }
 
+export type StudentMedicalDataClassification = typeof StudentMedicalDataClassification[keyof typeof StudentMedicalDataClassification];
+
+
+export const StudentMedicalDataClassification = {
+  restricted: 'restricted',
+  confidential: 'confidential',
+  internal: 'internal',
+} as const;
+
+export interface StudentMedical {
+  studentId: number;
+  /** @nullable */
+  medicalConditions?: string | null;
+  /** @nullable */
+  allergies?: string | null;
+  /** @nullable */
+  medicalConditionsPreview?: string | null;
+  /** @nullable */
+  allergiesPreview?: string | null;
+  dataClassification: StudentMedicalDataClassification;
+}
+
+export interface StudentMedicalInput {
+  /** @nullable */
+  medicalConditions?: string | null;
+  /** @nullable */
+  allergies?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type PreLessonBriefingPedalOperator = typeof PreLessonBriefingPedalOperator[keyof typeof PreLessonBriefingPedalOperator] | null;
+
+
+export const PreLessonBriefingPedalOperator = {
+  student: 'student',
+  instructor: 'instructor',
+  shared: 'shared',
+} as const;
+
+export type PreLessonBriefingSafetyCriticalNotesItem = { [key: string]: unknown };
+
+export interface PreLessonBriefing {
+  /** @nullable */
+  pedalOperator?: PreLessonBriefingPedalOperator;
+  safetyCriticalNotes?: PreLessonBriefingSafetyCriticalNotesItem[];
+  /** @nullable */
+  medicalConditionsPreview?: string | null;
+  /** @nullable */
+  allergiesPreview?: string | null;
+  /** @nullable */
+  medicalConditions?: string | null;
+  /** @nullable */
+  allergies?: string | null;
+  /** @nullable */
+  latestFocusAreas?: string | null;
+}
+
+export interface DrivingSchool {
+  id: number;
+  name: string;
+  /** @nullable */
+  abn?: string | null;
+  /** @nullable */
+  contactEmail?: string | null;
+  /** @nullable */
+  contactPhone?: string | null;
+  /** @nullable */
+  addressLine1?: string | null;
+  /** @nullable */
+  suburb?: string | null;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  postcode?: string | null;
+  /** @nullable */
+  logoPath?: string | null;
+  /** @nullable */
+  primaryColor?: string | null;
+  /** @nullable */
+  secondaryColor?: string | null;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface DrivingSchoolInput {
+  name: string;
+  abn?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  addressLine1?: string;
+  suburb?: string;
+  state?: string;
+  postcode?: string;
+}
+
+export type ViewerLinkStatus = typeof ViewerLinkStatus[keyof typeof ViewerLinkStatus];
+
+
+export const ViewerLinkStatus = {
+  active: 'active',
+  revoked: 'revoked',
+  expired: 'expired',
+} as const;
+
+export interface ViewerLink {
+  id: number;
+  studentId: number;
+  viewerUserId: number;
+  status: ViewerLinkStatus;
+  /** @nullable */
+  viewerCode?: string | null;
+  /** @nullable */
+  linkedAt?: string | null;
+  /** @nullable */
+  expiresAt?: string | null;
+  createdAt?: string;
+}
+
+export type BookingChangeRequestRequestType = typeof BookingChangeRequestRequestType[keyof typeof BookingChangeRequestRequestType];
+
+
+export const BookingChangeRequestRequestType = {
+  cancel: 'cancel',
+  reschedule: 'reschedule',
+  update: 'update',
+} as const;
+
+export type BookingChangeRequestStatus = typeof BookingChangeRequestStatus[keyof typeof BookingChangeRequestStatus];
+
+
+export const BookingChangeRequestStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  denied: 'denied',
+  withdrawn: 'withdrawn',
+} as const;
+
+export interface BookingChangeRequest {
+  id: number;
+  bookingId: number;
+  requestedByUserId: number;
+  requestType: BookingChangeRequestRequestType;
+  /** @nullable */
+  requestedDate?: string | null;
+  /** @nullable */
+  requestedTime?: string | null;
+  /** @nullable */
+  reason?: string | null;
+  status: BookingChangeRequestStatus;
+  /** @nullable */
+  reviewedByUserId?: number | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  createdAt?: string;
+}
+
+export interface NotificationPreferences {
+  userId: number;
+  inAppEnabled?: boolean;
+  emailEnabled?: boolean;
+  pushEnabled?: boolean;
+  bookingEmails?: boolean;
+  bookingPush?: boolean;
+  safeguardingAlerts?: boolean;
+  marketingEnabled?: boolean;
+}
+
+export interface NotificationPreferencesInput {
+  inAppEnabled?: boolean;
+  emailEnabled?: boolean;
+  pushEnabled?: boolean;
+  bookingEmails?: boolean;
+  bookingPush?: boolean;
+  safeguardingAlerts?: boolean;
+  marketingEnabled?: boolean;
+}
+
+export type PushTokenPlatform = typeof PushTokenPlatform[keyof typeof PushTokenPlatform];
+
+
+export const PushTokenPlatform = {
+  ios: 'ios',
+  android: 'android',
+  web: 'web',
+} as const;
+
+export interface PushToken {
+  id: number;
+  userId: number;
+  token: string;
+  platform: PushTokenPlatform;
+  /** @nullable */
+  deviceId?: string | null;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export type PushTokenInputPlatform = typeof PushTokenInputPlatform[keyof typeof PushTokenInputPlatform];
+
+
+export const PushTokenInputPlatform = {
+  ios: 'ios',
+  android: 'android',
+  web: 'web',
+} as const;
+
+export interface PushTokenInput {
+  token: string;
+  platform: PushTokenInputPlatform;
+  deviceId?: string;
+}
+
+export type ModerationCaseStatus = typeof ModerationCaseStatus[keyof typeof ModerationCaseStatus];
+
+
+export const ModerationCaseStatus = {
+  open: 'open',
+  under_review: 'under_review',
+  escalated: 'escalated',
+  released: 'released',
+  closed: 'closed',
+} as const;
+
+export type ModerationCaseSeverity = typeof ModerationCaseSeverity[keyof typeof ModerationCaseSeverity];
+
+
+export const ModerationCaseSeverity = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  critical: 'critical',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ModerationCaseRuleHitsJson = { [key: string]: unknown } | null;
+
+export interface ModerationCase {
+  id: number;
+  /** @nullable */
+  schoolId?: number | null;
+  status: ModerationCaseStatus;
+  severity: ModerationCaseSeverity;
+  contentType: string;
+  /** @nullable */
+  contentId?: number | null;
+  /** @nullable */
+  actorUserId?: number | null;
+  /** @nullable */
+  targetUserId?: number | null;
+  /** @nullable */
+  studentId?: number | null;
+  /** @nullable */
+  rawExcerpt?: string | null;
+  /** @nullable */
+  ruleHitsJson?: ModerationCaseRuleHitsJson;
+  /** @nullable */
+  reviewOutcome?: string | null;
+  /** @nullable */
+  reviewedByUserId?: number | null;
+  /** @nullable */
+  reviewedAt?: string | null;
+  legalHold?: boolean;
+  createdAt?: string;
+}
+
+export type ModerationCasePatchStatus = typeof ModerationCasePatchStatus[keyof typeof ModerationCasePatchStatus];
+
+
+export const ModerationCasePatchStatus = {
+  open: 'open',
+  under_review: 'under_review',
+  escalated: 'escalated',
+  released: 'released',
+  closed: 'closed',
+} as const;
+
+export interface ModerationCasePatch {
+  status?: ModerationCasePatchStatus;
+  reviewOutcome?: string;
+  legalHold?: boolean;
+}
+
+export type ModerationEventEventType = typeof ModerationEventEventType[keyof typeof ModerationEventEventType];
+
+
+export const ModerationEventEventType = {
+  detected: 'detected',
+  quarantined: 'quarantined',
+  reviewed: 'reviewed',
+  released: 'released',
+  escalated: 'escalated',
+  exported: 'exported',
+  closed: 'closed',
+} as const;
+
+/**
+ * @nullable
+ */
+export type ModerationEventPayloadJson = { [key: string]: unknown } | null;
+
+export interface ModerationEvent {
+  id: number;
+  moderationCaseId: number;
+  eventType: ModerationEventEventType;
+  /** @nullable */
+  payloadJson?: ModerationEventPayloadJson;
+  createdAt?: string;
+}
+
+export type SubscriptionStatus = typeof SubscriptionStatus[keyof typeof SubscriptionStatus];
+
+
+export const SubscriptionStatus = {
+  active: 'active',
+  trialing: 'trialing',
+  past_due: 'past_due',
+  cancelled: 'cancelled',
+  paused: 'paused',
+} as const;
+
+export interface Subscription {
+  id: number;
+  userId: number;
+  /** @nullable */
+  schoolId?: number | null;
+  planCode: string;
+  /** @nullable */
+  billingProvider?: string | null;
+  /** @nullable */
+  externalSubscriptionId?: string | null;
+  status: SubscriptionStatus;
+  /** @nullable */
+  currentPeriodStart?: string | null;
+  /** @nullable */
+  currentPeriodEnd?: string | null;
+  /** @nullable */
+  cancelledAt?: string | null;
+  /** @nullable */
+  seatCount?: number | null;
+  /** @nullable */
+  amountCents?: number | null;
+  /** @nullable */
+  currency?: string | null;
+  createdAt?: string;
+}
+
+export interface FeatureEntitlement {
+  id: number;
+  userId: number;
+  /** @nullable */
+  schoolId?: number | null;
+  featureKey: string;
+  enabled: boolean;
+  overriddenByAdmin?: boolean;
+  /** @nullable */
+  expiresAt?: string | null;
+  createdAt?: string;
+}
+
+export interface OkResponse {
+  ok: boolean;
+  /** @nullable */
+  message?: string | null;
+}
+
+export interface SchoolInput {
+  name: string;
+  abn?: string;
+  billingContactEmail?: string;
+  billingContactName?: string;
+  billingContactPhone?: string;
+  seatLimit?: number;
+}
+
+export interface SchoolPatch {
+  name?: string;
+  abn?: string;
+  logoPath?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  billingContactEmail?: string;
+  billingContactName?: string;
+  billingContactPhone?: string;
+  seatLimit?: number;
+}
+
+export type SchoolInstructorInputRoleWithinSchool = typeof SchoolInstructorInputRoleWithinSchool[keyof typeof SchoolInstructorInputRoleWithinSchool];
+
+
+export const SchoolInstructorInputRoleWithinSchool = {
+  instructor: 'instructor',
+  school_admin: 'school_admin',
+} as const;
+
+export interface SchoolInstructorInput {
+  instructorId: number;
+  roleWithinSchool?: SchoolInstructorInputRoleWithinSchool;
+  isPrimary?: boolean;
+}
+
+export type ViewerLinkRequestRelationshipType = typeof ViewerLinkRequestRelationshipType[keyof typeof ViewerLinkRequestRelationshipType];
+
+
+export const ViewerLinkRequestRelationshipType = {
+  parent: 'parent',
+  guardian: 'guardian',
+  mentor: 'mentor',
+  support_worker: 'support_worker',
+  agency_case_worker: 'agency_case_worker',
+  school_mentor: 'school_mentor',
+  other: 'other',
+} as const;
+
+export interface ViewerLinkRequest {
+  /** Student viewer code (e.g. DRV-7KQ9X2) */
+  code: string;
+  relationshipType?: ViewerLinkRequestRelationshipType;
+}
+
+export interface ViewerStudentSummary {
+  id: number;
+  fullName: string;
+  /** @nullable */
+  totalHours?: number | null;
+  /** @nullable */
+  headshotPath?: string | null;
+  noShowCount?: number;
+  /** @nullable */
+  attendanceReliabilityScore?: number | null;
+  /** @nullable */
+  relationshipType?: string | null;
+  linkedAt?: string;
+}
+
+export type ViewerStudentDashboardRecentAssessmentsItem = {
+  id?: number;
+  lessonDate?: string;
+  durationMinutes?: number;
+  pedalOperator?: string;
+  /** @nullable */
+  focusAreasNext?: string | null;
+  /** @nullable */
+  totalHoursThisLesson?: number | null;
+};
+
+export type ViewerStudentDashboardUpcomingBookingsItem = {
+  id?: number;
+  scheduledAt?: string;
+  durationMinutes?: number;
+  status?: string;
+  /** @nullable */
+  pickupAddress?: string | null;
+};
+
+export type ViewerStudentDashboardLink = {
+  /** @nullable */
+  relationshipType?: string | null;
+  linkedAt?: string;
+};
+
+export interface ViewerStudentDashboard {
+  student: ViewerStudentSummary;
+  recentAssessments: ViewerStudentDashboardRecentAssessmentsItem[];
+  upcomingBookings: ViewerStudentDashboardUpcomingBookingsItem[];
+  link?: ViewerStudentDashboardLink;
+}
+
+export type ModerationCaseDetail = ModerationCase & {
+  events?: ModerationEvent[];
+};
+
+export interface ModerationExportInput {
+  caseIds: number[];
+  reason: string;
+  schoolId?: number;
+}
+
+export interface NotificationPreferencesPatch {
+  emailEnabled?: boolean;
+  pushEnabled?: boolean;
+  inAppEnabled?: boolean;
+  smsEnabled?: boolean;
+  bookingEmails?: boolean;
+  bookingPush?: boolean;
+  safeguardingAlerts?: boolean;
+  marketingEnabled?: boolean;
+}
+
+export type SubscriptionInfoPricingInfo = {
+  viewer?: number;
+  independentInstructor?: number;
+  schoolBase?: number;
+  schoolAdditionalSeat?: number;
+};
+
+export interface SubscriptionInfo {
+  planCode: string;
+  status: string;
+  /** @nullable */
+  billingProvider?: string | null;
+  /** @nullable */
+  seatCount?: number | null;
+  /** @nullable */
+  renewalAt?: string | null;
+  enforcementEnabled?: boolean;
+  pricingInfo?: SubscriptionInfoPricingInfo;
+}
+
+export type EntitlementSummarySource = typeof EntitlementSummarySource[keyof typeof EntitlementSummarySource];
+
+
+export const EntitlementSummarySource = {
+  plan: 'plan',
+  promo: 'promo',
+  manual: 'manual',
+  default: 'default',
+} as const;
+
+export interface EntitlementSummary {
+  featureKey: string;
+  isEnabled: boolean;
+  source?: EntitlementSummarySource;
+}
+
+/**
+ * @nullable
+ */
+export type DemoStatusLastReset = { [key: string]: unknown } | null;
+
+export interface DemoStatus {
+  demoModeEnabled: boolean;
+  /** @nullable */
+  demoSchoolId?: number | null;
+  /** @nullable */
+  lastReset?: DemoStatusLastReset;
+}
+
+export type DemoResetInputResetScope = typeof DemoResetInputResetScope[keyof typeof DemoResetInputResetScope];
+
+
+export const DemoResetInputResetScope = {
+  full_demo: 'full_demo',
+  bookings_only: 'bookings_only',
+  students_only: 'students_only',
+} as const;
+
+export interface DemoResetInput {
+  resetScope?: DemoResetInputResetScope;
+  notes?: string;
+}
+
+export interface DemoResetResult {
+  ok: boolean;
+  resetId?: number;
+  scope: string;
+}
+
+export type GenerateViewerCode200 = {
+  viewerCode: string;
+  viewerCodeIssuedAt: string;
+};
+
 export type ListAssessmentsParams = {
 studentId?: number;
 instructorId?: number;
@@ -832,6 +1510,53 @@ export const SearchInstructorsTransmissionType = {
 
 export type ListBookingsParams = {
 status?: string;
+};
+
+export type MarkNoShowBody = {
+  reason?: string;
+};
+
+export type ListBookingChangeRequestsParams = {
+status?: ListBookingChangeRequestsStatus;
+};
+
+export type ListBookingChangeRequestsStatus = typeof ListBookingChangeRequestsStatus[keyof typeof ListBookingChangeRequestsStatus];
+
+
+export const ListBookingChangeRequestsStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  denied: 'denied',
+  withdrawn: 'withdrawn',
+} as const;
+
+export type CreateBookingChangeRequestBodyRequestType = typeof CreateBookingChangeRequestBodyRequestType[keyof typeof CreateBookingChangeRequestBodyRequestType];
+
+
+export const CreateBookingChangeRequestBodyRequestType = {
+  cancel: 'cancel',
+  reschedule: 'reschedule',
+  availability_override: 'availability_override',
+} as const;
+
+export type CreateBookingChangeRequestBodyRequestedPayloadJson = { [key: string]: unknown };
+
+export type CreateBookingChangeRequestBody = {
+  requestType: CreateBookingChangeRequestBodyRequestType;
+  requestedPayloadJson?: CreateBookingChangeRequestBodyRequestedPayloadJson;
+};
+
+export type ReviewBookingChangeRequestBodyDecision = typeof ReviewBookingChangeRequestBodyDecision[keyof typeof ReviewBookingChangeRequestBodyDecision];
+
+
+export const ReviewBookingChangeRequestBodyDecision = {
+  approved: 'approved',
+  denied: 'denied',
+} as const;
+
+export type ReviewBookingChangeRequestBody = {
+  decision: ReviewBookingChangeRequestBodyDecision;
+  reviewNotes?: string;
 };
 
 export type ListNotificationsParams = {
@@ -884,5 +1609,44 @@ export const ReviewVerificationBodyAction = {
 export type ReviewVerificationBody = {
   action: ReviewVerificationBodyAction;
   notes?: string;
+};
+
+export type AssignSchoolAdminBodyRole = typeof AssignSchoolAdminBodyRole[keyof typeof AssignSchoolAdminBodyRole];
+
+
+export const AssignSchoolAdminBodyRole = {
+  school_admin: 'school_admin',
+  instructor: 'instructor',
+} as const;
+
+export type AssignSchoolAdminBody = {
+  userId: number;
+  role?: AssignSchoolAdminBodyRole;
+};
+
+export type GetModerationCasesParams = {
+status?: string;
+severity?: string;
+schoolId?: number;
+contentType?: string;
+limit?: number;
+};
+
+export type ReleaseModerationCaseBody = {
+  outcome?: string;
+};
+
+export type EscalateModerationCaseBody = {
+  reason?: string;
+};
+
+export type CreateModerationExport201 = {
+  exportId: number;
+  caseCount: number;
+};
+
+export type CreateOrUpdateSubscriptionBody = {
+  planCode: string;
+  schoolId?: number;
 };
 

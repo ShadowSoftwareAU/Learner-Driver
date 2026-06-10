@@ -5,6 +5,8 @@ import { Loader2, ArrowLeft, Clock, Award, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
+import { PreLessonBriefingCard } from "@/components/PreLessonBriefingCard";
+import { MedicalInfoCard } from "@/components/MedicalInfoCard";
 
 export default function HandoverView() {
   const params = useParams();
@@ -58,6 +60,24 @@ export default function HandoverView() {
           <h1 className="text-3xl font-bold tracking-tight mb-2">Handover Report</h1>
           <p className="text-primary-foreground/80 text-lg">{handover.student.fullName}</p>
         </div>
+
+        {/* Pre-lesson briefing — safety snapshot */}
+        {(handover as any).safetyBriefing && (
+          <PreLessonBriefingCard
+            briefing={(handover as any).safetyBriefing}
+            studentName={handover.student.fullName}
+            readOnly
+          />
+        )}
+
+        {/* Medical info — restricted, reveal on demand */}
+        <MedicalInfoCard
+          studentId={studentId}
+          preview={{
+            medicalConditionsPreview: (handover as any).safetyBriefing?.medicalConditionsPreview,
+            allergiesPreview: (handover as any).safetyBriefing?.allergiesPreview,
+          }}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>

@@ -70,7 +70,7 @@ export default function Onboarding() {
       return;
     }
     updateRole.mutate(
-      { data: { role } },
+      { data: { role: role as "student" | "instructor" | "admin" } },
       {
         onSuccess: async () => {
           await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });

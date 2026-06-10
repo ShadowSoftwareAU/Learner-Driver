@@ -3,6 +3,7 @@ import { getAuth } from "@clerk/express";
 import { eq } from "drizzle-orm";
 import { db, usersTable, instructorsTable, studentsTable } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { touchLastActive } from "./audit";
 
 const router = Router();
 
@@ -27,12 +28,16 @@ async function getOrCreateUser(clerkId: string, email: string, name?: string) {
 router.get("/users/me", requireAuth, async (req: any, res): Promise<void> => {
   const auth = getAuth(req);
   const user = await getOrCreateUser(req.clerkUserId, auth?.sessionClaims?.email as string ?? "", auth?.sessionClaims?.name as string ?? undefined);
+  // Update lastActiveAt non-fatally on each authenticated request
+  touchLastActive(user.id).catch(() => {});
   res.json({
     id: user.id,
     clerkId: user.clerkId,
     email: user.email,
     name: user.name,
     role: user.role,
+    schoolId: user.schoolId ?? null,
+    sessionTimeoutMinutes: user.sessionTimeoutMinutes,
     createdAt: user.createdAt,
   });
 });
@@ -41,13 +46,13 @@ router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void>
   const auth = getAuth(req);
   const user = await getOrCreateUser(req.clerkUserId, auth?.sessionClaims?.email as string ?? "", auth?.sessionClaims?.name as string ?? undefined);
   const { role } = req.body;
-  if (!["student", "instructor", "admin"].includes(role)) {
+  // viewer is a valid self-assignable role (parent/guardian/mentor)
+  if (!["student", "instructor", "admin", "school_admin", "viewer"].includes(role)) {
     res.status(400).json({ error: "Invalid role" });
     return;
   }
   const [updated] = await db.update(usersTable).set({ role }).where(eq(usersTable.id, user.id)).returning();
 
-  // Ensure matching profile row exists for the role.
   const displayName = updated.name || updated.email || `User ${updated.id}`;
   const emailValue = updated.email || "";
   try {
@@ -64,6 +69,7 @@ router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void>
         req.log.info({ userId: updated.id }, "Student profile created for role assignment");
       }
     }
+    // viewer: no additional profile row needed yet — handled when linking via viewer code
   } catch (err) {
     req.log.error({ err, userId: updated.id, role }, "Failed to create profile row for role");
     res.status(500).json({ error: "Failed to create profile" });
@@ -76,6 +82,7 @@ router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void>
     email: updated.email,
     name: updated.name,
     role: updated.role,
+    schoolId: updated.schoolId ?? null,
     createdAt: updated.createdAt,
   });
 });

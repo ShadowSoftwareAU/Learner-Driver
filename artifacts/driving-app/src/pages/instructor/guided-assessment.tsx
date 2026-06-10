@@ -13,7 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
 import { useState, useMemo, useRef, useEffect } from "react";
-import { ManeuverResultItemCompetencyLevel } from "@/lib/enums";
+import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
+import { PedalControlSelector } from "@/components/PedalControlSelector";
 import { useToast } from "@/hooks/use-toast";
 import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
@@ -34,6 +35,9 @@ export default function GuidedAssessment() {
   const [studentId, setStudentId] = useState<string>("");
   const [duration, setDuration] = useState("60");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Pedal control — required before saving
+  const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
 
   // Flow state
   const [step, setStep] = useState<GuidedStep>("setup");
@@ -151,6 +155,10 @@ export default function GuidedAssessment() {
       toast({ title: "Error", description: "Please select a student", variant: "destructive" });
       return;
     }
+    if (!pedalOperator) {
+      toast({ title: "Pedal control required", description: "Please go back to setup and select pedal control.", variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -159,6 +167,7 @@ export default function GuidedAssessment() {
           studentId: parseInt(studentId),
           lessonDate: new Date(date).toISOString(),
           durationMinutes: parseInt(duration),
+          pedalOperator,
           confidenceNote,
           focusAreasNext: focusAreas,
           routePath: routePointsRef.current.length > 0 ? routePointsRef.current : undefined,
@@ -252,6 +261,15 @@ export default function GuidedAssessment() {
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader className="p-6 pb-4">
+              <CardTitle>Pedal Control</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <PedalControlSelector value={pedalOperator} onChange={setPedalOperator} />
+            </CardContent>
+          </Card>
+
           <PreviousLessonCard
             studentId={studentId ? parseInt(studentId) : null}
             onUseFocus={(focus) => {
@@ -263,7 +281,7 @@ export default function GuidedAssessment() {
           <Button
             className="w-full h-16 text-lg"
             onClick={() => setStep("select")}
-            disabled={!studentId}
+            disabled={!studentId || !pedalOperator}
           >
             Choose Maneuvers <ArrowRight className="w-5 h-5 ml-2" />
           </Button>

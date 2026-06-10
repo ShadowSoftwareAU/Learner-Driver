@@ -5,6 +5,7 @@
  *
  * To enable live email: set EMAIL_PROVIDER=resend and RESEND_API_KEY.
  */
+import { eq } from "drizzle-orm";
 import { db, notificationsTable } from "@workspace/db";
 import type { NotificationPayload } from "./notificationService";
 import { logger } from "../logger";
@@ -38,16 +39,14 @@ export async function sendEmail(
     logger.info({ event: "email_skipped_no_provider", userId, type: payload.type });
     await db.update(notificationsTable)
       .set({ deliveryStatus: "suppressed" })
-      .where((t, { eq }) => eq(t.id, row.id));
+      .where(eq(notificationsTable.id, row.id));
     return;
   }
 
   // TODO: Integrate Resend / SendGrid / SES here
-  // Example:
-  // await resend.emails.send({ from: '...', to: email, subject: payload.title, html: renderTemplate(payload) });
   logger.info({ event: "email_send_stub", provider, userId, type: payload.type, to: email });
 
   await db.update(notificationsTable)
     .set({ deliveryStatus: "sent", deliveredAt: new Date() })
-    .where((t, { eq }) => eq(t.id, row.id));
+    .where(eq(notificationsTable.id, row.id));
 }

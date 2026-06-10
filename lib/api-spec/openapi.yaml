@@ -30,6 +30,16 @@ tags:
     description: Dashboard summaries
   - name: scheduling
     description: Availability, zones, bookings and notifications
+  - name: schools
+    description: Driving school / tenant management
+  - name: viewer
+    description: Viewer role — parents, guardians, mentors
+  - name: moderation
+    description: Content moderation and safeguarding (super_admin only)
+  - name: billing
+    description: Subscriptions, feature entitlements, and Stripe skeleton
+  - name: demo
+    description: Demo mode controls (super_admin only)
 
 paths:
   /healthz:
@@ -947,6 +957,98 @@ paths:
         "409":
           description: Booking is not in a markable state
 
+  # ─── Booking change requests ─────────────────────────────────────────────────
+  /bookings/change-requests:
+    get:
+      operationId: listBookingChangeRequests
+      tags: [scheduling]
+      summary: List booking change requests (school-admin view)
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [pending, approved, denied, withdrawn]
+      responses:
+        "200":
+          description: List of change requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BookingChangeRequest"
+
+  /bookings/{id}/change-requests:
+    post:
+      operationId: createBookingChangeRequest
+      tags: [scheduling]
+      summary: Submit a change request for a booking
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [requestType]
+              properties:
+                requestType:
+                  type: string
+                  enum: [cancel, reschedule, availability_override]
+                requestedPayloadJson:
+                  type: object
+      responses:
+        "201":
+          description: Change request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingChangeRequest"
+        "404":
+          description: Booking not found
+
+  /bookings/change-requests/{id}/review:
+    patch:
+      operationId: reviewBookingChangeRequest
+      tags: [scheduling]
+      summary: Approve or deny a booking change request (school-admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision:
+                  type: string
+                  enum: [approved, denied]
+                reviewNotes:
+                  type: string
+      responses:
+        "200":
+          description: Request reviewed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingChangeRequest"
+        "404":
+          description: Not found
+        "409":
+          description: Not pending
+
   # ─── Notifications ────────────────────────────────────────────────────────────
   /notifications:
     get:
@@ -1191,6 +1293,540 @@ paths:
               schema:
                 $ref: "#/components/schemas/TermsStatus"
 
+  # ─── Notification Preferences ────────────────────────────────────────────────
+  /notifications/preferences:
+    get:
+      operationId: getNotificationPreferences
+      tags: [scheduling]
+      summary: Get current user notification preferences
+      responses:
+        "200":
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+    patch:
+      operationId: updateNotificationPreferences
+      tags: [scheduling]
+      summary: Update notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferencesPatch"
+      responses:
+        "200":
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+
+  /notifications/push-tokens:
+    post:
+      operationId: registerPushToken
+      tags: [scheduling]
+      summary: Register a push token for this device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "201":
+          description: Token registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushToken"
+
+  /notifications/push-tokens/{id}:
+    delete:
+      operationId: revokePushToken
+      tags: [scheduling]
+      summary: Revoke a push token
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Token revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  # ─── Schools ──────────────────────────────────────────────────────────────────
+  /schools:
+    post:
+      operationId: createSchool
+      tags: [schools]
+      summary: Create a driving school (super_admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchoolInput"
+      responses:
+        "201":
+          description: School created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrivingSchool"
+
+  /schools/me:
+    get:
+      operationId: getMySchool
+      tags: [schools]
+      summary: Get the school associated with the current user
+      responses:
+        "200":
+          description: My school
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrivingSchool"
+
+  /schools/{id}:
+    get:
+      operationId: getSchool
+      tags: [schools]
+      summary: Get a school by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: School
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrivingSchool"
+    patch:
+      operationId: updateSchool
+      tags: [schools]
+      summary: Update school settings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchoolPatch"
+      responses:
+        "200":
+          description: Updated school
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DrivingSchool"
+
+  /schools/{id}/instructors:
+    post:
+      operationId: addSchoolInstructor
+      tags: [schools]
+      summary: Add instructor to school
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchoolInstructorInput"
+      responses:
+        "201":
+          description: Instructor added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /schools/{id}/instructors/{instructorId}:
+    delete:
+      operationId: removeSchoolInstructor
+      tags: [schools]
+      summary: Remove instructor from school
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: instructorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Instructor removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /schools/{id}/admins:
+    post:
+      operationId: assignSchoolAdmin
+      tags: [schools]
+      summary: Assign a user as school admin (super_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId:
+                  type: integer
+                role:
+                  type: string
+                  enum: [school_admin, instructor]
+      responses:
+        "200":
+          description: Admin assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  # ─── Viewer links ─────────────────────────────────────────────────────────────
+  /viewer-links/request:
+    post:
+      operationId: requestViewerLink
+      tags: [viewer]
+      summary: Link to a student using a viewer code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ViewerLinkRequest"
+      responses:
+        "201":
+          description: Link created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /viewer/me/students:
+    get:
+      operationId: getViewerStudents
+      tags: [viewer]
+      summary: Get students linked to the current viewer
+      responses:
+        "200":
+          description: Linked students
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ViewerStudentSummary"
+
+  /viewer/students/{id}/dashboard:
+    get:
+      operationId: getViewerStudentDashboard
+      tags: [viewer]
+      summary: Get sanitised student dashboard for a viewer
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Viewer student dashboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewerStudentDashboard"
+
+  # ─── Moderation ───────────────────────────────────────────────────────────────
+  /moderation/cases:
+    get:
+      operationId: getModerationCases
+      tags: [moderation]
+      summary: List moderation cases (super_admin only)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: schoolId
+          in: query
+          schema:
+            type: integer
+        - name: contentType
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cases list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModerationCase"
+
+  /moderation/cases/{id}:
+    get:
+      operationId: getModerationCase
+      tags: [moderation]
+      summary: Get a moderation case with its event history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Case detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationCaseDetail"
+    patch:
+      operationId: updateModerationCase
+      tags: [moderation]
+      summary: Update case status, legalHold, or reviewOutcome
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerationCasePatch"
+      responses:
+        "200":
+          description: Updated case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModerationCase"
+
+  /moderation/cases/{id}/release:
+    post:
+      operationId: releaseModerationCase
+      tags: [moderation]
+      summary: Release quarantined content after review
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                outcome:
+                  type: string
+      responses:
+        "200":
+          description: Case released
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /moderation/cases/{id}/escalate:
+    post:
+      operationId: escalateModerationCase
+      tags: [moderation]
+      summary: Escalate a moderation case
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        "200":
+          description: Case escalated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /moderation/exports:
+    post:
+      operationId: createModerationExport
+      tags: [moderation]
+      summary: Create a law enforcement evidence export (super_admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ModerationExportInput"
+      responses:
+        "201":
+          description: Export created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [exportId, caseCount]
+                properties:
+                  exportId:
+                    type: integer
+                  caseCount:
+                    type: integer
+
+  # ─── Billing ──────────────────────────────────────────────────────────────────
+  /billing/subscription:
+    get:
+      operationId: getMySubscription
+      tags: [billing]
+      summary: Get current subscription and pricing info
+      responses:
+        "200":
+          description: Subscription info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionInfo"
+    post:
+      operationId: createOrUpdateSubscription
+      tags: [billing]
+      summary: Create or update a subscription (stub)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planCode]
+              properties:
+                planCode:
+                  type: string
+                schoolId:
+                  type: integer
+      responses:
+        "201":
+          description: Subscription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subscription"
+
+  /billing/entitlements:
+    get:
+      operationId: getMyEntitlements
+      tags: [billing]
+      summary: Get merged feature entitlements for the current user/school
+      responses:
+        "200":
+          description: Entitlements list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EntitlementSummary"
+
+  /billing/webhook:
+    post:
+      operationId: stripeWebhook
+      tags: [billing]
+      summary: Stripe webhook endpoint (stub)
+      responses:
+        "200":
+          description: Webhook received
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  # ─── Demo ─────────────────────────────────────────────────────────────────────
+  /demo/status:
+    get:
+      operationId: getDemoStatus
+      tags: [demo]
+      summary: Get demo mode status (super_admin only)
+      responses:
+        "200":
+          description: Demo status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoStatus"
+
+  /demo/reset:
+    post:
+      operationId: resetDemoData
+      tags: [demo]
+      summary: Reset demo school data (super_admin only, feature-flagged)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoResetInput"
+      responses:
+        "200":
+          description: Demo data reset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DemoResetResult"
+
 
 components:
   schemas:
@@ -1216,7 +1852,7 @@ components:
           type: ["string", "null"]
         role:
           type: string
-          enum: [student, instructor, admin, unassigned]
+          enum: [student, instructor, admin, school_admin, viewer, super_admin, unassigned]
         createdAt:
           type: string
 
@@ -1226,7 +1862,7 @@ components:
       properties:
         role:
           type: string
-          enum: [student, instructor, admin]
+          enum: [student, instructor, admin, school_admin, viewer, super_admin]
 
     # ─── Students ──────────────────────────────────────────────────────────────
     Student:
@@ -2332,3 +2968,615 @@ components:
           type: string
         acceptedAt:
           type: ["string", "null"]
+
+    # ─── Medical ────────────────────────────────────────────────────────────────
+    StudentMedical:
+      type: object
+      required: [studentId, dataClassification]
+      properties:
+        studentId:
+          type: integer
+        medicalConditions:
+          type: ["string", "null"]
+        allergies:
+          type: ["string", "null"]
+        medicalConditionsPreview:
+          type: ["string", "null"]
+        allergiesPreview:
+          type: ["string", "null"]
+        dataClassification:
+          type: string
+          enum: [restricted, confidential, internal]
+
+    StudentMedicalInput:
+      type: object
+      properties:
+        medicalConditions:
+          type: ["string", "null"]
+        allergies:
+          type: ["string", "null"]
+
+    # ─── Pre-lesson briefing ───────────────────────────────────────────────────
+    PreLessonBriefing:
+      type: object
+      properties:
+        pedalOperator:
+          type: ["string", "null"]
+          enum: [student, instructor, shared, null]
+        safetyCriticalNotes:
+          type: array
+          items:
+            type: object
+        medicalConditionsPreview:
+          type: ["string", "null"]
+        allergiesPreview:
+          type: ["string", "null"]
+        medicalConditions:
+          type: ["string", "null"]
+        allergies:
+          type: ["string", "null"]
+        latestFocusAreas:
+          type: ["string", "null"]
+
+    # ─── Driving schools ──────────────────────────────────────────────────────
+    DrivingSchool:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        abn:
+          type: ["string", "null"]
+        contactEmail:
+          type: ["string", "null"]
+        contactPhone:
+          type: ["string", "null"]
+        addressLine1:
+          type: ["string", "null"]
+        suburb:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        postcode:
+          type: ["string", "null"]
+        logoPath:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        secondaryColor:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    DrivingSchoolInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        abn:
+          type: string
+        contactEmail:
+          type: string
+        contactPhone:
+          type: string
+        addressLine1:
+          type: string
+        suburb:
+          type: string
+        state:
+          type: string
+        postcode:
+          type: string
+
+    # ─── Viewer links ─────────────────────────────────────────────────────────
+    ViewerLink:
+      type: object
+      required: [id, studentId, viewerUserId, status]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        viewerUserId:
+          type: integer
+        status:
+          type: string
+          enum: [active, revoked, expired]
+        viewerCode:
+          type: ["string", "null"]
+        linkedAt:
+          type: ["string", "null"]
+        expiresAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ─── Booking change requests ──────────────────────────────────────────────
+    BookingChangeRequest:
+      type: object
+      required: [id, bookingId, requestedByUserId, requestType, status]
+      properties:
+        id:
+          type: integer
+        bookingId:
+          type: integer
+        requestedByUserId:
+          type: integer
+        requestType:
+          type: string
+          enum: [cancel, reschedule, update]
+        requestedDate:
+          type: ["string", "null"]
+        requestedTime:
+          type: ["string", "null"]
+        reason:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, approved, denied, withdrawn]
+        reviewedByUserId:
+          type: ["integer", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ─── Notification preferences ─────────────────────────────────────────────
+    NotificationPreferences:
+      type: object
+      required: [userId]
+      properties:
+        userId:
+          type: integer
+        inAppEnabled:
+          type: boolean
+        emailEnabled:
+          type: boolean
+        pushEnabled:
+          type: boolean
+        bookingEmails:
+          type: boolean
+        bookingPush:
+          type: boolean
+        safeguardingAlerts:
+          type: boolean
+        marketingEnabled:
+          type: boolean
+
+    NotificationPreferencesInput:
+      type: object
+      properties:
+        inAppEnabled:
+          type: boolean
+        emailEnabled:
+          type: boolean
+        pushEnabled:
+          type: boolean
+        bookingEmails:
+          type: boolean
+        bookingPush:
+          type: boolean
+        safeguardingAlerts:
+          type: boolean
+        marketingEnabled:
+          type: boolean
+
+    # ─── Push tokens ──────────────────────────────────────────────────────────
+    PushToken:
+      type: object
+      required: [id, userId, token, platform]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        token:
+          type: string
+        platform:
+          type: string
+          enum: [ios, android, web]
+        deviceId:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    PushTokenInput:
+      type: object
+      required: [token, platform]
+      properties:
+        token:
+          type: string
+        platform:
+          type: string
+          enum: [ios, android, web]
+        deviceId:
+          type: string
+
+    # ─── Moderation ───────────────────────────────────────────────────────────
+    ModerationCase:
+      type: object
+      required: [id, status, severity, contentType]
+      properties:
+        id:
+          type: integer
+        schoolId:
+          type: ["integer", "null"]
+        status:
+          type: string
+          enum: [open, under_review, escalated, released, closed]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        contentType:
+          type: string
+        contentId:
+          type: ["integer", "null"]
+        actorUserId:
+          type: ["integer", "null"]
+        targetUserId:
+          type: ["integer", "null"]
+        studentId:
+          type: ["integer", "null"]
+        rawExcerpt:
+          type: ["string", "null"]
+        ruleHitsJson:
+          type: ["object", "null"]
+        reviewOutcome:
+          type: ["string", "null"]
+        reviewedByUserId:
+          type: ["integer", "null"]
+        reviewedAt:
+          type: ["string", "null"]
+        legalHold:
+          type: boolean
+        createdAt:
+          type: string
+
+    ModerationCasePatch:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, under_review, escalated, released, closed]
+        reviewOutcome:
+          type: string
+        legalHold:
+          type: boolean
+
+    ModerationEvent:
+      type: object
+      required: [id, moderationCaseId, eventType]
+      properties:
+        id:
+          type: integer
+        moderationCaseId:
+          type: integer
+        eventType:
+          type: string
+          enum: [detected, quarantined, reviewed, released, escalated, exported, closed]
+        payloadJson:
+          type: ["object", "null"]
+        createdAt:
+          type: string
+
+    # ─── Subscriptions ────────────────────────────────────────────────────────
+    Subscription:
+      type: object
+      required: [id, userId, planCode, status]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        schoolId:
+          type: ["integer", "null"]
+        planCode:
+          type: string
+        billingProvider:
+          type: ["string", "null"]
+        externalSubscriptionId:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [active, trialing, past_due, cancelled, paused]
+        currentPeriodStart:
+          type: ["string", "null"]
+        currentPeriodEnd:
+          type: ["string", "null"]
+        cancelledAt:
+          type: ["string", "null"]
+        seatCount:
+          type: ["integer", "null"]
+        amountCents:
+          type: ["integer", "null"]
+        currency:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ─── Feature entitlements ─────────────────────────────────────────────────
+    FeatureEntitlement:
+      type: object
+      required: [id, userId, featureKey, enabled]
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        schoolId:
+          type: ["integer", "null"]
+        featureKey:
+          type: string
+        enabled:
+          type: boolean
+        overriddenByAdmin:
+          type: boolean
+        expiresAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    # ─── Shared utilities ─────────────────────────────────────────────────────
+    OkResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: ["string", "null"]
+
+    # ─── Schools ──────────────────────────────────────────────────────────────
+    SchoolInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        abn:
+          type: string
+        billingContactEmail:
+          type: string
+        billingContactName:
+          type: string
+        billingContactPhone:
+          type: string
+        seatLimit:
+          type: integer
+
+    SchoolPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        abn:
+          type: string
+        logoPath:
+          type: string
+        primaryColor:
+          type: string
+        secondaryColor:
+          type: string
+        billingContactEmail:
+          type: string
+        billingContactName:
+          type: string
+        billingContactPhone:
+          type: string
+        seatLimit:
+          type: integer
+
+    SchoolInstructorInput:
+      type: object
+      required: [instructorId]
+      properties:
+        instructorId:
+          type: integer
+        roleWithinSchool:
+          type: string
+          enum: [instructor, school_admin]
+        isPrimary:
+          type: boolean
+
+    # ─── Viewer ───────────────────────────────────────────────────────────────
+    ViewerLinkRequest:
+      type: object
+      required: [code]
+      properties:
+        code:
+          type: string
+          description: "Student viewer code (e.g. DRV-7KQ9X2)"
+        relationshipType:
+          type: string
+          enum: [parent, guardian, mentor, support_worker, agency_case_worker, school_mentor, other]
+
+    ViewerStudentSummary:
+      type: object
+      required: [id, fullName]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        totalHours:
+          type: ["number", "null"]
+        headshotPath:
+          type: ["string", "null"]
+        noShowCount:
+          type: integer
+        attendanceReliabilityScore:
+          type: ["integer", "null"]
+        relationshipType:
+          type: ["string", "null"]
+        linkedAt:
+          type: string
+
+    ViewerStudentDashboard:
+      type: object
+      required: [student, recentAssessments, upcomingBookings]
+      properties:
+        student:
+          $ref: "#/components/schemas/ViewerStudentSummary"
+        recentAssessments:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              lessonDate:
+                type: string
+              durationMinutes:
+                type: integer
+              pedalOperator:
+                type: string
+              focusAreasNext:
+                type: ["string", "null"]
+              totalHoursThisLesson:
+                type: ["number", "null"]
+        upcomingBookings:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              scheduledAt:
+                type: string
+              durationMinutes:
+                type: integer
+              status:
+                type: string
+              pickupAddress:
+                type: ["string", "null"]
+        link:
+          type: object
+          properties:
+            relationshipType:
+              type: ["string", "null"]
+            linkedAt:
+              type: string
+
+    # ─── Moderation (detail) ──────────────────────────────────────────────────
+    ModerationCaseDetail:
+      allOf:
+        - $ref: "#/components/schemas/ModerationCase"
+        - type: object
+          properties:
+            events:
+              type: array
+              items:
+                $ref: "#/components/schemas/ModerationEvent"
+
+    ModerationExportInput:
+      type: object
+      required: [caseIds, reason]
+      properties:
+        caseIds:
+          type: array
+          items:
+            type: integer
+        reason:
+          type: string
+        schoolId:
+          type: integer
+
+    NotificationPreferencesPatch:
+      type: object
+      properties:
+        emailEnabled:
+          type: boolean
+        pushEnabled:
+          type: boolean
+        inAppEnabled:
+          type: boolean
+        smsEnabled:
+          type: boolean
+        bookingEmails:
+          type: boolean
+        bookingPush:
+          type: boolean
+        safeguardingAlerts:
+          type: boolean
+        marketingEnabled:
+          type: boolean
+
+    # ─── Billing ──────────────────────────────────────────────────────────────
+    SubscriptionInfo:
+      type: object
+      required: [planCode, status]
+      properties:
+        planCode:
+          type: string
+        status:
+          type: string
+        billingProvider:
+          type: ["string", "null"]
+        seatCount:
+          type: ["integer", "null"]
+        renewalAt:
+          type: ["string", "null"]
+        enforcementEnabled:
+          type: boolean
+        pricingInfo:
+          type: object
+          properties:
+            viewer:
+              type: integer
+            independentInstructor:
+              type: integer
+            schoolBase:
+              type: integer
+            schoolAdditionalSeat:
+              type: integer
+
+    EntitlementSummary:
+      type: object
+      required: [featureKey, isEnabled]
+      properties:
+        featureKey:
+          type: string
+        isEnabled:
+          type: boolean
+        source:
+          type: string
+          enum: [plan, promo, manual, default]
+
+    # ─── Demo ─────────────────────────────────────────────────────────────────
+    DemoStatus:
+      type: object
+      required: [demoModeEnabled]
+      properties:
+        demoModeEnabled:
+          type: boolean
+        demoSchoolId:
+          type: ["integer", "null"]
+        lastReset:
+          type: ["object", "null"]
+
+    DemoResetInput:
+      type: object
+      properties:
+        resetScope:
+          type: string
+          enum: [full_demo, bookings_only, students_only]
+        notes:
+          type: string
+
+    DemoResetResult:
+      type: object
+      required: [ok, scope]
+      properties:
+        ok:
+          type: boolean
+        resetId:
+          type: integer
+        scope:
+          type: string

@@ -17,6 +17,12 @@ import lessonPlanRouter from "./lesson-plan";
 import storageRouter from "./storage";
 import verificationRouter from "./verification";
 import termsRouter from "./terms";
+import moderationRouter from "./moderation";
+import schoolsRouter from "./schools";
+import viewerLinksRouter from "./viewer-links";
+import billingRouter from "./billing";
+import demoRouter from "./demo";
+import bookingApprovalsRouter from "./booking-approvals";
 
 const router: IRouter = Router();
 
@@ -38,5 +44,11 @@ router.use(lessonPlanRouter);
 router.use(storageRouter);
 router.use(verificationRouter);
 router.use(termsRouter);
+router.use(moderationRouter);
+router.use(schoolsRouter);
+router.use(viewerLinksRouter);
+router.use(billingRouter);
+router.use(demoRouter);
+router.use(bookingApprovalsRouter);
 
 export default router;
