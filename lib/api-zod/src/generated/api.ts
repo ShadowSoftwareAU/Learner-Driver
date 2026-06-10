@@ -1945,3 +1945,62 @@ export const ResetDemoDataResponse = zod.object({
 })
 
 
+/**
+ * @summary Get community cleanliness summary for a public toilet
+ */
+export const GetToiletSummaryParams = zod.object({
+  "osmId": zod.coerce.number()
+})
+
+export const getToiletSummaryResponseAvgCleanlinessMax = 5;
+
+export const getToiletSummaryResponseMyRatingOneCleanlinessMax = 5;
+
+
+
+export const GetToiletSummaryResponse = zod.object({
+  "osmNodeId": zod.number(),
+  "avgCleanliness": zod.number().min(1).max(getToiletSummaryResponseAvgCleanlinessMax).nullish(),
+  "totalRatings": zod.number(),
+  "myRating": zod.union([zod.object({
+  "cleanliness": zod.number().min(1).max(getToiletSummaryResponseMyRatingOneCleanlinessMax),
+  "comment": zod.string().nullish()
+}),zod.null()]).optional()
+})
+
+
+/**
+ * @summary Submit or update a cleanliness rating for a public toilet
+ */
+export const RateToiletParams = zod.object({
+  "osmId": zod.coerce.number()
+})
+
+export const rateToiletBodyCleanlinessMax = 5;
+
+export const rateToiletBodyCommentMax = 200;
+
+
+
+export const RateToiletBody = zod.object({
+  "cleanliness": zod.number().min(1).max(rateToiletBodyCleanlinessMax),
+  "comment": zod.string().max(rateToiletBodyCommentMax).optional()
+})
+
+export const rateToiletResponseAvgCleanlinessMax = 5;
+
+export const rateToiletResponseMyRatingOneCleanlinessMax = 5;
+
+
+
+export const RateToiletResponse = zod.object({
+  "osmNodeId": zod.number(),
+  "avgCleanliness": zod.number().min(1).max(rateToiletResponseAvgCleanlinessMax).nullish(),
+  "totalRatings": zod.number(),
+  "myRating": zod.union([zod.object({
+  "cleanliness": zod.number().min(1).max(rateToiletResponseMyRatingOneCleanlinessMax),
+  "comment": zod.string().nullish()
+}),zod.null()]).optional()
+})
+
+

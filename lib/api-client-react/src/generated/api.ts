@@ -102,6 +102,8 @@ import type {
   Subscription,
   SubscriptionInfo,
   TermsStatus,
+  ToiletRateInput,
+  ToiletSummary,
   UserProfile,
   VerificationStatusResponse,
   VerificationWithDocs,
@@ -6538,5 +6540,154 @@ export const useResetDemoData = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getResetDemoDataMutationOptions(options));
+    }
+
+export const getGetToiletSummaryUrl = (osmId: number,) => {
+
+
+
+
+  return `/api/toilets/${osmId}/summary`
+}
+
+/**
+ * @summary Get community cleanliness summary for a public toilet
+ */
+export const getToiletSummary = async (osmId: number, options?: RequestInit): Promise<ToiletSummary> => {
+
+  return customFetch<ToiletSummary>(getGetToiletSummaryUrl(osmId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetToiletSummaryQueryKey = (osmId: number,) => {
+    return [
+    `/api/toilets/${osmId}/summary`
+    ] as const;
+    }
+
+
+export const getGetToiletSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getToiletSummary>>, TError = ErrorType<unknown>>(osmId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToiletSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetToiletSummaryQueryKey(osmId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getToiletSummary>>> = ({ signal }) => getToiletSummary(osmId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(osmId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getToiletSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetToiletSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getToiletSummary>>>
+export type GetToiletSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get community cleanliness summary for a public toilet
+ */
+
+export function useGetToiletSummary<TData = Awaited<ReturnType<typeof getToiletSummary>>, TError = ErrorType<unknown>>(
+ osmId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getToiletSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetToiletSummaryQueryOptions(osmId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRateToiletUrl = (osmId: number,) => {
+
+
+
+
+  return `/api/toilets/${osmId}/rate`
+}
+
+/**
+ * @summary Submit or update a cleanliness rating for a public toilet
+ */
+export const rateToilet = async (osmId: number,
+    toiletRateInput: ToiletRateInput, options?: RequestInit): Promise<ToiletSummary> => {
+
+  return customFetch<ToiletSummary>(getRateToiletUrl(osmId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      toiletRateInput,)
+  }
+);}
+
+
+
+
+export const getRateToiletMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateToilet>>, TError,{osmId: number;data: BodyType<ToiletRateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof rateToilet>>, TError,{osmId: number;data: BodyType<ToiletRateInput>}, TContext> => {
+
+const mutationKey = ['rateToilet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof rateToilet>>, {osmId: number;data: BodyType<ToiletRateInput>}> = (props) => {
+          const {osmId,data} = props ?? {};
+
+          return  rateToilet(osmId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RateToiletMutationResult = NonNullable<Awaited<ReturnType<typeof rateToilet>>>
+    export type RateToiletMutationBody = BodyType<ToiletRateInput>
+    export type RateToiletMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit or update a cleanliness rating for a public toilet
+ */
+export const useRateToilet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof rateToilet>>, TError,{osmId: number;data: BodyType<ToiletRateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof rateToilet>>,
+        TError,
+        {osmId: number;data: BodyType<ToiletRateInput>},
+        TContext
+      > => {
+      return useMutation(getRateToiletMutationOptions(options));
     }
 

@@ -16,3 +16,4 @@ export * from "./viewers";
 export * from "./moderation";
 export * from "./subscriptions";
 export * from "./permissions";
+export * from "./toilet-ratings";

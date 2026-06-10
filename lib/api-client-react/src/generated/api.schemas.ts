@@ -1471,6 +1471,38 @@ export interface DemoResetResult {
   scope: string;
 }
 
+export interface ToiletMyRating {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  cleanliness: number;
+  /** @nullable */
+  comment?: string | null;
+}
+
+export interface ToiletSummary {
+  osmNodeId: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     * @nullable
+     */
+  avgCleanliness?: number | null;
+  totalRatings: number;
+  myRating?: ToiletMyRating | null;
+}
+
+export interface ToiletRateInput {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  cleanliness: number;
+  /** @maxLength 200 */
+  comment?: string;
+}
+
 export type GenerateViewerCode200 = {
   viewerCode: string;
   viewerCodeIssuedAt: string;

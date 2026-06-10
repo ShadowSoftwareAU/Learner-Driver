@@ -24,6 +24,7 @@ import viewerLinksRouter from "./viewer-links";
 import billingRouter from "./billing";
 import demoRouter from "./demo";
 import bookingApprovalsRouter from "./booking-approvals";
+import toiletsRouter from "./toilets";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(viewerLinksRouter);
 router.use(billingRouter);
 router.use(demoRouter);
 router.use(bookingApprovalsRouter);
+router.use(toiletsRouter);
 
 export default router;

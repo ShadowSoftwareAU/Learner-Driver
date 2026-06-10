@@ -40,6 +40,8 @@ tags:
     description: Subscriptions, feature entitlements, and Stripe skeleton
   - name: demo
     description: Demo mode controls (super_admin only)
+  - name: toilets
+    description: Community cleanliness ratings for public toilets (OSM-sourced)
 
 paths:
   /healthz:
@@ -1827,6 +1829,54 @@ paths:
               schema:
                 $ref: "#/components/schemas/DemoResetResult"
 
+  # ─── Toilets ──────────────────────────────────────────────────────────────
+
+  /toilets/{osmId}/summary:
+    get:
+      operationId: getToiletSummary
+      tags: [toilets]
+      summary: Get community cleanliness summary for a public toilet
+      parameters:
+        - name: osmId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: Toilet community summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToiletSummary"
+
+  /toilets/{osmId}/rate:
+    post:
+      operationId: rateToilet
+      tags: [toilets]
+      summary: Submit or update a cleanliness rating for a public toilet
+      parameters:
+        - name: osmId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToiletRateInput"
+      responses:
+        "200":
+          description: Updated community summary after rating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToiletSummary"
+
 
 components:
   schemas:
@@ -3580,3 +3630,46 @@ components:
           type: integer
         scope:
           type: string
+
+    # ─── Toilets ────────────────────────────────────────────────────────────
+
+    ToiletMyRating:
+      type: object
+      required: [cleanliness]
+      properties:
+        cleanliness:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: ["string", "null"]
+
+    ToiletSummary:
+      type: object
+      required: [osmNodeId, totalRatings]
+      properties:
+        osmNodeId:
+          type: integer
+          format: int64
+        avgCleanliness:
+          type: ["number", "null"]
+          minimum: 1
+          maximum: 5
+        totalRatings:
+          type: integer
+        myRating:
+          oneOf:
+            - $ref: "#/components/schemas/ToiletMyRating"
+            - type: "null"
+
+    ToiletRateInput:
+      type: object
+      required: [cleanliness]
+      properties:
+        cleanliness:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 200

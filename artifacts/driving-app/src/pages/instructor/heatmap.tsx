@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useListManeuvers, getGetManeuverHeatmapQueryOptions } from "@workspace/api-client-react";
+import { ToiletRatingWidget } from "@/components/ToiletRatingWidget";
 
 const LEVEL_COLOR: Record<string, string> = {
   mastered: "#16a34a",
@@ -436,21 +437,14 @@ export default function HeatmapPage() {
                       }}
                     >
                       <Popup>
-                        <div style={{ minWidth: 160 }}>
-                          <p style={{ fontWeight: 700, marginBottom: 4 }}>{b.name}</p>
-                          <p style={{ fontSize: 11, marginBottom: 2 }}>
-                            {b.fee ? "💰 Paid entry" : "✅ Free"}
-                          </p>
-                          {b.wheelchair && (
-                            <p style={{ fontSize: 11, marginBottom: 2 }}>♿ Wheelchair accessible</p>
-                          )}
-                          {b.openingHours && (
-                            <p style={{ fontSize: 11, color: "#6b7280" }}>🕐 {b.openingHours}</p>
-                          )}
-                          <p style={{ fontSize: 10, color: "#9ca3af", marginTop: 4 }}>
-                            OSM data · Quality: {b.qualityScore}/4
-                          </p>
-                        </div>
+                        <ToiletRatingWidget
+                          osmId={b.id}
+                          name={b.name}
+                          fee={b.fee}
+                          wheelchair={b.wheelchair}
+                          openingHours={b.openingHours}
+                          qualityScore={b.qualityScore}
+                        />
                       </Popup>
                     </CircleMarker>
                   ))}
