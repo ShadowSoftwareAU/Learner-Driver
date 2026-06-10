@@ -152,9 +152,17 @@ function AuthErrorScreen() {
   const handleReset = async () => {
     try {
       await signOut();
-    } finally {
-      window.location.assign(basePath || "/");
+    } catch {
+      // signOut can fail when the session is already invalid — that's fine
     }
+    // Ask the server to expire all stale HttpOnly Clerk cookies via Set-Cookie headers.
+    // JavaScript cannot clear HttpOnly cookies itself, but a server response can.
+    try {
+      await fetch(`${basePath}/api/clear-session`, { credentials: "include" });
+    } catch {
+      // best-effort — proceed to sign-in regardless
+    }
+    window.location.assign(`${basePath}/sign-in`);
   };
   return (
     <div className="flex min-h-[100dvh] flex-col items-center justify-center gap-4 bg-gray-50 px-4 text-center">

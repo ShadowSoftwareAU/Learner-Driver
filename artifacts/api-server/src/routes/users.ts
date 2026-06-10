@@ -10,17 +10,6 @@ const router = Router();
 function requireAuth(req: any, res: any, next: any) {
   const auth = getAuth(req);
   const userId = auth?.userId;
-  // Temporary debug — remove after diagnosing 401s
-  const cookieNames = (req.headers?.cookie ?? "").split(";").map((c: string) => c.trim().split("=")[0]).filter(Boolean);
-  req.log.info({
-    clerkUserId: userId ?? null,
-    sessionId: auth?.sessionId ?? null,
-    sessionStatus: (auth as any)?.sessionStatus ?? null,
-    reason: userId ? null : "no_userId",
-    cookieNames,
-    hasSecretKey: !!(process.env.CLERK_SECRET_KEY),
-    secretKeyPrefix: process.env.CLERK_SECRET_KEY?.slice(0, 8) ?? null,
-  }, "requireAuth debug");
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
