@@ -534,7 +534,13 @@ export default function HeatmapPage() {
                   <BoundsTracker onBoundsChange={triggerBathroomFetch} />
                   <MapClickHandler
                     active={addMode}
-                    onMapClick={(lat, lng) => { setPendingLatLng({ lat, lng }); setAddMode(false); }}
+                    onMapClick={(lat, lng) => {
+                      setAddMode(false);
+                      // Defer so the Leaflet click event finishes propagating before
+                      // Radix Dialog mounts — otherwise Radix sees the same click as
+                      // an "outside click" and immediately dismisses the dialog.
+                      setTimeout(() => setPendingLatLng({ lat, lng }), 0);
+                    }}
                   />
                   {pendingLatLng && (
                     <CircleMarker
