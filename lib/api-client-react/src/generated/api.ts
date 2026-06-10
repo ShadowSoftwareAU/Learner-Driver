@@ -105,6 +105,7 @@ import type {
   SubscriptionInfo,
   TermsStatus,
   ToiletRateInput,
+  ToiletSubmitInput,
   ToiletSummary,
   UserProfile,
   VerificationStatusResponse,
@@ -6542,6 +6543,77 @@ export const useResetDemoData = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getResetDemoDataMutationOptions(options));
+    }
+
+export const getSubmitToiletUrl = () => {
+
+
+
+
+  return `/api/toilets/submit`
+}
+
+/**
+ * @summary Submit a new community-reported toilet
+ */
+export const submitToilet = async (toiletSubmitInput: ToiletSubmitInput, options?: RequestInit): Promise<GovToilet> => {
+
+  return customFetch<GovToilet>(getSubmitToiletUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      toiletSubmitInput,)
+  }
+);}
+
+
+
+
+export const getSubmitToiletMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitToilet>>, TError,{data: BodyType<ToiletSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitToilet>>, TError,{data: BodyType<ToiletSubmitInput>}, TContext> => {
+
+const mutationKey = ['submitToilet'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitToilet>>, {data: BodyType<ToiletSubmitInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  submitToilet(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitToiletMutationResult = NonNullable<Awaited<ReturnType<typeof submitToilet>>>
+    export type SubmitToiletMutationBody = BodyType<ToiletSubmitInput>
+    export type SubmitToiletMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit a new community-reported toilet
+ */
+export const useSubmitToilet = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitToilet>>, TError,{data: BodyType<ToiletSubmitInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitToilet>>,
+        TError,
+        {data: BodyType<ToiletSubmitInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitToiletMutationOptions(options));
     }
 
 export const getGetGovNearbyUrl = (params: GetGovNearbyParams,) => {

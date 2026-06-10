@@ -1946,6 +1946,30 @@ export const ResetDemoDataResponse = zod.object({
 
 
 /**
+ * @summary Submit a new community-reported toilet
+ */
+export const submitToiletBodyNameMax = 100;
+
+export const submitToiletBodyNotesMax = 300;
+
+
+
+export const SubmitToiletBody = zod.object({
+  "name": zod.string().min(1).max(submitToiletBodyNameMax),
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "wheelchairAccessible": zod.boolean().optional(),
+  "paymentRequired": zod.boolean().optional(),
+  "isOpen24h": zod.boolean().optional(),
+  "babyChange": zod.boolean().optional(),
+  "notes": zod.string().max(submitToiletBodyNotesMax).optional(),
+  "unisex": zod.boolean().optional(),
+  "male": zod.boolean().optional(),
+  "female": zod.boolean().optional()
+})
+
+
+/**
  * @summary Get government-sourced public toilets within a bounding box
  */
 export const GetGovNearbyQueryParams = zod.object({
@@ -1958,6 +1982,8 @@ export const GetGovNearbyQueryParams = zod.object({
 export const GetGovNearbyResponseItem = zod.object({
   "id": zod.number(),
   "govId": zod.string().nullish(),
+  "sourceType": zod.enum(['gov', 'user']),
+  "submittedByUserId": zod.number().nullish(),
   "name": zod.string(),
   "lat": zod.number(),
   "lng": zod.number(),

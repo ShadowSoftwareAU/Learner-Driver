@@ -1831,6 +1831,27 @@ paths:
 
   # ─── Toilets ──────────────────────────────────────────────────────────────
 
+  /toilets/submit:
+    post:
+      operationId: submitToilet
+      tags: [toilets]
+      summary: Submit a new community-reported toilet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToiletSubmitInput"
+      responses:
+        "201":
+          description: Newly created toilet record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GovToilet"
+
   /toilets/gov-nearby:
     get:
       operationId: getGovNearby
@@ -3678,14 +3699,49 @@ components:
         comment:
           type: ["string", "null"]
 
+    ToiletSubmitInput:
+      type: object
+      required: [name, lat, lng]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        lat:
+          type: number
+        lng:
+          type: number
+        wheelchairAccessible:
+          type: boolean
+        paymentRequired:
+          type: boolean
+        isOpen24h:
+          type: boolean
+        babyChange:
+          type: boolean
+        notes:
+          type: string
+          maxLength: 300
+        unisex:
+          type: boolean
+        male:
+          type: boolean
+        female:
+          type: boolean
+
     GovToilet:
       type: object
-      required: [id, name, lat, lng, male, female, unisex, wheelchairAccessible, isOpen24h, paymentRequired, mlakRequired, babyChange, showers, drinkingWater]
+      required: [id, sourceType, name, lat, lng, male, female, unisex, wheelchairAccessible, isOpen24h, paymentRequired, mlakRequired, babyChange, showers, drinkingWater]
       properties:
         id:
           type: integer
         govId:
           type: ["string", "null"]
+        sourceType:
+          type: string
+          enum: [gov, user]
+        submittedByUserId:
+          type: ["integer", "null"]
         name:
           type: string
         lat:

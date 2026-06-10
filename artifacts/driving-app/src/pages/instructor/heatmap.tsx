@@ -11,11 +11,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, MapPin, Layers, Check, ChevronsUpDown, X, Toilet } from "lucide-react";
+import { Loader2, MapPin, Layers, Check, ChevronsUpDown, X, Toilet, Plus } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useListManeuvers, getGetManeuverHeatmapQueryOptions, getGovNearby } from "@workspace/api-client-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { useListManeuvers, getGetManeuverHeatmapQueryOptions, getGovNearby, submitToilet } from "@workspace/api-client-react";
 import { ToiletRatingWidget } from "@/components/ToiletRatingWidget";
 
 const LEVEL_COLOR: Record<string, string> = {
@@ -35,6 +38,7 @@ const LEVEL_LABEL: Record<string, string> = {
 interface BathroomFeature {
   id: number;          // positive = OSM node ID; negative = gov DB id (no OSM record)
   source: "osm" | "gov";
+  sourceType?: "gov" | "user"; // only set for source === "gov"
   lat: number;
   lng: number;
   name: string;
@@ -77,6 +81,13 @@ function BoundsTracker({ onBoundsChange }: { onBoundsChange: (b: LatLngBounds) =
     onBoundsChange(map.getBounds());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  return null;
+}
+
+function MapClickHandler({ active, onMapClick }: { active: boolean; onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click: (e) => { if (active) onMapClick(e.latlng.lat, e.latlng.lng); },
+  });
   return null;
 }
 
@@ -177,6 +188,7 @@ function useBathroomData(enabled: boolean) {
               govCacheRef.current.set(-g.id, {
                 id: -g.id,
                 source: "gov",
+                sourceType: g.sourceType as "gov" | "user",
                 lat: g.lat,
                 lng: g.lng,
                 name: g.name,
@@ -219,7 +231,11 @@ function useBathroomData(enabled: boolean) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]);
 
-  return { bathrooms, loading, triggerFetch };
+  const refreshNow = useCallback(() => {
+    if (lastBoundsRef.current) triggerFetch(lastBoundsRef.current);
+  }, [triggerFetch]);
+
+  return { bathrooms, loading, triggerFetch, refreshNow };
 }
 
 export default function HeatmapPage() {
@@ -228,6 +244,10 @@ export default function HeatmapPage() {
   const [showLayer, setShowLayer] = useState(true);
   const [showBathrooms, setShowBathrooms] = useState(false);
   const [filterLevel, setFilterLevel] = useState<string>("all");
+  const [addMode, setAddMode] = useState(false);
+  const [pendingLatLng, setPendingLatLng] = useState<{ lat: number; lng: number } | null>(null);
+  const [submitForm, setSubmitForm] = useState({ name: "", wheelchair: false, fee: false, open24h: false, babyChange: false, notes: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   const { data: maneuvers, isLoading: maneuversLoading } = useListManeuvers();
 
@@ -260,7 +280,33 @@ export default function HeatmapPage() {
     [heatmapData]
   );
 
-  const { bathrooms, loading: bathroomsLoading, triggerFetch: triggerBathroomFetch } = useBathroomData(showBathrooms);
+  const { bathrooms, loading: bathroomsLoading, triggerFetch: triggerBathroomFetch, refreshNow: refreshBathrooms } = useBathroomData(showBathrooms);
+
+  async function handleToiletSubmit() {
+    if (!pendingLatLng || !submitForm.name.trim()) return;
+    setSubmitting(true);
+    try {
+      await submitToilet({
+        name: submitForm.name.trim(),
+        lat: pendingLatLng.lat,
+        lng: pendingLatLng.lng,
+        wheelchairAccessible: submitForm.wheelchair,
+        paymentRequired: submitForm.fee,
+        isOpen24h: submitForm.open24h,
+        babyChange: submitForm.babyChange,
+        notes: submitForm.notes.trim() || undefined,
+        unisex: true,
+      });
+      setPendingLatLng(null);
+      setAddMode(false);
+      setSubmitForm({ name: "", wheelchair: false, fee: false, open24h: false, babyChange: false, notes: "" });
+      if (showBathrooms) refreshBathrooms();
+    } catch {
+      // keep form open on error
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   function toggleId(id: string) {
     setSelectedIds(prev =>
@@ -447,6 +493,24 @@ export default function HeatmapPage() {
                 animation causes "_leaflet_pos" crashes. Instead overlay the spinner. */}
             <ErrorBoundary level="widget" fallback={mapFallback}>
             <div style={{ position: "relative", height: 500 }}>
+              {/* Add Toilet floating button */}
+              {showBathrooms && (
+                <div style={{ position: "absolute", top: 12, right: 12, zIndex: 1000 }}>
+                  <button
+                    onClick={() => { setAddMode(a => !a); setPendingLatLng(null); }}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium shadow-md border transition-colors select-none",
+                      addMode
+                        ? "bg-amber-500 text-white border-amber-600 hover:bg-amber-600"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    )}
+                    title={addMode ? "Click the map to place toilet — click again to cancel" : "Report a toilet that isn't on the map"}
+                  >
+                    <Plus className="w-4 h-4" />
+                    {addMode ? "Tap map to place…" : "Add toilet"}
+                  </button>
+                </div>
+              )}
               {heatmapLoading && selectedIds.length > 0 && (
                 <div
                   className="flex items-center justify-center bg-background/60 backdrop-blur-sm z-[1000]"
@@ -468,6 +532,17 @@ export default function HeatmapPage() {
                   />
 
                   <BoundsTracker onBoundsChange={triggerBathroomFetch} />
+                  <MapClickHandler
+                    active={addMode}
+                    onMapClick={(lat, lng) => { setPendingLatLng({ lat, lng }); setAddMode(false); }}
+                  />
+                  {pendingLatLng && (
+                    <CircleMarker
+                      center={[pendingLatLng.lat, pendingLatLng.lng]}
+                      radius={10}
+                      pathOptions={{ color: "#f59e0b", fillColor: "#fbbf24", fillOpacity: 0.9, weight: 2.5, opacity: 1 }}
+                    />
+                  )}
 
                   {showLayer && mapPoints.length > 0 && <FitPoints points={mapPoints} />}
 
@@ -520,6 +595,22 @@ export default function HeatmapPage() {
                             openingHours={b.openingHours}
                             qualityScore={b.qualityScore}
                           />
+                        ) : b.sourceType === "user" ? (
+                          <div style={{ fontFamily: "inherit" }}>
+                            <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 4 }}>
+                              <span style={{ fontSize: 10, background: "#f59e0b", color: "#fff", borderRadius: 4, padding: "1px 6px", fontWeight: 600 }}>Community report</span>
+                            </div>
+                            <ToiletRatingWidget
+                              osmId={b.id}
+                              lat={b.lat}
+                              lng={b.lng}
+                              name={b.name}
+                              fee={b.fee}
+                              wheelchair={b.wheelchair}
+                              openingHours={b.openingHours}
+                              qualityScore={b.qualityScore}
+                            />
+                          </div>
                         ) : (
                           <div style={{ minWidth: 200, maxWidth: 240, fontFamily: "inherit" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
@@ -601,6 +692,71 @@ export default function HeatmapPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Toilet dialog — opens after user taps map location */}
+      <Dialog open={pendingLatLng !== null} onOpenChange={(o) => { if (!o) { setPendingLatLng(null); setAddMode(false); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Toilet className="w-5 h-5 text-primary" />
+              Add a Toilet
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            <div>
+              <Label htmlFor="toilet-name">Name / Location <span className="text-destructive">*</span></Label>
+              <Input
+                id="toilet-name"
+                placeholder="e.g. Shell Petrol Station, Roma St"
+                value={submitForm.name}
+                onChange={e => setSubmitForm(f => ({ ...f, name: e.target.value }))}
+                className="mt-1.5"
+                autoFocus
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              {([
+                { key: "wheelchair", label: "Wheelchair accessible" },
+                { key: "fee",        label: "Fee charged" },
+                { key: "open24h",    label: "Open 24 hours" },
+                { key: "babyChange", label: "Baby change room" },
+              ] as const).map(({ key, label }) => (
+                <div key={key} className="flex items-center gap-2">
+                  <Switch
+                    id={`toilet-${key}`}
+                    checked={submitForm[key]}
+                    onCheckedChange={v => setSubmitForm(f => ({ ...f, [key]: v }))}
+                  />
+                  <Label htmlFor={`toilet-${key}`} className="text-sm cursor-pointer leading-tight">{label}</Label>
+                </div>
+              ))}
+            </div>
+            <div>
+              <Label htmlFor="toilet-notes">Notes (optional)</Label>
+              <Textarea
+                id="toilet-notes"
+                placeholder="e.g. Key available from counter, around the back"
+                value={submitForm.notes}
+                onChange={e => setSubmitForm(f => ({ ...f, notes: e.target.value }))}
+                className="mt-1.5 resize-none"
+                rows={2}
+              />
+            </div>
+            {pendingLatLng && (
+              <p className="text-xs text-muted-foreground">
+                📍 {pendingLatLng.lat.toFixed(5)}, {pendingLatLng.lng.toFixed(5)}
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => { setPendingLatLng(null); setAddMode(false); }}>Cancel</Button>
+            <Button onClick={handleToiletSubmit} disabled={submitting || !submitForm.name.trim()}>
+              {submitting && <Loader2 className="w-4 h-4 animate-spin mr-1.5" />}
+              Add to Map
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarLayout>
   );
 }

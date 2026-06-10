@@ -1481,10 +1481,40 @@ export interface ToiletMyRating {
   comment?: string | null;
 }
 
+export interface ToiletSubmitInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  lat: number;
+  lng: number;
+  wheelchairAccessible?: boolean;
+  paymentRequired?: boolean;
+  isOpen24h?: boolean;
+  babyChange?: boolean;
+  /** @maxLength 300 */
+  notes?: string;
+  unisex?: boolean;
+  male?: boolean;
+  female?: boolean;
+}
+
+export type GovToiletSourceType = typeof GovToiletSourceType[keyof typeof GovToiletSourceType];
+
+
+export const GovToiletSourceType = {
+  gov: 'gov',
+  user: 'user',
+} as const;
+
 export interface GovToilet {
   id: number;
   /** @nullable */
   govId?: string | null;
+  sourceType: GovToiletSourceType;
+  /** @nullable */
+  submittedByUserId?: number | null;
   name: string;
   lat: number;
   lng: number;
