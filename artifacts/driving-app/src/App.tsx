@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClerkProvider, SignIn, SignUp, SignedIn, SignedOut, useClerk, useAuth } from "@clerk/clerk-react";
+import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
+import { SessionTimeoutWarning } from "@/components/SessionTimeoutWarning";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
@@ -324,6 +326,36 @@ function ProtectedRoute({ component: Component, gateInstructors }: { component: 
   );
 }
 
+/**
+ * Watches for user inactivity. Only active when signed in.
+ * Shows a warning at 25 min; signs the user out at 30 min.
+ */
+function SessionTimeoutManager() {
+  const { isSignedIn } = useAuth();
+  const { signOut } = useClerk();
+
+  const handleExpire = async () => {
+    try { await signOut(); } catch { /* already expired */ }
+    window.location.assign("/");
+  };
+
+  const { isWarning, remainingSeconds, reset } = useInactivityTimeout({
+    timeoutMs: 30 * 60 * 1000,
+    warnMs: 25 * 60 * 1000,
+    onExpire: handleExpire,
+  });
+
+  if (!isSignedIn) return null;
+
+  return (
+    <SessionTimeoutWarning
+      open={isWarning}
+      remainingSeconds={remainingSeconds}
+      onStaySignedIn={reset}
+    />
+  );
+}
+
 function ClerkProviderWithRoutes() {
   const [, setLocation] = useLocation();
 
@@ -339,6 +371,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <SessionTimeoutManager />
         <ErrorBoundary level="page">
         <Switch>
           <Route path="/" component={HomeRedirect} />
