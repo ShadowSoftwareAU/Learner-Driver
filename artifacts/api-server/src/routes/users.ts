@@ -10,6 +10,15 @@ const router = Router();
 function requireAuth(req: any, res: any, next: any) {
   const auth = getAuth(req);
   const userId = auth?.userId;
+  // Temporary debug — remove after diagnosing 401s
+  req.log.info({
+    clerkUserId: userId ?? null,
+    sessionId: auth?.sessionId ?? null,
+    sessionStatus: (auth as any)?.sessionStatus ?? null,
+    reason: userId ? null : "no_userId",
+    hasCookie: !!(req.headers?.cookie),
+    hasAuthorization: !!(req.headers?.authorization),
+  }, "requireAuth debug");
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return;
