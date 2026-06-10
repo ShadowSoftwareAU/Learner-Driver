@@ -10,6 +10,8 @@ export const usersTable = pgTable("users", {
   // Extended roles: student | instructor | school_admin | super_admin | viewer | unassigned
   // During rollout, admin is tolerated as alias for school_admin
   role: text("role").notNull().default("unassigned"),
+  // Admin sub-role scoped within school_admin: owner | manager | coordinator | null
+  adminSubRole: text("admin_sub_role"),
   // Tenant scoping — null for independent instructors and super_admins
   schoolId: integer("school_id"),
   // Activity and session tracking

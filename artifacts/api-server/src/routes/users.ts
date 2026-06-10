@@ -36,6 +36,7 @@ router.get("/users/me", requireAuth, async (req: any, res): Promise<void> => {
     email: user.email,
     name: user.name,
     role: user.role,
+    adminSubRole: user.adminSubRole ?? null,
     schoolId: user.schoolId ?? null,
     sessionTimeoutMinutes: user.sessionTimeoutMinutes,
     createdAt: user.createdAt,
@@ -85,6 +86,23 @@ router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void>
     schoolId: updated.schoolId ?? null,
     createdAt: updated.createdAt,
   });
+});
+
+// ─── Admin sub-role (super_admin only) ───────────────────────────────────────
+
+router.patch("/users/:id/admin-sub-role", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (user.role !== "super_admin") {
+    res.status(403).json({ error: "super_admin required" }); return;
+  }
+  const targetId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const { adminSubRole } = req.body as { adminSubRole?: string | null };
+  const valid = [null, "owner", "manager", "coordinator"];
+  if (!valid.includes(adminSubRole ?? null)) {
+    res.status(400).json({ error: "adminSubRole must be owner, manager, coordinator, or null" }); return;
+  }
+  await db.update(usersTable).set({ adminSubRole: adminSubRole ?? null }).where(eq(usersTable.id, targetId));
+  res.json({ ok: true });
 });
 
 export { requireAuth, getOrCreateUser };

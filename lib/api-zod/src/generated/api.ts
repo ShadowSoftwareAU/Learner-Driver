@@ -25,6 +25,8 @@ export const GetMeResponse = zod.object({
   "email": zod.string(),
   "name": zod.string().nullish(),
   "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin', 'unassigned']),
+  "adminSubRole": zod.union([zod.literal('owner'),zod.literal('manager'),zod.literal('coordinator'),zod.literal(null)]).nullish(),
+  "schoolId": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -42,6 +44,8 @@ export const UpdateMyRoleResponse = zod.object({
   "email": zod.string(),
   "name": zod.string().nullish(),
   "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin', 'unassigned']),
+  "adminSubRole": zod.union([zod.literal('owner'),zod.literal('manager'),zod.literal('coordinator'),zod.literal(null)]).nullish(),
+  "schoolId": zod.number().nullish(),
   "createdAt": zod.string().optional()
 })
 
@@ -2062,6 +2066,252 @@ export const RateToiletResponse = zod.object({
   "cleanliness": zod.number().min(1).max(rateToiletResponseMyRatingOneCleanlinessMax),
   "comment": zod.string().nullish()
 }),zod.null()]).optional()
+})
+
+
+/**
+ * @summary Student submits feedback for a completed assessment
+ */
+export const SubmitAssessmentFeedbackParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const submitAssessmentFeedbackBodyOverallRatingMax = 5;
+
+export const submitAssessmentFeedbackBodyCommunicationRatingMax = 5;
+
+export const submitAssessmentFeedbackBodySafetyFocusRatingMax = 5;
+
+export const submitAssessmentFeedbackBodyLessonQualityRatingMax = 5;
+
+export const submitAssessmentFeedbackBodyCommentsMax = 2000;
+
+
+
+export const SubmitAssessmentFeedbackBody = zod.object({
+  "overallRating": zod.number().min(1).max(submitAssessmentFeedbackBodyOverallRatingMax),
+  "communicationRating": zod.number().min(1).max(submitAssessmentFeedbackBodyCommunicationRatingMax),
+  "safetyFocusRating": zod.number().min(1).max(submitAssessmentFeedbackBodySafetyFocusRatingMax),
+  "lessonQualityRating": zod.number().min(1).max(submitAssessmentFeedbackBodyLessonQualityRatingMax),
+  "wouldRecommend": zod.boolean(),
+  "comments": zod.string().max(submitAssessmentFeedbackBodyCommentsMax).optional()
+})
+
+
+/**
+ * @summary Get feedback for an assessment (instructor / admin)
+ */
+export const GetAssessmentFeedbackParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetAssessmentFeedbackResponse = zod.object({
+  "id": zod.number(),
+  "assessmentId": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "overallRating": zod.number().nullish(),
+  "communicationRating": zod.number().nullish(),
+  "safetyFocusRating": zod.number().nullish(),
+  "lessonQualityRating": zod.number().nullish(),
+  "wouldRecommend": zod.boolean().nullish(),
+  "comments": zod.string().nullish(),
+  "submittedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "lessonDate": zod.string().nullish()
+})
+
+
+/**
+ * @summary List all student feedback visible to this admin
+ */
+export const listAdminFeedbackQueryLimitDefault = 50;
+export const listAdminFeedbackQueryOffsetDefault = 0;
+
+export const ListAdminFeedbackQueryParams = zod.object({
+  "instructorId": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().default(listAdminFeedbackQueryLimitDefault),
+  "offset": zod.coerce.number().default(listAdminFeedbackQueryOffsetDefault)
+})
+
+export const ListAdminFeedbackResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "assessmentId": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "overallRating": zod.number().nullish(),
+  "communicationRating": zod.number().nullish(),
+  "safetyFocusRating": zod.number().nullish(),
+  "lessonQualityRating": zod.number().nullish(),
+  "wouldRecommend": zod.boolean().nullish(),
+  "comments": zod.string().nullish(),
+  "submittedAt": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "lessonDate": zod.string().nullish()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Aggregate feedback stats per instructor
+ */
+export const GetAdminFeedbackSummaryResponseItem = zod.object({
+  "instructorId": zod.number(),
+  "instructorName": zod.string().nullish(),
+  "totalFeedback": zod.number(),
+  "avgOverall": zod.number().nullish(),
+  "avgCommunication": zod.number().nullish(),
+  "avgSafetyFocus": zod.number().nullish(),
+  "avgLessonQuality": zod.number().nullish(),
+  "recommendRate": zod.number().nullish()
+})
+export const GetAdminFeedbackSummaryResponse = zod.array(GetAdminFeedbackSummaryResponseItem)
+
+
+/**
+ * @summary List all handover notes for admin audit
+ */
+export const listAdminHandoverNotesQueryLimitDefault = 50;
+export const listAdminHandoverNotesQueryOffsetDefault = 0;
+
+export const ListAdminHandoverNotesQueryParams = zod.object({
+  "instructorId": zod.coerce.number().optional(),
+  "safetyCritical": zod.coerce.boolean().optional(),
+  "reviewStatus": zod.enum(['unreviewed', 'approved', 'needs_improvement', 'flagged']).optional(),
+  "limit": zod.coerce.number().default(listAdminHandoverNotesQueryLimitDefault),
+  "offset": zod.coerce.number().default(listAdminHandoverNotesQueryOffsetDefault)
+})
+
+export const ListAdminHandoverNotesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "note": zod.string(),
+  "focusAreas": zod.string().nullish(),
+  "isSafetyCritical": zod.boolean(),
+  "contentStatus": zod.string(),
+  "createdAt": zod.string(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "review": zod.union([zod.object({
+  "id": zod.number(),
+  "handoverNoteId": zod.number(),
+  "reviewerUserId": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "verdict": zod.enum(['approved', 'needs_improvement', 'flagged']),
+  "reviewComment": zod.string().nullish(),
+  "reviewedAt": zod.string()
+}),zod.null()]).optional()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Submit or update an admin review for a handover note
+ */
+export const ReviewHandoverNoteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const reviewHandoverNoteBodyReviewCommentMax = 2000;
+
+
+
+export const ReviewHandoverNoteBody = zod.object({
+  "verdict": zod.enum(['approved', 'needs_improvement', 'flagged']),
+  "reviewComment": zod.string().max(reviewHandoverNoteBodyReviewCommentMax).optional()
+})
+
+export const ReviewHandoverNoteResponse = zod.object({
+  "id": zod.number(),
+  "handoverNoteId": zod.number(),
+  "reviewerUserId": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "verdict": zod.enum(['approved', 'needs_improvement', 'flagged']),
+  "reviewComment": zod.string().nullish(),
+  "reviewedAt": zod.string()
+})
+
+
+/**
+ * @summary Get the review record for a handover note
+ */
+export const GetHandoverNoteReviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetHandoverNoteReviewResponse = zod.object({
+  "id": zod.number(),
+  "handoverNoteId": zod.number(),
+  "reviewerUserId": zod.number(),
+  "schoolId": zod.number().nullish(),
+  "verdict": zod.enum(['approved', 'needs_improvement', 'flagged']),
+  "reviewComment": zod.string().nullish(),
+  "reviewedAt": zod.string()
+})
+
+
+/**
+ * @summary Get feedback collection settings for this school
+ */
+export const getSchoolFeedbackSettingsResponseFeedbackReminderDaysMax = 30;
+
+
+
+export const GetSchoolFeedbackSettingsResponse = zod.object({
+  "feedbackEnabled": zod.boolean().optional(),
+  "feedbackReminderDays": zod.number().min(1).max(getSchoolFeedbackSettingsResponseFeedbackReminderDaysMax).optional(),
+  "feedbackShareWithMentor": zod.boolean().optional(),
+  "mentorGroupEmail": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update feedback collection settings (school_admin / owner only)
+ */
+export const updateSchoolFeedbackSettingsBodyFeedbackReminderDaysMax = 30;
+
+
+
+export const UpdateSchoolFeedbackSettingsBody = zod.object({
+  "feedbackEnabled": zod.boolean().optional(),
+  "feedbackReminderDays": zod.number().min(1).max(updateSchoolFeedbackSettingsBodyFeedbackReminderDaysMax).optional(),
+  "feedbackShareWithMentor": zod.boolean().optional(),
+  "mentorGroupEmail": zod.string().nullish()
+})
+
+export const updateSchoolFeedbackSettingsResponseFeedbackReminderDaysMax = 30;
+
+
+
+export const UpdateSchoolFeedbackSettingsResponse = zod.object({
+  "feedbackEnabled": zod.boolean().optional(),
+  "feedbackReminderDays": zod.number().min(1).max(updateSchoolFeedbackSettingsResponseFeedbackReminderDaysMax).optional(),
+  "feedbackShareWithMentor": zod.boolean().optional(),
+  "mentorGroupEmail": zod.string().nullish()
+})
+
+
+/**
+ * @summary Set admin sub-role for a school_admin user (super_admin only)
+ */
+export const SetAdminSubRoleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetAdminSubRoleBody = zod.object({
+  "adminSubRole": zod.union([zod.literal('owner'),zod.literal('manager'),zod.literal('coordinator'),zod.literal(null)]).nullish()
 })
 
 

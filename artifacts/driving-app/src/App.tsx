@@ -37,6 +37,10 @@ import AdminInstructors from "@/pages/admin/instructors";
 import AdminAuditLog from "@/pages/admin/audit";
 import AdminBookings from "@/pages/admin/bookings";
 import AdminVerifications from "@/pages/admin/verifications";
+import AdminHandoverNotes from "@/pages/admin/handover-notes";
+import AdminHandoverNoteDetail from "@/pages/admin/handover-note-detail";
+import AdminFeedback from "@/pages/admin/feedback";
+import StudentFeedback from "@/pages/student/feedback";
 
 import InstructorAvailability from "@/pages/instructor/availability";
 import InstructorZones from "@/pages/instructor/zones";
@@ -398,6 +402,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/student/dashboard" component={() => <ProtectedRoute component={StudentDashboard} />} />
           <Route path="/student/search" component={() => <ProtectedRoute component={StudentSearch} />} />
           <Route path="/student/bookings" component={() => <ProtectedRoute component={StudentBookings} />} />
+          <Route path="/student/feedback/:assessmentId" component={() => <ProtectedRoute component={StudentFeedback} />} />
 
           {/* Admin routes */}
           <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} />} />
@@ -406,6 +411,9 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/audit" component={() => <ProtectedRoute component={AdminAuditLog} />} />
           <Route path="/admin/bookings" component={() => <ProtectedRoute component={AdminBookings} />} />
           <Route path="/admin/verifications" component={() => <ProtectedRoute component={AdminVerifications} />} />
+          <Route path="/admin/handover-notes/:id" component={() => <ProtectedRoute component={AdminHandoverNoteDetail} />} />
+          <Route path="/admin/handover-notes" component={() => <ProtectedRoute component={AdminHandoverNotes} />} />
+          <Route path="/admin/feedback" component={() => <ProtectedRoute component={AdminFeedback} />} />
 
           {/* Account routes */}
           <Route path="/account/notifications" component={() => <ProtectedRoute component={NotificationPreferencesPage} />} />

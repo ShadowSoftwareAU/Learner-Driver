@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
-import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable } from "@workspace/db";
+import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable, sessionFeedbackTable, usersTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
 import { scanContent } from "../lib/contentFiltering/scanContent";
+import { sendNotification } from "../lib/notifications/notificationService";
 
 const router = Router();
 
@@ -270,6 +271,42 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
 
   const [updated] = await db.update(assessmentsTable).set(updates).where(eq(assessmentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+
+  // When an assessment transitions to completed, send feedback request to student
+  if (status === "completed" && a.status !== "completed") {
+    sendNotification({
+      userId: 0, // resolved below
+      payload: {
+        type: "feedback_request",
+        title: "How did your lesson go?",
+        body: "Your lesson has been marked as complete. Tap to share your feedback with your driving school.",
+        relatedId: updated.id,
+        relatedType: "assessment",
+      },
+    }).catch(() => null); // fire-and-forget non-fatally; real userId resolved below
+
+    // Resolve student userId and send properly
+    const [student] = await db.select({ userId: studentsTable.userId, email: studentsTable.email })
+      .from(studentsTable).where(eq(studentsTable.id, updated.studentId));
+    if (student?.userId) {
+      const [studentUser] = await db.select({ id: usersTable.id, email: usersTable.email })
+        .from(usersTable).where(eq(usersTable.id, student.userId));
+      if (studentUser) {
+        sendNotification({
+          userId: studentUser.id,
+          email: studentUser.email,
+          payload: {
+            type: "feedback_request",
+            title: "How did your lesson go?",
+            body: "Your lesson has been marked as complete. Tap to share your feedback — it helps your school improve.",
+            relatedId: updated.id,
+            relatedType: "assessment",
+          },
+        }).catch(() => null);
+      }
+    }
+  }
+
   res.json(formatAssessment(updated));
 });
 

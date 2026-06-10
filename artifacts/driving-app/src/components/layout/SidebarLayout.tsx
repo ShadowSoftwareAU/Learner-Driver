@@ -17,6 +17,9 @@ import {
   CalendarCheck,
   Menu,
   X,
+  FileText,
+  MessageSquare,
+  Settings,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -54,8 +57,17 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Instructors", href: "/admin/instructors", icon: Car },
       { label: "Verifications", href: "/admin/verifications", icon: ShieldCheck },
       { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
+      { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText },
+      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
       { label: "Audit Log", href: "/admin/audit", icon: ShieldAlert },
       { label: "Heatmap", href: "/instructor/heatmap", icon: MapPin },
+    ],
+    school_admin: [
+      { label: "Dashboard", href: "/school-admin/dashboard", icon: LayoutDashboard },
+      { label: "Booking Approvals", href: "/school-admin/booking-approvals", icon: CalendarCheck },
+      { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText },
+      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
+      { label: "Settings", href: "/school-admin/settings", icon: Settings },
     ],
     unassigned: [],
   };

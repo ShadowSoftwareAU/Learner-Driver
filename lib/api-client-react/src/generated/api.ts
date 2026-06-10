@@ -52,17 +52,24 @@ import type {
   GovToilet,
   HandoverNote,
   HandoverNoteInput,
+  HandoverNoteReviewInput,
+  HandoverNoteReviewRecord,
   HandoverView,
   HealthStatus,
   HeatmapPoint,
   Instructor,
   InstructorDashboard,
+  InstructorFeedbackSummary,
   InstructorUpdate,
   InstructorVerification,
   InstructorZone,
   Intake,
   IntakeInput,
   LessonPlan,
+  ListAdminFeedback200,
+  ListAdminFeedbackParams,
+  ListAdminHandoverNotes200,
+  ListAdminHandoverNotesParams,
   ListAssessmentsParams,
   ListAuditLogsParams,
   ListBookingChangeRequestsParams,
@@ -89,10 +96,13 @@ import type {
   ReviewBookingChangeRequestBody,
   ReviewVerificationBody,
   RoleUpdate,
+  SchoolFeedbackSettings,
   SchoolInput,
   SchoolInstructorInput,
   SchoolPatch,
   SearchInstructorsParams,
+  SessionFeedbackItem,
+  SetAdminSubRoleBody,
   Student,
   StudentDashboard,
   StudentInput,
@@ -100,6 +110,7 @@ import type {
   StudentMedicalInput,
   StudentProgress,
   StudentUpdate,
+  SubmitFeedbackInput,
   SubmitVerificationBody,
   Subscription,
   SubscriptionInfo,
@@ -6847,5 +6858,768 @@ export const useRateToilet = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRateToiletMutationOptions(options));
+    }
+
+export const getSubmitAssessmentFeedbackUrl = (id: number,) => {
+
+
+
+
+  return `/api/assessments/${id}/feedback`
+}
+
+/**
+ * @summary Student submits feedback for a completed assessment
+ */
+export const submitAssessmentFeedback = async (id: number,
+    submitFeedbackInput: SubmitFeedbackInput, options?: RequestInit): Promise<SessionFeedbackItem> => {
+
+  return customFetch<SessionFeedbackItem>(getSubmitAssessmentFeedbackUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      submitFeedbackInput,)
+  }
+);}
+
+
+
+
+export const getSubmitAssessmentFeedbackMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAssessmentFeedback>>, TError,{id: number;data: BodyType<SubmitFeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof submitAssessmentFeedback>>, TError,{id: number;data: BodyType<SubmitFeedbackInput>}, TContext> => {
+
+const mutationKey = ['submitAssessmentFeedback'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof submitAssessmentFeedback>>, {id: number;data: BodyType<SubmitFeedbackInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  submitAssessmentFeedback(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SubmitAssessmentFeedbackMutationResult = NonNullable<Awaited<ReturnType<typeof submitAssessmentFeedback>>>
+    export type SubmitAssessmentFeedbackMutationBody = BodyType<SubmitFeedbackInput>
+    export type SubmitAssessmentFeedbackMutationError = ErrorType<void>
+
+    /**
+ * @summary Student submits feedback for a completed assessment
+ */
+export const useSubmitAssessmentFeedback = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof submitAssessmentFeedback>>, TError,{id: number;data: BodyType<SubmitFeedbackInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof submitAssessmentFeedback>>,
+        TError,
+        {id: number;data: BodyType<SubmitFeedbackInput>},
+        TContext
+      > => {
+      return useMutation(getSubmitAssessmentFeedbackMutationOptions(options));
+    }
+
+export const getGetAssessmentFeedbackUrl = (id: number,) => {
+
+
+
+
+  return `/api/assessments/${id}/feedback`
+}
+
+/**
+ * @summary Get feedback for an assessment (instructor / admin)
+ */
+export const getAssessmentFeedback = async (id: number, options?: RequestInit): Promise<SessionFeedbackItem> => {
+
+  return customFetch<SessionFeedbackItem>(getGetAssessmentFeedbackUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAssessmentFeedbackQueryKey = (id: number,) => {
+    return [
+    `/api/assessments/${id}/feedback`
+    ] as const;
+    }
+
+
+export const getGetAssessmentFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof getAssessmentFeedback>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssessmentFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAssessmentFeedbackQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAssessmentFeedback>>> = ({ signal }) => getAssessmentFeedback(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAssessmentFeedback>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAssessmentFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof getAssessmentFeedback>>>
+export type GetAssessmentFeedbackQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get feedback for an assessment (instructor / admin)
+ */
+
+export function useGetAssessmentFeedback<TData = Awaited<ReturnType<typeof getAssessmentFeedback>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAssessmentFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAssessmentFeedbackQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListAdminFeedbackUrl = (params?: ListAdminFeedbackParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/feedback?${stringifiedParams}` : `/api/admin/feedback`
+}
+
+/**
+ * @summary List all student feedback visible to this admin
+ */
+export const listAdminFeedback = async (params?: ListAdminFeedbackParams, options?: RequestInit): Promise<ListAdminFeedback200> => {
+
+  return customFetch<ListAdminFeedback200>(getListAdminFeedbackUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminFeedbackQueryKey = (params?: ListAdminFeedbackParams,) => {
+    return [
+    `/api/admin/feedback`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminFeedbackQueryOptions = <TData = Awaited<ReturnType<typeof listAdminFeedback>>, TError = ErrorType<unknown>>(params?: ListAdminFeedbackParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminFeedbackQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminFeedback>>> = ({ signal }) => listAdminFeedback(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminFeedback>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminFeedbackQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminFeedback>>>
+export type ListAdminFeedbackQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all student feedback visible to this admin
+ */
+
+export function useListAdminFeedback<TData = Awaited<ReturnType<typeof listAdminFeedback>>, TError = ErrorType<unknown>>(
+ params?: ListAdminFeedbackParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminFeedback>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminFeedbackQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetAdminFeedbackSummaryUrl = () => {
+
+
+
+
+  return `/api/admin/feedback/summary`
+}
+
+/**
+ * @summary Aggregate feedback stats per instructor
+ */
+export const getAdminFeedbackSummary = async ( options?: RequestInit): Promise<InstructorFeedbackSummary[]> => {
+
+  return customFetch<InstructorFeedbackSummary[]>(getGetAdminFeedbackSummaryUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminFeedbackSummaryQueryKey = () => {
+    return [
+    `/api/admin/feedback/summary`
+    ] as const;
+    }
+
+
+export const getGetAdminFeedbackSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getAdminFeedbackSummary>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminFeedbackSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminFeedbackSummaryQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminFeedbackSummary>>> = ({ signal }) => getAdminFeedbackSummary({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminFeedbackSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminFeedbackSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminFeedbackSummary>>>
+export type GetAdminFeedbackSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Aggregate feedback stats per instructor
+ */
+
+export function useGetAdminFeedbackSummary<TData = Awaited<ReturnType<typeof getAdminFeedbackSummary>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminFeedbackSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminFeedbackSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListAdminHandoverNotesUrl = (params?: ListAdminHandoverNotesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/admin/handover-notes?${stringifiedParams}` : `/api/admin/handover-notes`
+}
+
+/**
+ * @summary List all handover notes for admin audit
+ */
+export const listAdminHandoverNotes = async (params?: ListAdminHandoverNotesParams, options?: RequestInit): Promise<ListAdminHandoverNotes200> => {
+
+  return customFetch<ListAdminHandoverNotes200>(getListAdminHandoverNotesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAdminHandoverNotesQueryKey = (params?: ListAdminHandoverNotesParams,) => {
+    return [
+    `/api/admin/handover-notes`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAdminHandoverNotesQueryOptions = <TData = Awaited<ReturnType<typeof listAdminHandoverNotes>>, TError = ErrorType<unknown>>(params?: ListAdminHandoverNotesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminHandoverNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAdminHandoverNotesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminHandoverNotes>>> = ({ signal }) => listAdminHandoverNotes(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAdminHandoverNotes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAdminHandoverNotesQueryResult = NonNullable<Awaited<ReturnType<typeof listAdminHandoverNotes>>>
+export type ListAdminHandoverNotesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all handover notes for admin audit
+ */
+
+export function useListAdminHandoverNotes<TData = Awaited<ReturnType<typeof listAdminHandoverNotes>>, TError = ErrorType<unknown>>(
+ params?: ListAdminHandoverNotesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAdminHandoverNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAdminHandoverNotesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getReviewHandoverNoteUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/handover-notes/${id}/review`
+}
+
+/**
+ * @summary Submit or update an admin review for a handover note
+ */
+export const reviewHandoverNote = async (id: number,
+    handoverNoteReviewInput: HandoverNoteReviewInput, options?: RequestInit): Promise<HandoverNoteReviewRecord> => {
+
+  return customFetch<HandoverNoteReviewRecord>(getReviewHandoverNoteUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      handoverNoteReviewInput,)
+  }
+);}
+
+
+
+
+export const getReviewHandoverNoteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewHandoverNote>>, TError,{id: number;data: BodyType<HandoverNoteReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewHandoverNote>>, TError,{id: number;data: BodyType<HandoverNoteReviewInput>}, TContext> => {
+
+const mutationKey = ['reviewHandoverNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewHandoverNote>>, {id: number;data: BodyType<HandoverNoteReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewHandoverNote(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewHandoverNoteMutationResult = NonNullable<Awaited<ReturnType<typeof reviewHandoverNote>>>
+    export type ReviewHandoverNoteMutationBody = BodyType<HandoverNoteReviewInput>
+    export type ReviewHandoverNoteMutationError = ErrorType<void>
+
+    /**
+ * @summary Submit or update an admin review for a handover note
+ */
+export const useReviewHandoverNote = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewHandoverNote>>, TError,{id: number;data: BodyType<HandoverNoteReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewHandoverNote>>,
+        TError,
+        {id: number;data: BodyType<HandoverNoteReviewInput>},
+        TContext
+      > => {
+      return useMutation(getReviewHandoverNoteMutationOptions(options));
+    }
+
+export const getGetHandoverNoteReviewUrl = (id: number,) => {
+
+
+
+
+  return `/api/admin/handover-notes/${id}/review`
+}
+
+/**
+ * @summary Get the review record for a handover note
+ */
+export const getHandoverNoteReview = async (id: number, options?: RequestInit): Promise<HandoverNoteReviewRecord> => {
+
+  return customFetch<HandoverNoteReviewRecord>(getGetHandoverNoteReviewUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetHandoverNoteReviewQueryKey = (id: number,) => {
+    return [
+    `/api/admin/handover-notes/${id}/review`
+    ] as const;
+    }
+
+
+export const getGetHandoverNoteReviewQueryOptions = <TData = Awaited<ReturnType<typeof getHandoverNoteReview>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHandoverNoteReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetHandoverNoteReviewQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getHandoverNoteReview>>> = ({ signal }) => getHandoverNoteReview(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getHandoverNoteReview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetHandoverNoteReviewQueryResult = NonNullable<Awaited<ReturnType<typeof getHandoverNoteReview>>>
+export type GetHandoverNoteReviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the review record for a handover note
+ */
+
+export function useGetHandoverNoteReview<TData = Awaited<ReturnType<typeof getHandoverNoteReview>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getHandoverNoteReview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetHandoverNoteReviewQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetSchoolFeedbackSettingsUrl = () => {
+
+
+
+
+  return `/api/schools/mine/feedback-settings`
+}
+
+/**
+ * @summary Get feedback collection settings for this school
+ */
+export const getSchoolFeedbackSettings = async ( options?: RequestInit): Promise<SchoolFeedbackSettings> => {
+
+  return customFetch<SchoolFeedbackSettings>(getGetSchoolFeedbackSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetSchoolFeedbackSettingsQueryKey = () => {
+    return [
+    `/api/schools/mine/feedback-settings`
+    ] as const;
+    }
+
+
+export const getGetSchoolFeedbackSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getSchoolFeedbackSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchoolFeedbackSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSchoolFeedbackSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSchoolFeedbackSettings>>> = ({ signal }) => getSchoolFeedbackSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSchoolFeedbackSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetSchoolFeedbackSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getSchoolFeedbackSettings>>>
+export type GetSchoolFeedbackSettingsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get feedback collection settings for this school
+ */
+
+export function useGetSchoolFeedbackSettings<TData = Awaited<ReturnType<typeof getSchoolFeedbackSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getSchoolFeedbackSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetSchoolFeedbackSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateSchoolFeedbackSettingsUrl = () => {
+
+
+
+
+  return `/api/schools/mine/feedback-settings`
+}
+
+/**
+ * @summary Update feedback collection settings (school_admin / owner only)
+ */
+export const updateSchoolFeedbackSettings = async (schoolFeedbackSettings: SchoolFeedbackSettings, options?: RequestInit): Promise<SchoolFeedbackSettings> => {
+
+  return customFetch<SchoolFeedbackSettings>(getUpdateSchoolFeedbackSettingsUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      schoolFeedbackSettings,)
+  }
+);}
+
+
+
+
+export const getUpdateSchoolFeedbackSettingsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSchoolFeedbackSettings>>, TError,{data: BodyType<SchoolFeedbackSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSchoolFeedbackSettings>>, TError,{data: BodyType<SchoolFeedbackSettings>}, TContext> => {
+
+const mutationKey = ['updateSchoolFeedbackSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSchoolFeedbackSettings>>, {data: BodyType<SchoolFeedbackSettings>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateSchoolFeedbackSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSchoolFeedbackSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateSchoolFeedbackSettings>>>
+    export type UpdateSchoolFeedbackSettingsMutationBody = BodyType<SchoolFeedbackSettings>
+    export type UpdateSchoolFeedbackSettingsMutationError = ErrorType<void>
+
+    /**
+ * @summary Update feedback collection settings (school_admin / owner only)
+ */
+export const useUpdateSchoolFeedbackSettings = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSchoolFeedbackSettings>>, TError,{data: BodyType<SchoolFeedbackSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSchoolFeedbackSettings>>,
+        TError,
+        {data: BodyType<SchoolFeedbackSettings>},
+        TContext
+      > => {
+      return useMutation(getUpdateSchoolFeedbackSettingsMutationOptions(options));
+    }
+
+export const getSetAdminSubRoleUrl = (id: number,) => {
+
+
+
+
+  return `/api/users/${id}/admin-sub-role`
+}
+
+/**
+ * @summary Set admin sub-role for a school_admin user (super_admin only)
+ */
+export const setAdminSubRole = async (id: number,
+    setAdminSubRoleBody: SetAdminSubRoleBody, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getSetAdminSubRoleUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      setAdminSubRoleBody,)
+  }
+);}
+
+
+
+
+export const getSetAdminSubRoleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAdminSubRole>>, TError,{id: number;data: BodyType<SetAdminSubRoleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setAdminSubRole>>, TError,{id: number;data: BodyType<SetAdminSubRoleBody>}, TContext> => {
+
+const mutationKey = ['setAdminSubRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setAdminSubRole>>, {id: number;data: BodyType<SetAdminSubRoleBody>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setAdminSubRole(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetAdminSubRoleMutationResult = NonNullable<Awaited<ReturnType<typeof setAdminSubRole>>>
+    export type SetAdminSubRoleMutationBody = BodyType<SetAdminSubRoleBody>
+    export type SetAdminSubRoleMutationError = ErrorType<void>
+
+    /**
+ * @summary Set admin sub-role for a school_admin user (super_admin only)
+ */
+export const useSetAdminSubRole = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setAdminSubRole>>, TError,{id: number;data: BodyType<SetAdminSubRoleBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setAdminSubRole>>,
+        TError,
+        {id: number;data: BodyType<SetAdminSubRoleBody>},
+        TContext
+      > => {
+      return useMutation(getSetAdminSubRoleMutationOptions(options));
     }
 

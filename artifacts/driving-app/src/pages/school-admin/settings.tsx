@@ -1,11 +1,12 @@
-import { useGetMySchool, useUpdateSchool } from "@workspace/api-client-react";
+import { useGetMySchool, useUpdateSchool, useGetSchoolFeedbackSettings, useUpdateSchoolFeedbackSettings } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Building2, Save } from "lucide-react";
+import { Loader2, Building2, Save, MessageSquare } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -244,7 +245,132 @@ export default function SchoolSettings() {
             Save Changes
           </Button>
         </div>
+
+        <Separator />
+
+        <FeedbackSettingsSection />
       </div>
     </SidebarLayout>
+  );
+}
+
+function FeedbackSettingsSection() {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const FB_QK = ["/api/schools/mine/feedback-settings"];
+
+  const { data: fbSettings, isLoading: fbLoading } = useGetSchoolFeedbackSettings({
+    query: { queryKey: FB_QK },
+  });
+
+  const { mutate: patchFb, isPending: fbSaving } = useUpdateSchoolFeedbackSettings({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Feedback settings saved" });
+        qc.invalidateQueries({ queryKey: FB_QK });
+      },
+      onError: () => toast({ title: "Failed to save feedback settings", variant: "destructive" }),
+    },
+  });
+
+  const [fbEnabled, setFbEnabled] = useState(true);
+  const [fbDays, setFbDays] = useState(3);
+  const [fbShare, setFbShare] = useState(false);
+  const [fbEmail, setFbEmail] = useState("");
+
+  useEffect(() => {
+    if (fbSettings) {
+      setFbEnabled(fbSettings.feedbackEnabled ?? true);
+      setFbDays(fbSettings.feedbackReminderDays ?? 3);
+      setFbShare(fbSettings.feedbackShareWithMentor ?? false);
+      setFbEmail(fbSettings.mentorGroupEmail ?? "");
+    }
+  }, [fbSettings]);
+
+  function handleFbSave() {
+    patchFb({
+      data: {
+        feedbackEnabled: fbEnabled,
+        feedbackReminderDays: fbDays,
+        feedbackShareWithMentor: fbShare,
+        mentorGroupEmail: fbEmail || null,
+      },
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <MessageSquare className="w-4 h-4" /> Student Feedback
+        </CardTitle>
+        <CardDescription>
+          Configure how and when students are prompted to rate their lessons.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        {fbLoading ? (
+          <div className="flex items-center gap-2 text-muted-foreground text-sm py-4">
+            <Loader2 className="w-4 h-4 animate-spin" /> Loading…
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-medium">Enable student feedback</Label>
+                <p className="text-xs text-muted-foreground">Students are asked to rate their lesson after it's marked as completed.</p>
+              </div>
+              <Switch checked={fbEnabled} onCheckedChange={setFbEnabled} />
+            </div>
+
+            {fbEnabled && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="fbDays">Reminder window (days)</Label>
+                  <p className="text-xs text-muted-foreground">How many days after the lesson to keep prompting if no response received.</p>
+                  <Input
+                    id="fbDays"
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={fbDays}
+                    onChange={e => setFbDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                    className="w-24"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Share results with mentor/group email</Label>
+                    <p className="text-xs text-muted-foreground">Send a weekly digest of feedback to a nominated email address.</p>
+                  </div>
+                  <Switch checked={fbShare} onCheckedChange={setFbShare} />
+                </div>
+
+                {fbShare && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="fbEmail">Mentor group email</Label>
+                    <Input
+                      id="fbEmail"
+                      type="email"
+                      value={fbEmail}
+                      onChange={e => setFbEmail(e.target.value)}
+                      placeholder="team@yourschool.com.au"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="flex justify-end">
+              <Button size="sm" onClick={handleFbSave} disabled={fbSaving}>
+                {fbSaving ? <Loader2 className="w-4 h-4 animate-spin mr-1.5" /> : <Save className="w-4 h-4 mr-1.5" />}
+                Save Feedback Settings
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

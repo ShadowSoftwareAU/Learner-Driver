@@ -249,4 +249,57 @@ router.post("/schools/:id/admins", requireAuth, async (req: any, res): Promise<v
   res.json({ ok: true });
 });
 
+// ─── Feedback settings ────────────────────────────────────────────────────────
+
+router.get("/schools/mine/feedback-settings", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (!isSchoolAdmin(user.role) && !isSuperAdmin(user.role)) {
+    res.status(403).json({ error: "school_admin required" }); return;
+  }
+  if (!user.schoolId) { res.status(400).json({ error: "No school associated" }); return; }
+
+  const [school] = await db.select().from(drivingSchoolsTable).where(eq(drivingSchoolsTable.id, user.schoolId));
+  if (!school) { res.status(404).json({ error: "School not found" }); return; }
+
+  res.json({
+    feedbackEnabled: school.feedbackEnabled,
+    feedbackReminderDays: school.feedbackReminderDays,
+    feedbackShareWithMentor: school.feedbackShareWithMentor,
+    mentorGroupEmail: school.mentorGroupEmail ?? null,
+  });
+});
+
+router.patch("/schools/mine/feedback-settings", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (!isSchoolAdmin(user.role) && !isSuperAdmin(user.role)) {
+    res.status(403).json({ error: "school_admin required" }); return;
+  }
+  if (!user.schoolId) { res.status(400).json({ error: "No school associated" }); return; }
+
+  const { feedbackEnabled, feedbackReminderDays, feedbackShareWithMentor, mentorGroupEmail } = req.body as {
+    feedbackEnabled?: boolean;
+    feedbackReminderDays?: number;
+    feedbackShareWithMentor?: boolean;
+    mentorGroupEmail?: string | null;
+  };
+
+  const updates: Record<string, unknown> = {};
+  if (feedbackEnabled !== undefined) updates.feedbackEnabled = feedbackEnabled;
+  if (feedbackReminderDays !== undefined) updates.feedbackReminderDays = Math.max(1, Math.min(30, feedbackReminderDays));
+  if (feedbackShareWithMentor !== undefined) updates.feedbackShareWithMentor = feedbackShareWithMentor;
+  if (mentorGroupEmail !== undefined) updates.mentorGroupEmail = mentorGroupEmail ?? null;
+
+  const [updated] = await db.update(drivingSchoolsTable)
+    .set(updates)
+    .where(eq(drivingSchoolsTable.id, user.schoolId))
+    .returning();
+
+  res.json({
+    feedbackEnabled: updated.feedbackEnabled,
+    feedbackReminderDays: updated.feedbackReminderDays,
+    feedbackShareWithMentor: updated.feedbackShareWithMentor,
+    mentorGroupEmail: updated.mentorGroupEmail ?? null,
+  });
+});
+
 export default router;

@@ -22,6 +22,18 @@ export const UserProfileRole = {
   unassigned: 'unassigned',
 } as const;
 
+/**
+ * @nullable
+ */
+export type UserProfileAdminSubRole = typeof UserProfileAdminSubRole[keyof typeof UserProfileAdminSubRole] | null;
+
+
+export const UserProfileAdminSubRole = {
+  owner: 'owner',
+  manager: 'manager',
+  coordinator: 'coordinator',
+} as const;
+
 export interface UserProfile {
   id: number;
   clerkId: string;
@@ -29,6 +41,10 @@ export interface UserProfile {
   /** @nullable */
   name?: string | null;
   role: UserProfileRole;
+  /** @nullable */
+  adminSubRole?: UserProfileAdminSubRole;
+  /** @nullable */
+  schoolId?: number | null;
   createdAt?: string;
 }
 
@@ -1562,6 +1578,146 @@ export interface ToiletRateInput {
   comment?: string;
 }
 
+export interface SubmitFeedbackInput {
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  overallRating: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  communicationRating: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  safetyFocusRating: number;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  lessonQualityRating: number;
+  wouldRecommend: boolean;
+  /** @maxLength 2000 */
+  comments?: string;
+}
+
+export interface SessionFeedbackItem {
+  id: number;
+  assessmentId: number;
+  studentId: number;
+  instructorId: number;
+  /** @nullable */
+  schoolId?: number | null;
+  /** @nullable */
+  overallRating?: number | null;
+  /** @nullable */
+  communicationRating?: number | null;
+  /** @nullable */
+  safetyFocusRating?: number | null;
+  /** @nullable */
+  lessonQualityRating?: number | null;
+  /** @nullable */
+  wouldRecommend?: boolean | null;
+  /** @nullable */
+  comments?: string | null;
+  /** @nullable */
+  submittedAt?: string | null;
+  createdAt: string;
+  /** @nullable */
+  studentName?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
+  /** @nullable */
+  lessonDate?: string | null;
+}
+
+export interface InstructorFeedbackSummary {
+  instructorId: number;
+  /** @nullable */
+  instructorName?: string | null;
+  totalFeedback: number;
+  /** @nullable */
+  avgOverall?: number | null;
+  /** @nullable */
+  avgCommunication?: number | null;
+  /** @nullable */
+  avgSafetyFocus?: number | null;
+  /** @nullable */
+  avgLessonQuality?: number | null;
+  /** @nullable */
+  recommendRate?: number | null;
+}
+
+export type HandoverNoteReviewRecordVerdict = typeof HandoverNoteReviewRecordVerdict[keyof typeof HandoverNoteReviewRecordVerdict];
+
+
+export const HandoverNoteReviewRecordVerdict = {
+  approved: 'approved',
+  needs_improvement: 'needs_improvement',
+  flagged: 'flagged',
+} as const;
+
+export interface HandoverNoteReviewRecord {
+  id: number;
+  handoverNoteId: number;
+  reviewerUserId: number;
+  /** @nullable */
+  schoolId?: number | null;
+  verdict: HandoverNoteReviewRecordVerdict;
+  /** @nullable */
+  reviewComment?: string | null;
+  reviewedAt: string;
+}
+
+export interface HandoverNoteAuditItem {
+  id: number;
+  studentId: number;
+  instructorId: number;
+  /** @nullable */
+  schoolId?: number | null;
+  note: string;
+  /** @nullable */
+  focusAreas?: string | null;
+  isSafetyCritical: boolean;
+  contentStatus: string;
+  createdAt: string;
+  /** @nullable */
+  studentName?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
+  review?: HandoverNoteReviewRecord | null;
+}
+
+export type HandoverNoteReviewInputVerdict = typeof HandoverNoteReviewInputVerdict[keyof typeof HandoverNoteReviewInputVerdict];
+
+
+export const HandoverNoteReviewInputVerdict = {
+  approved: 'approved',
+  needs_improvement: 'needs_improvement',
+  flagged: 'flagged',
+} as const;
+
+export interface HandoverNoteReviewInput {
+  verdict: HandoverNoteReviewInputVerdict;
+  /** @maxLength 2000 */
+  reviewComment?: string;
+}
+
+export interface SchoolFeedbackSettings {
+  feedbackEnabled?: boolean;
+  /**
+     * @minimum 1
+     * @maximum 30
+     */
+  feedbackReminderDays?: number;
+  feedbackShareWithMentor?: boolean;
+  /** @nullable */
+  mentorGroupEmail?: string | null;
+}
+
 export type GenerateViewerCode200 = {
   viewerCode: string;
   viewerCodeIssuedAt: string;
@@ -1746,5 +1902,56 @@ s: number;
 w: number;
 n: number;
 e: number;
+};
+
+export type ListAdminFeedbackParams = {
+instructorId?: number;
+limit?: number;
+offset?: number;
+};
+
+export type ListAdminFeedback200 = {
+  items: SessionFeedbackItem[];
+  total: number;
+};
+
+export type ListAdminHandoverNotesParams = {
+instructorId?: number;
+safetyCritical?: boolean;
+reviewStatus?: ListAdminHandoverNotesReviewStatus;
+limit?: number;
+offset?: number;
+};
+
+export type ListAdminHandoverNotesReviewStatus = typeof ListAdminHandoverNotesReviewStatus[keyof typeof ListAdminHandoverNotesReviewStatus];
+
+
+export const ListAdminHandoverNotesReviewStatus = {
+  unreviewed: 'unreviewed',
+  approved: 'approved',
+  needs_improvement: 'needs_improvement',
+  flagged: 'flagged',
+} as const;
+
+export type ListAdminHandoverNotes200 = {
+  items: HandoverNoteAuditItem[];
+  total: number;
+};
+
+/**
+ * @nullable
+ */
+export type SetAdminSubRoleBodyAdminSubRole = typeof SetAdminSubRoleBodyAdminSubRole[keyof typeof SetAdminSubRoleBodyAdminSubRole] | null;
+
+
+export const SetAdminSubRoleBodyAdminSubRole = {
+  owner: 'owner',
+  manager: 'manager',
+  coordinator: 'coordinator',
+} as const;
+
+export type SetAdminSubRoleBody = {
+  /** @nullable */
+  adminSubRole?: SetAdminSubRoleBodyAdminSubRole;
 };
 

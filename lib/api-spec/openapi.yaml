@@ -1932,6 +1932,235 @@ paths:
               schema:
                 $ref: "#/components/schemas/ToiletSummary"
 
+  # ─── Feedback ────────────────────────────────────────────────────────────────
+  /assessments/{id}/feedback:
+    post:
+      operationId: submitAssessmentFeedback
+      tags: [assessments]
+      summary: Student submits feedback for a completed assessment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitFeedbackInput"
+      responses:
+        "201":
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionFeedbackItem"
+        "400": { description: Validation error }
+        "403": { description: Access denied }
+        "404": { description: Assessment not found }
+    get:
+      operationId: getAssessmentFeedback
+      tags: [assessments]
+      summary: Get feedback for an assessment (instructor / admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Feedback
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionFeedbackItem"
+        "404": { description: No feedback yet }
+
+  /admin/feedback:
+    get:
+      operationId: listAdminFeedback
+      tags: [assessments]
+      summary: List all student feedback visible to this admin
+      parameters:
+        - name: instructorId
+          in: query
+          schema: { type: integer }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Paginated feedback list
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/SessionFeedbackItem"
+                  total:
+                    type: integer
+
+  /admin/feedback/summary:
+    get:
+      operationId: getAdminFeedbackSummary
+      tags: [assessments]
+      summary: Aggregate feedback stats per instructor
+      responses:
+        "200":
+          description: Per-instructor aggregate stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstructorFeedbackSummary"
+
+  # ─── Handover audit ──────────────────────────────────────────────────────────
+  /admin/handover-notes:
+    get:
+      operationId: listAdminHandoverNotes
+      tags: [handover]
+      summary: List all handover notes for admin audit
+      parameters:
+        - name: instructorId
+          in: query
+          schema: { type: integer }
+        - name: safetyCritical
+          in: query
+          schema: { type: boolean }
+        - name: reviewStatus
+          in: query
+          schema: { type: string, enum: [unreviewed, approved, needs_improvement, flagged] }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        "200":
+          description: Paginated handover notes
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, total]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/HandoverNoteAuditItem"
+                  total:
+                    type: integer
+
+  /admin/handover-notes/{id}/review:
+    post:
+      operationId: reviewHandoverNote
+      tags: [handover]
+      summary: Submit or update an admin review for a handover note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/HandoverNoteReviewInput"
+      responses:
+        "200":
+          description: Review recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverNoteReviewRecord"
+        "403": { description: Access denied }
+        "404": { description: Note not found }
+    get:
+      operationId: getHandoverNoteReview
+      tags: [handover]
+      summary: Get the review record for a handover note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Review record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HandoverNoteReviewRecord"
+        "404": { description: Not reviewed yet }
+
+  # ─── Feedback settings ───────────────────────────────────────────────────────
+  /schools/mine/feedback-settings:
+    get:
+      operationId: getSchoolFeedbackSettings
+      tags: [schools]
+      summary: Get feedback collection settings for this school
+      responses:
+        "200":
+          description: Feedback settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolFeedbackSettings"
+    patch:
+      operationId: updateSchoolFeedbackSettings
+      tags: [schools]
+      summary: Update feedback collection settings (school_admin / owner only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SchoolFeedbackSettings"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SchoolFeedbackSettings"
+        "403": { description: Access denied }
+
+  # ─── Admin sub-role ──────────────────────────────────────────────────────────
+  /users/{id}/admin-sub-role:
+    patch:
+      operationId: setAdminSubRole
+      tags: [users]
+      summary: Set admin sub-role for a school_admin user (super_admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                adminSubRole:
+                  type: ["string", "null"]
+                  enum: [owner, manager, coordinator, null]
+      responses:
+        "200":
+          description: Updated user
+        "403": { description: Access denied }
 
 components:
   schemas:
@@ -1958,6 +2187,11 @@ components:
         role:
           type: string
           enum: [student, instructor, admin, school_admin, viewer, super_admin, unassigned]
+        adminSubRole:
+          type: ["string", "null"]
+          enum: [owner, manager, coordinator, null]
+        schoolId:
+          type: ["integer", "null"]
         createdAt:
           type: string
 
@@ -3808,3 +4042,163 @@ components:
         comment:
           type: string
           maxLength: 200
+
+    SubmitFeedbackInput:
+      type: object
+      required: [overallRating, communicationRating, safetyFocusRating, lessonQualityRating, wouldRecommend]
+      properties:
+        overallRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        communicationRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        safetyFocusRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        lessonQualityRating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        wouldRecommend:
+          type: boolean
+        comments:
+          type: string
+          maxLength: 2000
+
+    SessionFeedbackItem:
+      type: object
+      required: [id, assessmentId, studentId, instructorId, createdAt]
+      properties:
+        id:
+          type: integer
+        assessmentId:
+          type: integer
+        studentId:
+          type: integer
+        instructorId:
+          type: integer
+        schoolId:
+          type: ["integer", "null"]
+        overallRating:
+          type: ["integer", "null"]
+        communicationRating:
+          type: ["integer", "null"]
+        safetyFocusRating:
+          type: ["integer", "null"]
+        lessonQualityRating:
+          type: ["integer", "null"]
+        wouldRecommend:
+          type: ["boolean", "null"]
+        comments:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        studentName:
+          type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        lessonDate:
+          type: ["string", "null"]
+
+    InstructorFeedbackSummary:
+      type: object
+      required: [instructorId, totalFeedback]
+      properties:
+        instructorId:
+          type: integer
+        instructorName:
+          type: ["string", "null"]
+        totalFeedback:
+          type: integer
+        avgOverall:
+          type: ["number", "null"]
+        avgCommunication:
+          type: ["number", "null"]
+        avgSafetyFocus:
+          type: ["number", "null"]
+        avgLessonQuality:
+          type: ["number", "null"]
+        recommendRate:
+          type: ["integer", "null"]
+
+    HandoverNoteAuditItem:
+      type: object
+      required: [id, studentId, instructorId, note, isSafetyCritical, contentStatus, createdAt]
+      properties:
+        id:
+          type: integer
+        studentId:
+          type: integer
+        instructorId:
+          type: integer
+        schoolId:
+          type: ["integer", "null"]
+        note:
+          type: string
+        focusAreas:
+          type: ["string", "null"]
+        isSafetyCritical:
+          type: boolean
+        contentStatus:
+          type: string
+        createdAt:
+          type: string
+        studentName:
+          type: ["string", "null"]
+        instructorName:
+          type: ["string", "null"]
+        review:
+          oneOf:
+            - $ref: "#/components/schemas/HandoverNoteReviewRecord"
+            - type: "null"
+
+    HandoverNoteReviewInput:
+      type: object
+      required: [verdict]
+      properties:
+        verdict:
+          type: string
+          enum: [approved, needs_improvement, flagged]
+        reviewComment:
+          type: string
+          maxLength: 2000
+
+    HandoverNoteReviewRecord:
+      type: object
+      required: [id, handoverNoteId, reviewerUserId, verdict, reviewedAt]
+      properties:
+        id:
+          type: integer
+        handoverNoteId:
+          type: integer
+        reviewerUserId:
+          type: integer
+        schoolId:
+          type: ["integer", "null"]
+        verdict:
+          type: string
+          enum: [approved, needs_improvement, flagged]
+        reviewComment:
+          type: ["string", "null"]
+        reviewedAt:
+          type: string
+
+    SchoolFeedbackSettings:
+      type: object
+      properties:
+        feedbackEnabled:
+          type: boolean
+        feedbackReminderDays:
+          type: integer
+          minimum: 1
+          maximum: 30
+        feedbackShareWithMentor:
+          type: boolean
+        mentorGroupEmail:
+          type: ["string", "null"]

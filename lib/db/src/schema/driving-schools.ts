@@ -18,6 +18,11 @@ export const drivingSchoolsTable = pgTable("driving_schools", {
   seatLimit: integer("seat_limit").notNull().default(5),
   studentCountSnapshot: integer("student_count_snapshot"),
   subscriptionTier: text("subscription_tier"), // independent | school | enterprise
+  // Student feedback settings
+  feedbackEnabled: boolean("feedback_enabled").notNull().default(true),
+  feedbackReminderDays: integer("feedback_reminder_days").notNull().default(2),
+  feedbackShareWithMentor: boolean("feedback_share_with_mentor").notNull().default(false),
+  mentorGroupEmail: text("mentor_group_email"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
