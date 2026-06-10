@@ -15,10 +15,15 @@ export type ContentType =
   | "message"
   | "other";
 
-export type OpenCaseResult = {
-  caseId: number;
-  status: "approved" | "quarantined" | "flagged";
-};
+/**
+ * Discriminated union so callers can tell DB failures apart from scan results.
+ *
+ * ok: true  → moderation ran successfully; caseId is non-null when a case was opened
+ * ok: false → DB write failed; content was NOT recorded; callers should fail-open but log
+ */
+export type OpenCaseResult =
+  | { ok: true; caseId: number | null; status: "approved" | "quarantined" | "flagged" }
+  | { ok: false; caseId: null; status: "scan_error" };
 
 /**
  * Process a scan result for a piece of content.
@@ -40,7 +45,7 @@ export async function processScanResult(opts: {
   const { scanResult, actorId } = opts;
 
   if (scanResult.status === "approved") {
-    return { caseId: 0, status: "approved" };
+    return { ok: true, caseId: null, status: "approved" };
   }
 
   try {
@@ -99,11 +104,21 @@ export async function processScanResult(opts: {
       ruleCount: scanResult.ruleHits.length,
     });
 
-    return { caseId: newCase.id, status: scanResult.status };
+    return { ok: true, caseId: newCase.id, status: scanResult.status };
   } catch (err) {
-    logger.error({ event: "moderation_service_error", err });
-    // Non-fatal — do not block content submission on moderation failures
-    return { caseId: 0, status: "flagged" };
+    logger.error({
+      event: "moderation_service_error",
+      err,
+      contentType: opts.contentType,
+      actorId: opts.actorId,
+      // Log enough context to reconstruct the event from logs
+      rawExcerptPreview: opts.rawExcerpt?.slice(0, 100),
+      severity: scanResult.severity,
+      ruleCount: scanResult.ruleHits.length,
+    }, "Moderation DB write failed — content NOT recorded in moderation_cases");
+    // Fail-open: do not block content submission on moderation infra failures.
+    // The error log above ensures forensic traceability.
+    return { ok: false, caseId: null, status: "scan_error" };
   }
 }
 

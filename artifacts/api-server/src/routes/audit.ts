@@ -3,6 +3,7 @@ import { desc, eq, and } from "drizzle-orm";
 import { db, auditLogsTable, usersTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { normalizeRole, isSchoolAdmin, isSuperAdmin } from "../lib/config";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
@@ -43,8 +44,10 @@ export async function logAudit(entry: AuditEntry, req?: Request): Promise<void> 
       route: entry.route ?? (req ? req.originalUrl : null),
       metadataJson: (entry.metadataJson ?? null) as any,
     });
-  } catch {
-    // non-fatal — never let audit failures block the request
+  } catch (err) {
+    // Non-fatal — never block the request, but always emit to structured log
+    // so the event is captured even if the DB write fails (compliance fallback).
+    logger.warn({ event: "audit_db_failure", entry, err }, "Audit log DB write failed — entry captured in log only");
   }
 }
 

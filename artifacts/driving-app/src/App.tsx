@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ClerkProvider, SignIn, SignUp, SignedIn, SignedOut, useClerk, useAuth } from "@clerk/clerk-react";
 import { shadcn } from "@clerk/themes";
 import { Switch, Route, useLocation, Router as WouterRouter, Redirect } from "wouter";
@@ -330,6 +331,7 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
+        <ErrorBoundary level="page">
         <Switch>
           <Route path="/" component={HomeRedirect} />
           <Route path="/sign-in/*?" component={SignInPage} />
@@ -384,6 +386,7 @@ function ClerkProviderWithRoutes() {
 
           <Route component={NotFound} />
         </Switch>
+        </ErrorBoundary>
       </QueryClientProvider>
     </ClerkProvider>
   );

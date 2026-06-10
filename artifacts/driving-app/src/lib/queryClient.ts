@@ -19,5 +19,14 @@ export const queryClient = new QueryClient({
       refetchOnMount: false,
       refetchOnReconnect: false,
     },
+    mutations: {
+      // Retry mutations up to 3 times with exponential backoff.
+      // Auth errors are never retried — a 401/403 on a write is permanent.
+      retry: (failureCount, error) => {
+        if (isAuthError(error)) return false;
+        return failureCount < 3;
+      },
+      retryDelay: (failureCount) => Math.min(1000 * 2 ** failureCount, 15_000),
+    },
   },
 });

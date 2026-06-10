@@ -20,6 +20,8 @@ import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
 import AssessmentRouteMap from "@/components/AssessmentRouteMap";
+import { useLessonDraft } from "@/hooks/useLessonDraft";
+import type { LessonDraftState } from "@/hooks/useLessonDraft";
 
 type GuidedStep = "setup" | "select" | "assess" | "summary";
 
@@ -55,6 +57,64 @@ export default function GuidedAssessment() {
   const watchIdRef = useRef<number | null>(null);
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [maneuverLocations, setManeuverLocations] = useState<Record<number, { lat: number; lng: number }>>({});
+
+  // ── Draft persistence (Fix #1: lesson data survives network drops) ──────────
+  const { saveDraft, loadDraft, clearDraft } = useLessonDraft();
+  const [hasDraft, setHasDraft] = useState(false);
+  const [draftAge, setDraftAge] = useState("");
+
+  // Always-current state snapshot used by the GPS interval to avoid stale closures.
+  const currentStateRef = useRef<Omit<LessonDraftState, "routePoints" | "savedAt">>({
+    studentId: "", duration: "60", date: new Date().toISOString().split("T")[0],
+    pedalOperator: "",
+    results: {},
+    maneuverNotes: {},
+    maneuverLocations: {},
+    selectedManeuverIds: [],
+    confidenceNote: "",
+    focusAreas: "",
+  });
+
+  useEffect(() => {
+    currentStateRef.current = {
+      studentId, duration, date, pedalOperator,
+      results, maneuverNotes, maneuverLocations,
+      selectedManeuverIds: [...selectedManeuverIds],
+      confidenceNote, focusAreas,
+    };
+  }, [studentId, duration, date, pedalOperator, results, maneuverNotes, maneuverLocations, selectedManeuverIds, confidenceNote, focusAreas]);
+
+  // Check for a recoverable draft when the component first mounts.
+  useEffect(() => {
+    loadDraft().then((draft) => {
+      if (!draft) return;
+      const ageMs = Date.now() - draft.savedAt;
+      if (ageMs > 24 * 60 * 60 * 1000) return; // discard drafts older than 24 h
+      const ageMins = Math.round(ageMs / 60_000);
+      setDraftAge(ageMins < 1 ? "just now" : `${ageMins} min${ageMins !== 1 ? "s" : ""} ago`);
+      setHasDraft(true);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const restoreDraft = async () => {
+    const draft = await loadDraft();
+    if (!draft) return;
+    setStudentId(draft.studentId);
+    setDuration(draft.duration);
+    setDate(draft.date);
+    if (draft.pedalOperator) setPedalOperator(draft.pedalOperator as PedalOperator);
+    setResults(draft.results as Record<number, ManeuverResultItemCompetencyLevel>);
+    setManeuverNotes(draft.maneuverNotes);
+    setManeuverLocations(draft.maneuverLocations);
+    setSelectedManeuverIds(new Set(draft.selectedManeuverIds));
+    setConfidenceNote(draft.confidenceNote);
+    setFocusAreas(draft.focusAreas);
+    routePointsRef.current = draft.routePoints;
+    setHasDraft(false);
+    toast({ title: "Lesson restored", description: "Your previous lesson has been recovered." });
+  };
+  // ────────────────────────────────────────────────────────────────────────────
 
   const groupedManeuvers = useMemo(() => {
     if (!maneuvers) return {};
@@ -122,6 +182,12 @@ export default function GuidedAssessment() {
       if (pos) {
         routePointsRef.current.push({ lat: pos.latitude, lng: pos.longitude, ts: Date.now() });
       }
+      // Persist draft every 5 s — reads currentStateRef to avoid stale closures.
+      saveDraft({
+        ...currentStateRef.current,
+        routePoints: routePointsRef.current,
+        savedAt: Date.now(),
+      });
     }, 5000);
 
     return () => {
@@ -190,6 +256,7 @@ export default function GuidedAssessment() {
       }
 
       toast({ title: "Success", description: "Assessment saved successfully." });
+      clearDraft();
       setLocation(`/instructor/assessments/${assessment.id}`);
     } catch (error) {
       toast({ title: "Error", description: "Failed to save assessment.", variant: "destructive" });
@@ -217,6 +284,25 @@ export default function GuidedAssessment() {
             <h1 className="text-3xl font-bold tracking-tight">Guided Lesson</h1>
             <p className="text-muted-foreground text-lg mt-1">Step through maneuvers one at a time.</p>
           </div>
+
+          {hasDraft && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-amber-900">Unsaved lesson found</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  A lesson was saved {draftAge}. Would you like to restore it?
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" onClick={() => { setHasDraft(false); clearDraft(); }}>
+                  Dismiss
+                </Button>
+                <Button size="sm" onClick={restoreDraft}>
+                  Restore
+                </Button>
+              </div>
+            </div>
+          )}
 
           <Card>
             <CardHeader className="p-6">

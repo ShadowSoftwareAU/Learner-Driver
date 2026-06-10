@@ -188,7 +188,7 @@ router.post("/handover/:studentId/notes", requireAuth, async (req: any, res): Pr
     focusAreas: focusAreas ?? null,
     isSafetyCritical: isSafetyCritical === true,
     contentStatus: scan.contentStatus,
-    moderationCaseId: scan.moderationCaseId > 0 ? scan.moderationCaseId : null,
+    moderationCaseId: scan.moderationCaseId ?? null,
   }).returning();
 
   await logAudit({

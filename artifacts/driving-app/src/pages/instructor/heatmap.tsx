@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap, useMapEvents } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import type { LatLngBounds, LatLngTuple } from "leaflet";
@@ -338,6 +339,11 @@ export default function HeatmapPage() {
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : (
+              <ErrorBoundary level="widget" fallback={
+                <div className="flex items-center justify-center bg-muted/30 rounded-lg text-sm text-muted-foreground" style={{ height: 500 }}>
+                  Map is temporarily unavailable. Try refreshing the page.
+                </div>
+              }>
               <div style={{ height: 500 }}>
                 <MapContainer
                   center={[-27.47, 153.03]}
@@ -412,6 +418,7 @@ export default function HeatmapPage() {
                   ))}
                 </MapContainer>
               </div>
+              </ErrorBoundary>
             )}
           </CardContent>
         </Card>

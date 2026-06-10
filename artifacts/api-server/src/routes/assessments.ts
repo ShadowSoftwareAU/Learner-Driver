@@ -1,11 +1,44 @@
 import { Router } from "express";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
+import { z } from "zod";
 import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
 import { scanContent } from "../lib/contentFiltering/scanContent";
 
 const router = Router();
+
+// ─── Schemas ──────────────────────────────────────────────────────────────────
+
+const routePointSchema = z.object({ lat: z.number(), lng: z.number(), ts: z.number() });
+
+const createAssessmentBody = z.object({
+  studentId: z.number().int().positive(),
+  lessonDate: z.string().min(1),
+  durationMinutes: z.number().int().min(1).max(480),
+  pedalOperator: z.enum(["student", "instructor", "shared"]),
+  confidenceNote: z.string().max(5000).optional(),
+  focusAreasNext: z.string().max(2000).optional(),
+  routePath: z.array(routePointSchema).optional().nullable(),
+});
+
+const patchAssessmentBody = z.object({
+  confidenceNote: z.string().max(5000).optional(),
+  focusAreasNext: z.string().max(2000).optional(),
+  status: z.enum(["in_progress", "completed", "no_show"]).optional(),
+  durationMinutes: z.number().int().min(1).max(480).optional(),
+  routePath: z.array(routePointSchema).optional().nullable(),
+  pedalOperator: z.enum(["student", "instructor", "shared"]).optional(),
+  acknowledgeBriefing: z.boolean().optional(),
+});
+
+const maneuverResultItemSchema = z.object({
+  maneuverId: z.number().int().positive(),
+  competencyLevel: z.enum(["not_attempted", "attempted", "practiced", "mastered"]),
+  notes: z.string().max(2000).optional(),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
+});
 
 // ─── List ─────────────────────────────────────────────────────────────────────
 
@@ -51,16 +84,13 @@ router.get("/assessments", requireAuth, async (req: any, res): Promise<void> => 
 
 router.post("/assessments", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { studentId, lessonDate, durationMinutes, confidenceNote, focusAreasNext, routePath, pedalOperator } = req.body;
 
-  if (!studentId || !lessonDate || !durationMinutes) {
-    res.status(400).json({ error: "studentId, lessonDate, durationMinutes required" });
+  const parsed = createAssessmentBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  if (!pedalOperator || !["student", "instructor", "shared"].includes(pedalOperator)) {
-    res.status(400).json({ error: "pedalOperator required: student | instructor | shared" });
-    return;
-  }
+  const { studentId, lessonDate, durationMinutes, confidenceNote, focusAreasNext, routePath, pedalOperator } = parsed.data;
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
@@ -200,7 +230,12 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
     if (!instructor || a.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, pedalOperator, acknowledgeBriefing } = req.body;
+  const bodyParsed = patchAssessmentBody.safeParse(req.body);
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: bodyParsed.error.issues });
+    return;
+  }
+  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, pedalOperator, acknowledgeBriefing } = bodyParsed.data;
 
   // Scan any updated free-text fields
   const textsToScan = [confidenceNote, focusAreasNext].filter(Boolean).join(" ");
@@ -243,8 +278,12 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
 router.post("/assessments/:id/results", requireAuth, async (req: any, res): Promise<void> => {
   const assessmentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { results } = req.body;
-  if (!Array.isArray(results)) { res.status(400).json({ error: "results array required" }); return; }
+  const resultsParsed = z.object({ results: z.array(maneuverResultItemSchema) }).safeParse(req.body);
+  if (!resultsParsed.success) {
+    res.status(400).json({ error: "Invalid results data", issues: resultsParsed.error.issues });
+    return;
+  }
+  const { results } = resultsParsed.data;
 
   if (user.role === "instructor") {
     const [assessment] = await db.select({ instructorId: assessmentsTable.instructorId }).from(assessmentsTable).where(eq(assessmentsTable.id, assessmentId));

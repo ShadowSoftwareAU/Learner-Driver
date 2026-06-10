@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { eq, sql, and } from "drizzle-orm";
+import { z } from "zod";
 import { db, studentsTable, usersTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, bookingsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
@@ -214,7 +215,15 @@ router.patch("/students/:id/medical", requireAuth, async (req: any, res): Promis
     if (!(await instructorHasStudent(instructor.id, id))) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  const { medicalConditions, allergies } = req.body;
+  const medParsed = z.object({
+    medicalConditions: z.string().max(10_000).optional(),
+    allergies: z.string().max(5_000).optional(),
+  }).safeParse(req.body);
+  if (!medParsed.success) {
+    res.status(400).json({ error: "Invalid medical data", issues: medParsed.error.issues });
+    return;
+  }
+  const { medicalConditions, allergies } = medParsed.data;
   const updates: any = {};
 
   if (medicalConditions !== undefined) {
