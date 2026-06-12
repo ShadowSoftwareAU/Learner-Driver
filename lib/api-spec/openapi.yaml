@@ -574,6 +574,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/Assessment"
 
+  /assessments/{id}/submit:
+    post:
+      operationId: submitAssessment
+      tags: [assessments]
+      summary: Submit a completed assessment for instructor approval (draft → pending_approval)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assessment submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+        "404":
+          description: Not found
+        "409":
+          description: Assessment already submitted or approved
+
+  /assessments/{id}/approve:
+    post:
+      operationId: approveAssessment
+      tags: [assessments]
+      summary: Approve an assessment and record report dispatch details (pending_approval → approved)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApproveAssessmentInput"
+      responses:
+        "200":
+          description: Assessment approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+        "404":
+          description: Not found
+        "409":
+          description: Assessment not in pending_approval state
+
   /assessments/{id}/results:
     post:
       operationId: saveManeuverResults
@@ -2786,8 +2838,33 @@ components:
                 type: integer
         preLessonBriefingAcknowledgedAt:
           type: ["string", "null"]
+        # Report finalization workflow
+        finalizationStatus:
+          type: string
+          enum: [draft, pending_approval, approved, dispatched]
+        approvedAt:
+          type: ["string", "null"]
+        approvedByUserId:
+          type: ["integer", "null"]
+        reportDispatchedAt:
+          type: ["string", "null"]
+        reportDispatchedTo:
+          type: ["string", "null"]
+          description: JSON array of email addresses the report was dispatched to
         createdAt:
           type: string
+
+    ApproveAssessmentInput:
+      type: object
+      properties:
+        dispatchEmails:
+          type: array
+          items:
+            type: string
+          description: Email addresses to record as dispatch recipients
+        notes:
+          type: string
+          description: Optional approval notes
 
     AssessmentInput:
       type: object

@@ -364,6 +364,102 @@ router.post("/assessments/:id/results", requireAuth, async (req: any, res): Prom
   res.json(saved);
 });
 
+// ─── Submit for approval ──────────────────────────────────────────────────────
+
+router.post("/assessments/:id/submit", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, id));
+  if (!a) { res.status(404).json({ error: "Not found" }); return; }
+
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor || a.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
+  if (a.finalizationStatus !== "draft") {
+    res.status(409).json({ error: "Assessment has already been submitted or approved", finalizationStatus: a.finalizationStatus });
+    return;
+  }
+
+  const [updated] = await db.update(assessmentsTable)
+    .set({ finalizationStatus: "pending_approval", status: "completed" })
+    .where(eq(assessmentsTable.id, id))
+    .returning();
+
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "submit_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
+
+  res.json(formatAssessment(updated));
+});
+
+// ─── Approve + dispatch ───────────────────────────────────────────────────────
+
+router.post("/assessments/:id/approve", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, id));
+  if (!a) { res.status(404).json({ error: "Not found" }); return; }
+
+  if (user.role === "instructor") {
+    const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+    if (!instructor || a.instructorId !== instructor.id) { res.status(403).json({ error: "Access denied" }); return; }
+  }
+
+  if (a.finalizationStatus !== "pending_approval") {
+    res.status(409).json({ error: "Assessment must be in pending_approval state to approve", finalizationStatus: a.finalizationStatus });
+    return;
+  }
+
+  const bodyParsed = z.object({
+    dispatchEmails: z.array(z.string().email()).optional().default([]),
+    notes: z.string().max(1000).optional(),
+  }).safeParse(req.body);
+
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: bodyParsed.error.issues });
+    return;
+  }
+
+  const { dispatchEmails } = bodyParsed.data;
+  const now = new Date();
+
+  const [updated] = await db.update(assessmentsTable)
+    .set({
+      finalizationStatus: "dispatched",
+      approvedAt: now,
+      approvedByUserId: user.id,
+      reportDispatchedAt: now,
+      reportDispatchedTo: JSON.stringify(dispatchEmails),
+    })
+    .where(eq(assessmentsTable.id, id))
+    .returning();
+
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "approve_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
+
+  // Fire-and-forget notification to student
+  const [student] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, a.studentId));
+  if (student?.userId) {
+    const [studentUser] = await db.select({ id: usersTable.id, email: usersTable.email }).from(usersTable).where(eq(usersTable.id, student.userId));
+    if (studentUser) {
+      sendNotification({
+        userId: studentUser.id,
+        email: studentUser.email,
+        payload: {
+          type: "assessment_approved",
+          title: "Your lesson report is ready",
+          body: "Your instructor has approved your lesson report. Tap to view your progress.",
+          relatedId: id,
+          relatedType: "assessment",
+        },
+      }).catch(() => null);
+    }
+  }
+
+  res.json(formatAssessment(updated));
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAssessment(a: any) {
@@ -381,6 +477,11 @@ function formatAssessment(a: any) {
     focusAreasNext: a.focusAreasNext ?? null,
     routePath: a.routePath ?? null,
     preLessonBriefingAcknowledgedAt: a.preLessonBriefingAcknowledgedAt ?? null,
+    finalizationStatus: a.finalizationStatus ?? "draft",
+    approvedAt: a.approvedAt ?? null,
+    approvedByUserId: a.approvedByUserId ?? null,
+    reportDispatchedAt: a.reportDispatchedAt ?? null,
+    reportDispatchedTo: a.reportDispatchedTo ?? null,
     createdAt: a.createdAt,
   };
 }

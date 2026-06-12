@@ -1,4 +1,4 @@
-import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
+import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents, useSubmitAssessment } from "@workspace/api-client-react";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export default function GuidedAssessment() {
   const { data: maneuvers, isLoading: isManeuversLoading } = useListManeuvers();
   const createAssessment = useCreateAssessment();
   const saveResults = useSaveManeuverResults();
+  const submitForApproval = useSubmitAssessment();
 
   // Setup state
   const [studentId, setStudentId] = useState<string>("");
@@ -255,7 +256,10 @@ export default function GuidedAssessment() {
         });
       }
 
-      toast({ title: "Success", description: "Assessment saved successfully." });
+      // Auto-submit for approval — moves to pending_approval state
+      await submitForApproval.mutateAsync({ id: assessment.id });
+
+      toast({ title: "Lesson saved", description: "Assessment is ready for your review and approval." });
       clearDraft();
       setLocation(`/instructor/assessments/${assessment.id}`);
     } catch (error) {

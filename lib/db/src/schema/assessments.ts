@@ -21,6 +21,12 @@ export const assessmentsTable = pgTable("assessments", {
   // Pre-lesson briefing acknowledgement
   preLessonBriefingAcknowledgedAt: timestamp("pre_lesson_briefing_acknowledged_at", { withTimezone: true }),
   preLessonBriefingAcknowledgedBy: integer("pre_lesson_briefing_acknowledged_by"),
+  // Report finalization workflow
+  finalizationStatus: text("finalization_status").notNull().default("draft"), // draft | pending_approval | approved | dispatched
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvedByUserId: integer("approved_by_user_id"),
+  reportDispatchedAt: timestamp("report_dispatched_at", { withTimezone: true }),
+  reportDispatchedTo: text("report_dispatched_to"), // JSON array of email addresses
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
