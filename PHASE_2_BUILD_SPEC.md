@@ -121,6 +121,11 @@ Do not design Phase 2 around SCIM assumptions.
 Build in the following order.
 This order balances safety-critical quick wins first, then infrastructure, then tenancy and monetisation.
 
+0. **Wave 0.5 — Alpha User Readiness (immediate)**
+   - Report preview and approval gate
+   - Assessment navigation UX fixes (button labels, data persistence, scroll/swipe)
+   - Responsive layout QA pass
+   - End-to-end test: create student → run assessment → preview report → approve → dispatch
 1. Pedal control field
 2. Medical conditions and allergies
 3. Handover enhancement and pre-lesson briefing card
@@ -2321,3 +2326,147 @@ Suggested endpoints:
 - licence validation architecture supports DVS-backed verification and document-authenticity checks
 - safeguarding checks support WWCC or Blue Card verification for relevant staff roles
 - all identity results are audited and stored in dedicated verification tables
+
+---
+
+# 30. Role Hierarchy Refinement (2026-06-12 Meeting Update)
+
+## 30.1 Confirmed Role Hierarchy (Whiteboard Diagram)
+
+The following hierarchy was confirmed by Dayv and Jimmy on 2026-06-12:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  PRIMARY DRIVING SCHOOL / INDEPENDENT DRIVER TRAINER │
+│  (Business entity — pays platform subscription)      │
+│                                                      │
+│  ┌─────────────────────────────────────────────┐    │
+│  │ Employed or Contracted Driver Trainer        │    │
+│  │ (Individual — may or may not pay own sub)    │    │
+│  └─────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+         │
+         ├── Secondary Contracted Driving School
+         │   (Separate billing entity under primary;
+         │    fee may include ≤3 trainers, or trainers
+         │    pay individually)
+         │
+         ├── Involved Authority
+         │   (PCYC / NDIS / Secondary School)
+         │   - Gets admin portal access
+         │   - Can coordinate mentors
+         │   - Receives handover reports
+         │
+         ├── Mentor (Carer / Guardian / Support Worker)
+         │   - Linked to student
+         │   - Logs supervised driving sessions
+         │   - Handover notes flow both directions
+         │   - NOT an instructor — separate arrangement
+         │
+         └── Parent / Guardian (Non-training)
+             - Reports only
+             - Payments only
+             - No training involvement
+
+         Learner (Student)
+         - Sits at the bottom
+         - Links to all above roles
+```
+
+## 30.2 Key Clarifications from Transcript
+
+1. **Fee model at primary school level:** The primary driving school's subscription can include up to 3 trainers bundled. Beyond that, contracted trainers pay their own subscription. Independent trainers always pay individually.
+
+2. **Involved Authority = Agency (admin portal):** Involved authorities (PCYC, NDIS providers, secondary schools) are treated the same as a driving school for admin portal purposes. They get:
+   - Their own admin portal login
+   - Ability to assign sub-roles within admin (finance person, bookings person)
+   - Permission matrix (checklist) controlling what each sub-role can see
+   - Visibility into student progress for linked students only
+
+3. **Contract owner audit capability:** The contract owner (e.g. Rachael for her school) can audit any activity under her organisation. This is for complaint investigation, police reports, and verifying location/time of incidents involving their staff or students.
+
+4. **Mentors are NOT instructors:** Mentors sit in a separate category. They:
+   - Are linked to a student through an involved authority OR directly
+   - Log supervised practice sessions (separate from formal lessons)
+   - Submit handover notes back to the primary instructor
+   - Receive handover notes from the instructor about what to work on
+   - Do NOT appear in the instructor list
+   - Do NOT have instructor-level calendar/booking access
+
+5. **Two-way communication principle:** Training/education is a two-way conversation. Information flows:
+   - Instructor → Mentor (what to work on)
+   - Mentor → Instructor (what was practiced, progress observations)
+   - Both directions feed into the student's card/record
+
+6. **Cancellation compliance:** When a booking is cancelled:
+   - Push notification or email goes to the student
+   - Student must confirm/acknowledge the cancellation
+   - This prevents off-book "cancel and pay cash" scenarios
+   - Validation step protects compliance
+
+7. **Unique code system across all user types:** Every role type (student, admin, instructor, mentor/guardian) has unique invite codes. Admin users (schools, authorities) can:
+   - Go into backend and grab their unique code
+   - Send invite by email
+   - Import existing record holders if they already have an account
+   - If unrecognised, system sends invite email to register and supply credentials (licence, WWCC, etc.)
+
+8. **Business entity separation from instructor:** When Rachael creates her business "Shifts and Surrounds Driver Training", she creates the business entity first, then adds herself as an instructor underneath it. This separates the business admin role from the teaching role even when it's the same person.
+
+9. **Report workflow (confirmed):**
+   - Assessment completes → marked as completed but NOT finalised
+   - Sits in "pending approval" state
+   - Instructor can review, add handover notes, preview the generated report
+   - On clicking "approve" → report dispatches to pre-configured email addresses
+   - Action item: build report preview before dispatch
+
+10. **Instructor reward/ranking (future consideration):** Instructors may be categorisable by:
+    - Experience hours in driver training
+    - Usage frequency of the platform
+    - These could surface as priority in search results (future feature, not Phase 2)
+
+## 30.3 Schema Impact
+
+The existing Phase 2 schema already supports most of this hierarchy through:
+- `driving_schools` table (primary school / business entity)
+- `school_instructors` table (employed/contracted trainers)
+- `organisation_accounts` table (involved authorities)
+- `viewer_links` table with `relationshipType` (mentors, parents, guardians)
+
+**New considerations:**
+- Add `mentor` as a distinct sub-type that is NOT a viewer but has slightly elevated access (can log practice sessions, submit handover notes back)
+- Consider a `mentor_sessions` table or extend `assessments` with a `sessionType` field (`formal_lesson | supervised_practice`) to capture mentor-logged driving time
+- The `organisation_accounts` table needs a `adminSubRoles` or permission matrix capability for finance/bookings segregation within the org
+- Add `secondarySchoolId` nullable FK on `driving_schools` to support the "secondary contracted school under primary" relationship
+
+**Assessment finalization workflow addition:**
+- Add `finalizationStatus` to assessments: `draft | pending_approval | approved | dispatched`
+- Add `approvedAt` timestamp
+- Add `approvedByUserId` FK
+- Add `reportDispatchedAt` timestamp
+- Add `reportDispatchedTo` text (JSON array of email addresses)
+
+## 30.4 UI Feedback Items (Action Items from Dayv)
+
+These are bugs/UX issues Dayv reported from testing:
+1. **Assessment step navigation:** Scrolling between maneuver boxes is cumbersome. Wants swipe/flick between steps.
+2. **"Previous" button says "Finished":** Confusing label when user wants to go back. Should say "Previous" or "Back".
+3. **Data loss on back navigation:** Going back to a previous step loses entered data. Must persist state.
+4. **Responsive layout differences:** Renders differently on big screen vs laptop. Needs responsive QA pass.
+5. **Report preview:** Need ability to preview the generated report before approving/dispatching.
+
+## 30.5 Go-to-Market Notes
+
+- ATA (Australian Trial Training Authority) conference on Gold Coast, September/October 2026. Target for presence/demo.
+- Rachael ready as alpha user from tomorrow (2026-06-12 onwards).
+- Dayv running a live assessment with a student today and sending report to Rachael before the meeting.
+- Marketing collateral: 250-word, 500-word, and 2500-word pitch documents generated. Canva presentation attempted but needs work.
+
+## 30.6 Delivery Order Update
+
+Based on the meeting, the following items move UP in priority for immediate delivery (before the Rachael meeting):
+1. Report preview + approval gate (new)
+2. Fix "Previous/Finished" button labelling
+3. Fix data persistence on back navigation
+4. Assessment step navigation UX improvement
+
+These should be treated as **Wave 0.5** — quick fixes needed for alpha user onboarding.
