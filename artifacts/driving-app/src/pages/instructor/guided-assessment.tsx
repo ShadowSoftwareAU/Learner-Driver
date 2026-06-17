@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useLocation } from "wouter";
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
 import { useToast } from "@/hooks/use-toast";
@@ -216,6 +216,35 @@ export default function GuidedAssessment() {
       setCurrentIndex(prev => prev - 1);
     }
   };
+
+  // Swipe & keyboard navigation — active only during the assess step
+  const touchStartXRef = useRef(0);
+  const touchStartYRef = useRef(0);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartXRef.current;
+    const dy = e.changedTouches[0].clientY - touchStartYRef.current;
+    // Only trigger on primarily horizontal swipes (more horizontal than vertical)
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) handleNext();   // swipe left → next
+    else handlePrev();           // swipe right → previous
+  }, [currentIndex, selectedManeuvers.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (step !== "assess") return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); handleNext(); }
+      if (e.key === "ArrowLeft")  { e.preventDefault(); handlePrev(); }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [step, currentIndex, selectedManeuvers.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = async () => {
     if (!studentId) {
@@ -452,11 +481,18 @@ export default function GuidedAssessment() {
       { val: ManeuverResultItemCompetencyLevel.mastered, label: "Mastered", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-200", active: "bg-green-200 border-green-500 text-green-900 ring-2 ring-green-500" },
     ];
 
+    const isFirst = currentIndex === 0;
+    const isLast  = currentIndex === selectedManeuvers.length - 1;
+
     return (
       <SidebarLayout>
-        <div className="flex flex-col min-h-[calc(100dvh-4rem)] max-w-2xl mx-auto">
+        <div
+          className="flex flex-col min-h-[calc(100dvh-4rem)] max-w-2xl mx-auto"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           {/* Progress bar */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
             <span className="text-sm text-muted-foreground font-medium">
               {currentIndex + 1} of {selectedManeuvers.length}
             </span>
@@ -466,18 +502,19 @@ export default function GuidedAssessment() {
                 style={{ width: `${((currentIndex + 1) / selectedManeuvers.length) * 100}%` }}
               />
             </div>
+            <span className="text-xs text-muted-foreground hidden sm:inline">← → to navigate</span>
           </div>
 
           {/* Maneuver card */}
           <Card className="flex-1 flex flex-col">
-            <CardHeader className="p-6 border-b">
+            <CardHeader className="p-4 sm:p-6 border-b">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-2xl flex-1">{currentManeuver.name}</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl flex-1">{currentManeuver.name}</CardTitle>
                 {(currentManeuver.complianceCriteria || currentManeuver.masteryDefinition) && (
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-12 w-12 shrink-0">
-                        <Info className="w-6 h-6 text-blue-500" />
+                      <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+                        <Info className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-lg">
@@ -502,22 +539,22 @@ export default function GuidedAssessment() {
                   </Dialog>
                 )}
               </div>
-              <p className="text-muted-foreground">{currentManeuver.category}</p>
+              <p className="text-muted-foreground text-sm sm:text-base">{currentManeuver.category}</p>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col justify-center p-6 space-y-6">
+            <CardContent className="flex-1 flex flex-col justify-center p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Score buttons */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 {levels.map(level => (
                   <button
                     key={level.val}
                     type="button"
                     onClick={() => handleLevelSelect(level.val)}
                     className={`
-                      h-20 rounded-xl border-2 flex flex-col items-center justify-center transition-all text-lg font-semibold
+                      min-h-[4.5rem] sm:min-h-[5rem] rounded-xl border-2 flex flex-col items-center justify-center transition-all text-base sm:text-lg font-semibold px-2
                       ${results[currentManeuver.id] === level.val ? level.active : level.color}
                     `}
                   >
-                    {results[currentManeuver.id] === level.val && <Check className="w-5 h-5 mb-1" />}
+                    {results[currentManeuver.id] === level.val && <Check className="w-4 h-4 sm:w-5 sm:h-5 mb-1" />}
                     {level.label}
                   </button>
                 ))}
@@ -549,23 +586,32 @@ export default function GuidedAssessment() {
           </Card>
 
           {/* Navigation */}
-          <div className="flex justify-between gap-4 mt-6 pb-6">
-            <Button
-              variant="outline"
-              onClick={handlePrev}
-              disabled={currentIndex === 0}
-              className="h-16 text-base px-6 flex-1"
-            >
-              <ArrowLeft className="w-5 h-5 mr-2" /> Previous
-            </Button>
+          <div className="flex justify-between gap-3 sm:gap-4 mt-4 sm:mt-6 pb-6">
+            {isFirst ? (
+              <Button
+                variant="outline"
+                onClick={() => setStep("select")}
+                className="h-14 sm:h-16 text-sm sm:text-base px-4 sm:px-6 flex-1"
+              >
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" /> Back to Selection
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={handlePrev}
+                className="h-14 sm:h-16 text-sm sm:text-base px-4 sm:px-6 flex-1"
+              >
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-2" /> Previous
+              </Button>
+            )}
             <Button
               onClick={handleNext}
-              className="h-16 text-base px-6 flex-1"
+              className="h-14 sm:h-16 text-sm sm:text-base px-4 sm:px-6 flex-1"
             >
-              {currentIndex < selectedManeuvers.length - 1 ? (
-                <>Next <ArrowRight className="w-5 h-5 ml-2" /></>
+              {isLast ? (
+                <>Review Summary <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 ml-2" /></>
               ) : (
-                <>Finish <CheckCircle2 className="w-5 h-5 ml-2" /></>
+                <>Next <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2" /></>
               )}
             </Button>
           </div>
