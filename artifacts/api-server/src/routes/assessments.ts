@@ -17,6 +17,7 @@ const createAssessmentBody = z.object({
   studentId: z.number().int().positive(),
   lessonDate: z.string().min(1),
   durationMinutes: z.number().int().min(1).max(480),
+  assessmentType: z.enum(["qsafe", "qride", "heavy_vehicle"]).default("qsafe"),
   pedalOperator: z.enum(["student", "instructor", "shared"]),
   confidenceNote: z.string().max(5000).optional(),
   focusAreasNext: z.string().max(2000).optional(),
@@ -91,7 +92,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  const { studentId, lessonDate, durationMinutes, confidenceNote, focusAreasNext, routePath, pedalOperator } = parsed.data;
+  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, pedalOperator } = parsed.data;
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
@@ -117,6 +118,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
   const [a] = await db.insert(assessmentsTable).values({
     studentId, instructorId: instructor.id,
     lessonDate, durationMinutes,
+    assessmentType: assessmentType ?? "qsafe",
     pedalOperator,
     confidenceNote: confidenceNote ?? null,
     focusAreasNext: focusAreasNext ?? null,
@@ -472,6 +474,7 @@ function formatAssessment(a: any) {
     lessonDate: a.lessonDate,
     durationMinutes: a.durationMinutes,
     status: a.status,
+    assessmentType: a.assessmentType ?? "qsafe",
     pedalOperator: a.pedalOperator ?? "student",
     confidenceNote: a.confidenceNote ?? null,
     focusAreasNext: a.focusAreasNext ?? null,

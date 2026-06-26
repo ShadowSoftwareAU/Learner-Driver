@@ -2795,7 +2795,7 @@ components:
     # ─── Assessments ───────────────────────────────────────────────────────────
     Assessment:
       type: object
-      required: [id, studentId, instructorId, lessonDate, durationMinutes, status, pedalOperator]
+      required: [id, studentId, instructorId, lessonDate, durationMinutes, status, pedalOperator, assessmentType]
       properties:
         id:
           type: integer
@@ -2814,6 +2814,12 @@ components:
         status:
           type: string
           enum: [in_progress, completed]
+        # Assessment program type — QSAFE (light vehicle), Q-Ride (motorcycle/e-bike), or Heavy Vehicle
+        assessmentType:
+          type: string
+          enum: [qsafe, qride, heavy_vehicle]
+          description: "Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)"
+          default: qsafe
         # Safety-critical: who controls the pedals during this lesson
         pedalOperator:
           type: string
@@ -2876,6 +2882,11 @@ components:
           type: string
         durationMinutes:
           type: integer
+        # Assessment program type (defaults to qsafe if omitted)
+        assessmentType:
+          type: string
+          enum: [qsafe, qride, heavy_vehicle]
+          default: qsafe
         # Required — instructor must explicitly confirm pedal control before saving
         pedalOperator:
           type: string

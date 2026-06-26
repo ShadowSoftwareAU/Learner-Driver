@@ -2,7 +2,7 @@ import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListS
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin } from "lucide-react";
+import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin, Car, Bike, Truck, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,7 +23,35 @@ import AssessmentRouteMap from "@/components/AssessmentRouteMap";
 import { useLessonDraft } from "@/hooks/useLessonDraft";
 import type { LessonDraftState } from "@/hooks/useLessonDraft";
 
-type GuidedStep = "setup" | "select" | "assess" | "summary";
+type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
+type GuidedStep = "type" | "setup" | "select" | "assess" | "summary";
+
+const ASSESSMENT_TYPES: { value: AssessmentType; label: string; subtitle: string; reg: string; icon: React.ReactNode; description: string }[] = [
+  {
+    value: "qsafe",
+    label: "QSAFE",
+    subtitle: "Light Vehicle (Car, SUV, Van)",
+    reg: "Driver Licensing Reg 2021, Ch. 3",
+    description: "Standard Queensland learner driver assessment for class C licences.",
+    icon: <Car className="w-7 h-7" />,
+  },
+  {
+    value: "qride",
+    label: "Q-Ride",
+    subtitle: "Motorcycle / E-Bike",
+    reg: "Accreditation Reg 2015, s. 33–41",
+    description: "Competency-based motorcycle training and assessment for class RE/R licences.",
+    icon: <Bike className="w-7 h-7" />,
+  },
+  {
+    value: "heavy_vehicle",
+    label: "Heavy Vehicle",
+    subtitle: "MR / HR / HC / MC",
+    reg: "Driver Licensing Reg 2021, s. 57–60",
+    description: "Assessment for medium and heavy vehicle licence classes.",
+    icon: <Truck className="w-7 h-7" />,
+  },
+];
 
 export default function GuidedAssessment() {
   const [, setLocation] = useLocation();
@@ -34,6 +62,9 @@ export default function GuidedAssessment() {
   const saveResults = useSaveManeuverResults();
   const submitForApproval = useSubmitAssessment();
 
+  // Assessment type — must be selected first
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>("qsafe");
+
   // Setup state
   const [studentId, setStudentId] = useState<string>("");
   const [duration, setDuration] = useState("60");
@@ -42,8 +73,8 @@ export default function GuidedAssessment() {
   // Pedal control — required before saving
   const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
 
-  // Flow state
-  const [step, setStep] = useState<GuidedStep>("setup");
+  // Flow state — starts at "type" selection
+  const [step, setStep] = useState<GuidedStep>("type");
   const [selectedManeuverIds, setSelectedManeuverIds] = useState<Set<number>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>({});
@@ -263,6 +294,7 @@ export default function GuidedAssessment() {
           studentId: parseInt(studentId),
           lessonDate: new Date(date).toISOString(),
           durationMinutes: parseInt(duration),
+          assessmentType,
           pedalOperator,
           confidenceNote,
           focusAreasNext: focusAreas,
@@ -308,14 +340,80 @@ export default function GuidedAssessment() {
     );
   }
 
-  // Step 1: Setup (student, date, duration)
+  // Step 0: Assessment Type selection
+  if (step === "type") {
+    return (
+      <SidebarLayout>
+        <div className="space-y-6 max-w-2xl mx-auto">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Guided Lesson</h1>
+            <p className="text-muted-foreground text-lg mt-1">Step 1 of 4 — Select the assessment program.</p>
+          </div>
+
+          <Card>
+            <CardHeader className="p-6 pb-4">
+              <CardTitle>Assessment Program</CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">Select the program that governs this lesson. Each type is regulated under separate Queensland transport legislation.</p>
+            </CardHeader>
+            <CardContent className="p-6 pt-0 space-y-3">
+              {ASSESSMENT_TYPES.map(type => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setAssessmentType(type.value)}
+                  className={`w-full rounded-lg border-2 p-4 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring flex items-start gap-4 ${
+                    assessmentType === type.value
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <div className={`mt-0.5 shrink-0 ${assessmentType === type.value ? "text-primary" : "text-muted-foreground"}`}>
+                    {type.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{type.label}</p>
+                      <span className="text-sm text-muted-foreground">— {type.subtitle}</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-0.5">{type.description}</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1 italic">{type.reg}</p>
+                  </div>
+                  {assessmentType === type.value && (
+                    <Check className="w-5 h-5 text-primary shrink-0 mt-1" />
+                  )}
+                </button>
+              ))}
+              {assessmentType !== "qsafe" && (
+                <div className="flex items-start gap-3 rounded-md bg-amber-50 border border-amber-200 px-4 py-3 mt-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                  <p className="text-sm text-amber-800">
+                    <span className="font-semibold">{assessmentType === "qride" ? "Q-Ride" : "Heavy Vehicle"} checklist coming soon.</span>{" "}
+                    This assessment will use the QSAFE maneuver checklist as a placeholder until the dedicated checklist is available.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end">
+            <Button onClick={() => setStep("setup")} className="gap-2">
+              Continue
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+      </SidebarLayout>
+    );
+  }
+
+  // Step 2: Setup (student, date, duration)
   if (step === "setup") {
     return (
       <SidebarLayout>
         <div className="space-y-6 max-w-2xl mx-auto">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Guided Lesson</h1>
-            <p className="text-muted-foreground text-lg mt-1">Step through maneuvers one at a time.</p>
+            <p className="text-muted-foreground text-lg mt-1">Step 2 of 4 — Enter lesson details.</p>
           </div>
 
           {hasDraft && (
@@ -397,13 +495,22 @@ export default function GuidedAssessment() {
             }}
           />
 
-          <Button
-            className="w-full h-16 text-lg"
-            onClick={() => setStep("select")}
-            disabled={!studentId || !pedalOperator}
-          >
-            Choose Maneuvers <ArrowRight className="w-5 h-5 ml-2" />
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setStep("type")}
+              className="h-16 text-base px-6"
+            >
+              <ArrowLeft className="w-5 h-5 mr-2" /> Back
+            </Button>
+            <Button
+              className="flex-1 h-16 text-lg"
+              onClick={() => setStep("select")}
+              disabled={!studentId || !pedalOperator}
+            >
+              Choose Maneuvers <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
+          </div>
         </div>
       </SidebarLayout>
     );

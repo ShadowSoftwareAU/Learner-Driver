@@ -206,6 +206,18 @@ export const AssessmentStatus = {
 } as const;
 
 /**
+ * Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)
+ */
+export type AssessmentAssessmentType = typeof AssessmentAssessmentType[keyof typeof AssessmentAssessmentType];
+
+
+export const AssessmentAssessmentType = {
+  qsafe: 'qsafe',
+  qride: 'qride',
+  heavy_vehicle: 'heavy_vehicle',
+} as const;
+
+/**
  * Who controls the pedals — student, instructor (dual control), or shared
  */
 export type AssessmentPedalOperator = typeof AssessmentPedalOperator[keyof typeof AssessmentPedalOperator];
@@ -244,6 +256,8 @@ export interface Assessment {
   lessonDate: string;
   durationMinutes: number;
   status: AssessmentStatus;
+  /** Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60) */
+  assessmentType: AssessmentAssessmentType;
   /** Who controls the pedals — student, instructor (dual control), or shared */
   pedalOperator: AssessmentPedalOperator;
   /** @nullable */
@@ -476,6 +490,15 @@ export interface ApproveAssessmentInput {
   notes?: string;
 }
 
+export type AssessmentInputAssessmentType = typeof AssessmentInputAssessmentType[keyof typeof AssessmentInputAssessmentType];
+
+
+export const AssessmentInputAssessmentType = {
+  qsafe: 'qsafe',
+  qride: 'qride',
+  heavy_vehicle: 'heavy_vehicle',
+} as const;
+
 export type AssessmentInputPedalOperator = typeof AssessmentInputPedalOperator[keyof typeof AssessmentInputPedalOperator];
 
 
@@ -495,6 +518,7 @@ export interface AssessmentInput {
   studentId: number;
   lessonDate: string;
   durationMinutes: number;
+  assessmentType?: AssessmentInputAssessmentType;
   pedalOperator: AssessmentInputPedalOperator;
   confidenceNote?: string;
   focusAreasNext?: string;

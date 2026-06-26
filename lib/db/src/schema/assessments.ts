@@ -21,6 +21,8 @@ export const assessmentsTable = pgTable("assessments", {
   // Pre-lesson briefing acknowledgement
   preLessonBriefingAcknowledgedAt: timestamp("pre_lesson_briefing_acknowledged_at", { withTimezone: true }),
   preLessonBriefingAcknowledgedBy: integer("pre_lesson_briefing_acknowledged_by"),
+  // Assessment program type — determines which checklist/regulations apply
+  assessmentType: text("assessment_type").notNull().default("qsafe"), // qsafe | qride | heavy_vehicle
   // Report finalization workflow
   finalizationStatus: text("finalization_status").notNull().default("draft"), // draft | pending_approval | approved | dispatched
   approvedAt: timestamp("approved_at", { withTimezone: true }),

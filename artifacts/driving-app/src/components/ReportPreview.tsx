@@ -37,6 +37,12 @@ type ManeuverResult = {
   notes?: string | null;
 };
 
+const ASSESSMENT_TYPE_LABELS: Record<string, string> = {
+  qsafe: "QSAFE — Light Vehicle",
+  qride: "Q-Ride — Motorcycle / E-Bike",
+  heavy_vehicle: "Heavy Vehicle (MR/HR/HC/MC)",
+};
+
 type ReportPreviewProps = {
   assessment: {
     id: number;
@@ -45,6 +51,7 @@ type ReportPreviewProps = {
     lessonDate: string;
     durationMinutes: number;
     status: string;
+    assessmentType?: string | null;
     pedalOperator?: string | null;
     confidenceNote?: string | null;
     focusAreasNext?: string | null;
@@ -144,6 +151,15 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
             <p className="font-medium">{assessment.durationMinutes} minutes</p>
           </div>
         </div>
+        {assessment.assessmentType && (
+          <div className="col-span-2 flex items-start gap-2">
+            <BookOpen className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">Assessment Program</p>
+              <p className="font-medium">{ASSESSMENT_TYPE_LABELS[assessment.assessmentType] ?? assessment.assessmentType}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       {assessment.pedalOperator && (

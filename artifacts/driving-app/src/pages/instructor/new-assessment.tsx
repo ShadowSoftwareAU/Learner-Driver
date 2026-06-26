@@ -1,7 +1,7 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle } from "lucide-react";
+import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle, Car, Bike, Truck, AlertTriangle } from "lucide-react";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useLocation, Link } from "wouter";
 import { useState, useMemo } from "react";
 import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
@@ -18,6 +19,32 @@ import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
 
+type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
+
+const ASSESSMENT_TYPES: { value: AssessmentType; label: string; subtitle: string; reg: string; icon: React.ReactNode }[] = [
+  {
+    value: "qsafe",
+    label: "QSAFE",
+    subtitle: "Light Vehicle (Car, SUV, Van)",
+    reg: "Driver Licensing Reg 2021, Ch. 3",
+    icon: <Car className="w-6 h-6" />,
+  },
+  {
+    value: "qride",
+    label: "Q-Ride",
+    subtitle: "Motorcycle / E-Bike",
+    reg: "Accreditation Reg 2015, s. 33–41",
+    icon: <Bike className="w-6 h-6" />,
+  },
+  {
+    value: "heavy_vehicle",
+    label: "Heavy Vehicle",
+    subtitle: "MR / HR / HC / MC",
+    reg: "Driver Licensing Reg 2021, s. 57–60",
+    icon: <Truck className="w-6 h-6" />,
+  },
+];
+
 export default function NewAssessment() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -26,6 +53,7 @@ export default function NewAssessment() {
   const createAssessment = useCreateAssessment();
   const saveResults = useSaveManeuverResults();
 
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>("qsafe");
   const [studentId, setStudentId] = useState<string>("");
   const [duration, setDuration] = useState("60");
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -76,6 +104,7 @@ export default function NewAssessment() {
           studentId: parseInt(studentId),
           lessonDate: new Date(date).toISOString(),
           durationMinutes: parseInt(duration),
+          assessmentType,
           pedalOperator: pedalOperator || undefined,
           confidenceNote,
           focusAreasNext: focusAreas,
@@ -129,6 +158,49 @@ export default function NewAssessment() {
             </Button>
           </Link>
         </div>
+
+        {/* Assessment Program Type */}
+        <Card>
+          <CardHeader className="p-6 pb-4">
+            <CardTitle>Assessment Program</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">Select the program type before logging this assessment. Each program is governed by separate Queensland transport legislation.</p>
+          </CardHeader>
+          <CardContent className="p-6 pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {ASSESSMENT_TYPES.map(type => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => setAssessmentType(type.value)}
+                  className={`rounded-lg border-2 p-4 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                    assessmentType === type.value
+                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                      : "border-border hover:border-primary/40 hover:bg-muted/40"
+                  }`}
+                >
+                  <div className={`mb-2 ${assessmentType === type.value ? "text-primary" : "text-muted-foreground"}`}>
+                    {type.icon}
+                  </div>
+                  <p className="font-semibold text-sm">{type.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{type.subtitle}</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1 italic">{type.reg}</p>
+                  {assessmentType === type.value && (
+                    <Badge className="mt-2 bg-primary/10 text-primary border-primary/20 text-xs" variant="outline">Selected</Badge>
+                  )}
+                </button>
+              ))}
+            </div>
+            {assessmentType !== "qsafe" && (
+              <div className="mt-4 flex items-start gap-3 rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">{assessmentType === "qride" ? "Q-Ride" : "Heavy Vehicle"} checklist coming soon.</span>{" "}
+                  This assessment is using the QSAFE maneuver checklist as a placeholder until the dedicated checklist is available.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader className="p-6">
