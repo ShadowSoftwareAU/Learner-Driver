@@ -71,6 +71,7 @@ export const ListStudentsResponseItem = zod.object({
   "headshotPath": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "region": zod.string().nullish(),
+  "state": zod.string().nullish().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
@@ -105,6 +106,7 @@ export const CreateStudentBody = zod.object({
   "headshotPath": zod.string().optional(),
   "notes": zod.string().optional(),
   "region": zod.string().optional(),
+  "state": zod.string().optional().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
   "country": zod.string().optional()
 })
 
@@ -134,6 +136,7 @@ export const GetStudentResponse = zod.object({
   "headshotPath": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "region": zod.string().nullish(),
+  "state": zod.string().nullish().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
@@ -169,6 +172,7 @@ export const UpdateStudentBody = zod.object({
   "headshotPath": zod.string().optional(),
   "notes": zod.string().optional(),
   "region": zod.string().optional(),
+  "state": zod.string().optional().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
   "country": zod.string().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
   "medicalConditions": zod.string().optional().describe('Plain text — server encrypts before storing'),
@@ -195,6 +199,7 @@ export const UpdateStudentResponse = zod.object({
   "headshotPath": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "region": zod.string().nullish(),
+  "state": zod.string().nullish().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
@@ -362,6 +367,7 @@ export const ListInstructorsResponseItem = zod.object({
   "vehicleYear": zod.number().nullish(),
   "qualifications": zod.string().nullish(),
   "trainingCategories": zod.array(zod.string()).optional(),
+  "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -399,6 +405,7 @@ export const GetInstructorResponse = zod.object({
   "vehicleYear": zod.number().nullish(),
   "qualifications": zod.string().nullish(),
   "trainingCategories": zod.array(zod.string()).optional(),
+  "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -461,7 +468,8 @@ export const UpdateInstructorBody = zod.object({
   "vehicleMake": zod.string().optional(),
   "vehicleModel": zod.string().optional(),
   "vehicleYear": zod.number().optional(),
-  "qualifications": zod.string().optional()
+  "qualifications": zod.string().optional(),
+  "state": zod.string().optional().describe('AU state\/territory where this instructor primarily operates')
 })
 
 export const UpdateInstructorResponse = zod.object({
@@ -476,6 +484,7 @@ export const UpdateInstructorResponse = zod.object({
   "vehicleYear": zod.number().nullish(),
   "qualifications": zod.string().nullish(),
   "trainingCategories": zod.array(zod.string()).optional(),
+  "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -951,6 +960,7 @@ export const GetHandoverResponse = zod.object({
   "headshotPath": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "region": zod.string().nullish(),
+  "state": zod.string().nullish().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
   "country": zod.string().nullish(),
   "totalHours": zod.number().optional(),
   "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
@@ -1896,6 +1906,8 @@ export const GetMySchoolResponse = zod.object({
   "logoPath": zod.string().nullish(),
   "primaryColor": zod.string().nullish(),
   "secondaryColor": zod.string().nullish(),
+  "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
+  "rspRegistrationNumber": zod.string().nullish().describe('Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)'),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string().optional()
 })
@@ -1921,6 +1933,8 @@ export const GetSchoolResponse = zod.object({
   "logoPath": zod.string().nullish(),
   "primaryColor": zod.string().nullish(),
   "secondaryColor": zod.string().nullish(),
+  "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
+  "rspRegistrationNumber": zod.string().nullish().describe('Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)'),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string().optional()
 })
@@ -1942,7 +1956,9 @@ export const UpdateSchoolBody = zod.object({
   "billingContactEmail": zod.string().optional(),
   "billingContactName": zod.string().optional(),
   "billingContactPhone": zod.string().optional(),
-  "seatLimit": zod.number().optional()
+  "seatLimit": zod.number().optional(),
+  "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
+  "rspRegistrationNumber": zod.string().optional().describe('RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3)')
 })
 
 export const UpdateSchoolResponse = zod.object({
@@ -1958,6 +1974,8 @@ export const UpdateSchoolResponse = zod.object({
   "logoPath": zod.string().nullish(),
   "primaryColor": zod.string().nullish(),
   "secondaryColor": zod.string().nullish(),
+  "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
+  "rspRegistrationNumber": zod.string().nullish().describe('Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)'),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string().optional()
 })

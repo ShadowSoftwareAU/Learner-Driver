@@ -105,6 +105,11 @@ export interface Student {
   notes?: string | null;
   /** @nullable */
   region?: string | null;
+  /**
+     * AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)
+     * @nullable
+     */
+  state?: string | null;
   /** @nullable */
   country?: string | null;
   totalHours?: number;
@@ -154,6 +159,8 @@ export interface StudentInput {
   headshotPath?: string;
   notes?: string;
   region?: string;
+  /** AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT) */
+  state?: string;
   country?: string;
 }
 
@@ -179,6 +186,8 @@ export interface StudentUpdate {
   headshotPath?: string;
   notes?: string;
   region?: string;
+  /** AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT) */
+  state?: string;
   country?: string;
   status?: StudentUpdateStatus;
   /** Plain text — server encrypts before storing */
@@ -337,6 +346,11 @@ export interface Instructor {
   /** @nullable */
   qualifications?: string | null;
   trainingCategories?: string[];
+  /**
+     * AU state/territory where this instructor primarily operates
+     * @nullable
+     */
+  state?: string | null;
   isIndependent?: boolean;
   activeStudents?: number;
   primaryVehicle?: InstructorVehicleSummary | null;
@@ -460,6 +474,8 @@ export interface InstructorUpdate {
   vehicleModel?: string;
   vehicleYear?: number;
   qualifications?: string;
+  /** AU state/territory where this instructor primarily operates */
+  state?: string;
 }
 
 export type ManeuverAssessmentType = typeof ManeuverAssessmentType[keyof typeof ManeuverAssessmentType];
@@ -1257,6 +1273,13 @@ export interface DrivingSchool {
   primaryColor?: string | null;
   /** @nullable */
   secondaryColor?: string | null;
+  /** AU state/territory codes where this school operates */
+  operatingStates?: string[];
+  /**
+     * Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)
+     * @nullable
+     */
+  rspRegistrationNumber?: string | null;
   isActive?: boolean;
   createdAt?: string;
 }
@@ -1563,6 +1586,10 @@ export interface SchoolPatch {
   billingContactName?: string;
   billingContactPhone?: string;
   seatLimit?: number;
+  /** AU state/territory codes where this school operates */
+  operatingStates?: string[];
+  /** RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3) */
+  rspRegistrationNumber?: string;
 }
 
 export type SchoolInstructorInputRoleWithinSchool = typeof SchoolInstructorInputRoleWithinSchool[keyof typeof SchoolInstructorInputRoleWithinSchool];

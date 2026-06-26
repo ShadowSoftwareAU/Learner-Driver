@@ -23,6 +23,7 @@ export const studentsTable = pgTable("students", {
   notes: text("notes"),
   totalHours: real("total_hours").notNull().default(0),
   region: text("region"),
+  state: text("state"),
   country: text("country").default("AU"),
   status: text("status").notNull().default("active"),
   // Medical and allergy data — encrypted at rest (AES-256-GCM via crypto.ts)

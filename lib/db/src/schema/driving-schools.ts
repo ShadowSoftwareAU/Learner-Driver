@@ -18,6 +18,9 @@ export const drivingSchoolsTable = pgTable("driving_schools", {
   seatLimit: integer("seat_limit").notNull().default(5),
   studentCountSnapshot: integer("student_count_snapshot"),
   subscriptionTier: text("subscription_tier"), // independent | school | enterprise
+  // Operating states and RSP (Registered Service Provider) compliance
+  operatingStates: text("operating_states").array().default([]),
+  rspRegistrationNumber: text("rsp_registration_number"),
   // Student feedback settings
   feedbackEnabled: boolean("feedback_enabled").notNull().default(true),
   feedbackReminderDays: integer("feedback_reminder_days").notNull().default(2),

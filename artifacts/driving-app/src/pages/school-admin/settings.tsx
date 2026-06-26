@@ -13,6 +13,17 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const QK = "/api/schools/mine";
 
+const AU_STATES = [
+  { value: "QLD", label: "Queensland" },
+  { value: "NSW", label: "New South Wales" },
+  { value: "VIC", label: "Victoria" },
+  { value: "SA", label: "South Australia" },
+  { value: "WA", label: "Western Australia" },
+  { value: "TAS", label: "Tasmania" },
+  { value: "NT", label: "Northern Territory" },
+  { value: "ACT", label: "Australian Capital Territory" },
+];
+
 interface SchoolFields {
   name: string;
   abn: string;
@@ -24,6 +35,8 @@ interface SchoolFields {
   postcode: string;
   primaryColor: string;
   secondaryColor: string;
+  operatingStates: string[];
+  rspRegistrationNumber: string;
 }
 
 export default function SchoolSettings() {
@@ -51,6 +64,8 @@ export default function SchoolSettings() {
     postcode: "",
     primaryColor: "",
     secondaryColor: "",
+    operatingStates: [],
+    rspRegistrationNumber: "",
   });
 
   useEffect(() => {
@@ -66,6 +81,8 @@ export default function SchoolSettings() {
         postcode: school.postcode ?? "",
         primaryColor: school.primaryColor ?? "",
         secondaryColor: school.secondaryColor ?? "",
+        operatingStates: (school as any).operatingStates ?? [],
+        rspRegistrationNumber: (school as any).rspRegistrationNumber ?? "",
       });
     }
   }, [school]);
@@ -79,6 +96,8 @@ export default function SchoolSettings() {
         abn: fields.abn || undefined,
         primaryColor: fields.primaryColor || undefined,
         secondaryColor: fields.secondaryColor || undefined,
+        operatingStates: fields.operatingStates,
+        rspRegistrationNumber: fields.rspRegistrationNumber || undefined,
       },
     });
   }
@@ -229,6 +248,58 @@ export default function SchoolSettings() {
                   />
                 </div>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Operating States</CardTitle>
+            <CardDescription>The states and territories where your school operates.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {AU_STATES.map(st => (
+                <label key={st.value} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={fields.operatingStates.includes(st.value)}
+                    onChange={e => {
+                      setFields(prev => ({
+                        ...prev,
+                        operatingStates: e.target.checked
+                          ? [...prev.operatingStates, st.value]
+                          : prev.operatingStates.filter(s => s !== st.value),
+                      }));
+                    }}
+                    className="w-4 h-4 accent-primary"
+                  />
+                  {st.label}
+                </label>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">RSP Registration (Q-Ride)</CardTitle>
+            <CardDescription>
+              Required to deliver Q-Ride training —{" "}
+              <span className="font-medium">Accreditation Reg 2015, Div 3, s.70–77</span>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1.5">
+              <Label htmlFor="rspRegNo">RSP Registration Number</Label>
+              <Input
+                id="rspRegNo"
+                value={fields.rspRegistrationNumber}
+                onChange={e => setFields(prev => ({ ...prev, rspRegistrationNumber: e.target.value }))}
+                placeholder="e.g. QTMR-RSP-12345"
+                className="max-w-xs"
+              />
+              <p className="text-xs text-muted-foreground">Leave blank if your school does not deliver Q-Ride.</p>
             </div>
           </CardContent>
         </Card>

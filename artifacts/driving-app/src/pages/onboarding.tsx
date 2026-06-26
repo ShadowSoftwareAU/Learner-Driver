@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoCaptureField } from "@/components/PhotoCaptureField";
-import { Car, GraduationCap, Building2, Loader2, ArrowLeft } from "lucide-react";
+import { Car, GraduationCap, Building2, Loader2, ArrowLeft, Info } from "lucide-react";
 import { RoleUpdateRole } from "@/lib/enums";
 
 const AU_STATES = [
@@ -22,6 +22,17 @@ const AU_STATES = [
   { value: "NT", label: "Northern Territory (NT)" },
   { value: "ACT", label: "Australian Capital Territory (ACT)" },
 ] as const;
+
+const STATE_REQUIREMENTS: Record<string, { hours: number; nightHours: number; citation: string }> = {
+  QLD: { hours: 100, nightHours: 10, citation: "Driver Licensing Regulation 2021, s.29" },
+  NSW: { hours: 120, nightHours: 20, citation: "Road Transport (Driver Licensing) Regulation 2017" },
+  VIC: { hours: 120, nightHours: 10, citation: "Road Safety (Driver Standards) Regulations 2019" },
+  SA: { hours: 75, nightHours: 15, citation: "Motor Vehicle Act 1959" },
+  WA: { hours: 50, nightHours: 5, citation: "Road Traffic (Driver Licensing) Regulations 2008" },
+  TAS: { hours: 80, nightHours: 10, citation: "Vehicle and Traffic Act 1999" },
+  NT: { hours: 100, nightHours: 10, citation: "Motor Vehicle Act (NT)" },
+  ACT: { hours: 100, nightHours: 10, citation: "Road Transport (Driver Licensing) Regulation 2000" },
+};
 
 export default function Onboarding() {
   const { data: user, isLoading, isError } = useGetMe();
@@ -91,7 +102,7 @@ export default function Onboarding() {
                 data: {
                   fullName: user.name || user.email,
                   email: user.email,
-                  region: selectedRegion || undefined,
+                  state: selectedRegion || undefined,
                   licenseNumber: details.licenseNumber.trim() || undefined,
                   phone: details.phone.trim() || undefined,
                   guardianPhone: details.guardianPhone.trim() || undefined,
@@ -141,6 +152,7 @@ export default function Onboarding() {
             <CardContent className="space-y-5">
               <div className="space-y-2">
                 <Label>State / Territory</Label>
+                <p className="text-xs text-muted-foreground">Road rules and licence requirements vary by state.</p>
                 <Select value={selectedRegion} onValueChange={setSelectedRegion}>
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Select your state" />
@@ -153,6 +165,21 @@ export default function Onboarding() {
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedRegion && STATE_REQUIREMENTS[selectedRegion] && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                    <div className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">
+                          {STATE_REQUIREMENTS[selectedRegion].hours} hours required, including {STATE_REQUIREMENTS[selectedRegion].nightHours} at night
+                        </p>
+                        <p className="text-xs text-blue-600 mt-0.5">
+                          {STATE_REQUIREMENTS[selectedRegion].citation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-2">

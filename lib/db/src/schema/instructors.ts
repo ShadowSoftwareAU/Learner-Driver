@@ -14,6 +14,8 @@ export const instructorsTable = pgTable("instructors", {
   vehicleYear: integer("vehicle_year"),
   qualifications: text("qualifications"),
   trainingCategories: jsonb("training_categories").$type<string[]>().default([]),
+  // State/territory where this instructor primarily operates
+  state: text("state"),
   // School relationship flags
   // true = sole trader/independent; false = managed by a driving school
   isIndependent: boolean("is_independent").notNull().default(true),

@@ -68,7 +68,7 @@ router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
 
 router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { fullName, email, phone, dateOfBirth, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, region, country } = req.body;
+  const { fullName, email, phone, dateOfBirth, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, region, state, country } = req.body;
   if (!fullName || !email) { res.status(400).json({ error: "fullName and email required" }); return; }
 
   let userId: number | null = null;
@@ -90,7 +90,7 @@ router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
     guardianEmail: guardianEmail ?? null, pcycSchoolEmail: pcycSchoolEmail ?? null,
     licenseNumber: licenseNumber ?? null, licenceFrontPath: licenceFrontPath ?? null,
     licenceBackPath: licenceBackPath ?? null, headshotPath: headshotPath ?? null,
-    notes: notes ?? null, region: region ?? null, country: country ?? null,
+    notes: notes ?? null, region: region ?? null, state: state ?? null, country: country ?? null,
   }).returning();
   await logAudit({ actorId: user.id, actorRole: user.role, action: "create_student", resourceType: "student", resourceId: s.id, studentId: s.id }, req);
   res.status(201).json(formatStudent(s));
@@ -131,7 +131,7 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
     if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  const { fullName, phone, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, status, region, country } = req.body;
+  const { fullName, phone, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, status, region, state, country } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
@@ -145,6 +145,7 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
   if (headshotPath !== undefined) updates.headshotPath = headshotPath;
   if (notes !== undefined) updates.notes = notes;
   if (region !== undefined) updates.region = region;
+  if (state !== undefined) updates.state = state;
   if (country !== undefined) updates.country = country;
   if (status && (isSchoolAdmin(user.role) || isSuperAdmin(user.role))) updates.status = status;
 
@@ -369,7 +370,7 @@ function formatStudent(s: any) {
     guardianName: s.guardianName, guardianPhone: s.guardianPhone, guardianEmail: s.guardianEmail,
     pcycSchoolEmail: s.pcycSchoolEmail, licenseNumber: s.licenseNumber,
     licenceFrontPath: s.licenceFrontPath, licenceBackPath: s.licenceBackPath, headshotPath: s.headshotPath,
-    notes: s.notes, region: s.region, country: s.country,
+    notes: s.notes, region: s.region, state: s.state ?? null, country: s.country,
     totalHours: s.totalHours, status: s.status,
     // Attendance
     noShowCount: s.noShowCount ?? 0,

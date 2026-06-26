@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Upload, CheckCircle2, Clock, XCircle, AlertTriangle,
-  FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard,
+  FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard, Award, HeartPulse,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -17,6 +17,9 @@ type DocType =
   | "insurance"
   | "license_front"
   | "license_back"
+  | "driver_trainer_accreditation"
+  | "first_aid"
+  | "rider_trainer_accreditation"
   | "qualification";
 
 type UploadedDoc = {
@@ -41,19 +44,37 @@ const DOC_CONFIG: Record<DocType, { label: string; description: string; icon: Re
   },
   license_front: {
     label: "Front of Licence",
-    description: "Photo showing your name, licence number and photo",
+    description: "Front of your driver's licence — Accreditation Reg 2015, s.12",
     icon: CreditCard,
     required: true,
   },
   license_back: {
     label: "Back of Licence",
-    description: "Photo showing conditions and expiry date",
+    description: "Photo showing licence conditions and expiry date",
     icon: CreditCard,
     required: true,
   },
+  driver_trainer_accreditation: {
+    label: "Driver Trainer Accreditation Card",
+    description: "Current accreditation card — Accreditation Reg 2015, s.26–27 (mandatory)",
+    icon: Award,
+    required: true,
+  },
+  first_aid: {
+    label: "First Aid Certificate",
+    description: "Valid first aid certificate — recommended for all instructors",
+    icon: HeartPulse,
+    required: false,
+  },
+  rider_trainer_accreditation: {
+    label: "Rider Trainer Accreditation",
+    description: "Required for Q-Ride motorcycle training — Accreditation Reg 2015, s.33–37",
+    icon: Award,
+    required: false,
+  },
   qualification: {
     label: "Instructor Qualification",
-    description: "ADI certificate or equivalent driving instructor qualification",
+    description: "ADI certificate or equivalent driving instructor qualification (optional)",
     icon: BookOpen,
     required: false,
   },
@@ -261,11 +282,16 @@ export default function InstructorVerification() {
     insurance: null,
     license_front: null,
     license_back: null,
+    driver_trainer_accreditation: null,
+    first_aid: null,
+    rider_trainer_accreditation: null,
     qualification: null,
   });
+  const [deliversQRide, setDeliversQRide] = useState(false);
 
-  const requiredDocs: DocType[] = ["wwcc", "insurance", "license_front", "license_back"];
-  const allRequiredUploaded = requiredDocs.every((dt) => uploads[dt] !== null);
+  const requiredDocs: DocType[] = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
+  const allRequiredUploaded = requiredDocs.every((dt) => uploads[dt] !== null) &&
+    (!deliversQRide || uploads.rider_trainer_accreditation !== null);
   const anyUploaded = Object.values(uploads).some(Boolean);
 
   const handleSubmit = () => {
@@ -365,6 +391,44 @@ export default function InstructorVerification() {
                 onUploaded={(doc) => setUploads((prev) => ({ ...prev, [doc.docType]: doc }))}
                 onRemove={(dt) => setUploads((prev) => ({ ...prev, [dt]: null }))}
               />
+
+              <UploadSlot
+                docType="driver_trainer_accreditation"
+                uploaded={uploads.driver_trainer_accreditation}
+                onUploaded={(doc) => setUploads((prev) => ({ ...prev, driver_trainer_accreditation: doc }))}
+                onRemove={() => setUploads((prev) => ({ ...prev, driver_trainer_accreditation: null }))}
+              />
+              <UploadSlot
+                docType="first_aid"
+                uploaded={uploads.first_aid}
+                onUploaded={(doc) => setUploads((prev) => ({ ...prev, first_aid: doc }))}
+                onRemove={() => setUploads((prev) => ({ ...prev, first_aid: null }))}
+              />
+
+              <div className="flex items-start gap-3 p-3 rounded-lg border bg-purple-50 border-purple-200">
+                <input
+                  type="checkbox"
+                  id="qride-checkbox"
+                  checked={deliversQRide}
+                  onChange={e => setDeliversQRide(e.target.checked)}
+                  className="w-4 h-4 mt-0.5 accent-purple-600 flex-shrink-0"
+                />
+                <label htmlFor="qride-checkbox" className="text-sm font-medium text-purple-900 cursor-pointer">
+                  I deliver Q-Ride motorcycle training
+                  <span className="block text-xs font-normal text-purple-700 mt-0.5">
+                    Rider Trainer Accreditation required — Accreditation Reg 2015, s.33–37
+                  </span>
+                </label>
+              </div>
+
+              {deliversQRide && (
+                <UploadSlot
+                  docType="rider_trainer_accreditation"
+                  uploaded={uploads.rider_trainer_accreditation}
+                  onUploaded={(doc) => setUploads((prev) => ({ ...prev, rider_trainer_accreditation: doc }))}
+                  onRemove={() => setUploads((prev) => ({ ...prev, rider_trainer_accreditation: null }))}
+                />
+              )}
 
               <UploadSlot
                 docType="qualification"

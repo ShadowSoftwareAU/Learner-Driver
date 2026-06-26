@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Car, Bike, Truck, ChevronRight, Users } from "lucide-react";
+import { Loader2, Search, Car, Bike, Truck, ChevronRight, Users, ShieldCheck, AlertTriangle, AlertCircle } from "lucide-react";
 
 const TRAINING_CATEGORIES = [
   { value: "all", label: "All categories" },
@@ -38,6 +38,31 @@ const CAT_SHORT: Record<string, string> = {
   q_ride_re: "RE", q_ride_r: "R", q_ride_re_to_r: "RE→R",
   mr: "MR", hr: "HR", hc: "HC", mc: "MC",
 };
+
+function ComplianceBadge({ status }: { status?: string }) {
+  if (status === "compliant") {
+    return (
+      <div className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+        <ShieldCheck className="w-3 h-3" />
+        Compliant
+      </div>
+    );
+  }
+  if (status === "partial") {
+    return (
+      <div className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+        <AlertTriangle className="w-3 h-3" />
+        Docs incomplete
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
+      <AlertCircle className="w-3 h-3" />
+      No docs
+    </div>
+  );
+}
 
 function VehicleTypeIcon({ type }: { type?: string | null }) {
   if (type === "motorbike") return <Bike className="w-3.5 h-3.5" />;
@@ -115,6 +140,9 @@ export default function AdminInstructors() {
                             </div>
                             <p className="text-sm text-muted-foreground truncate">{instructor.email}</p>
                             {instructor.phone && <p className="text-sm text-muted-foreground">{instructor.phone}</p>}
+                            <div className="mt-1.5">
+                              <ComplianceBadge status={(instructor as any).complianceStatus} />
+                            </div>
                           </div>
                         </div>
 

@@ -2426,6 +2426,9 @@ components:
           type: ["string", "null"]
         region:
           type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+          description: "AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)"
         country:
           type: ["string", "null"]
         totalHours:
@@ -2492,6 +2495,9 @@ components:
           type: string
         region:
           type: string
+        state:
+          type: string
+          description: "AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)"
         country:
           type: string
 
@@ -2522,6 +2528,9 @@ components:
           type: string
         region:
           type: string
+        state:
+          type: string
+          description: "AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)"
         country:
           type: string
         status:
@@ -2603,6 +2612,9 @@ components:
         trainingCategories:
           type: array
           items: { type: string }
+        state:
+          type: ["string", "null"]
+          description: "AU state/territory where this instructor primarily operates"
         isIndependent:
           type: boolean
         activeStudents:
@@ -2768,6 +2780,9 @@ components:
           type: integer
         qualifications:
           type: string
+        state:
+          type: string
+          description: "AU state/territory where this instructor primarily operates"
 
     # ─── Maneuvers ─────────────────────────────────────────────────────────────
     Maneuver:
@@ -3763,6 +3778,13 @@ components:
           type: ["string", "null"]
         secondaryColor:
           type: ["string", "null"]
+        operatingStates:
+          type: array
+          items: { type: string }
+          description: "AU state/territory codes where this school operates"
+        rspRegistrationNumber:
+          type: ["string", "null"]
+          description: "Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)"
         isActive:
           type: boolean
         createdAt:
@@ -4088,6 +4110,13 @@ components:
           type: string
         seatLimit:
           type: integer
+        operatingStates:
+          type: array
+          items: { type: string }
+          description: "AU state/territory codes where this school operates"
+        rspRegistrationNumber:
+          type: string
+          description: "RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3)"
 
     SchoolInstructorInput:
       type: object

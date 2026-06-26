@@ -8,6 +8,8 @@ import {
   assessmentsTable,
   instructorVehiclesTable,
   sessionFeedbackTable,
+  instructorVerificationsTable,
+  verificationDocumentsTable,
 } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 
@@ -47,9 +49,42 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
     : [];
   const countMap = new Map(studentCounts.map(s => [s.instructorId, Number(s.c)]));
 
+  // Compliance status: check which required docs each instructor has uploaded
+  const REQUIRED_COMPLIANCE_DOCS = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
+  const verifications = ids.length > 0
+    ? await db.select({ id: instructorVerificationsTable.id, instructorId: instructorVerificationsTable.instructorId })
+        .from(instructorVerificationsTable)
+        .where(inArray(instructorVerificationsTable.instructorId, ids))
+    : [];
+  const verifIdList = verifications.map(v => v.id);
+  const uploadedDocs = verifIdList.length > 0
+    ? await db.select({ verificationId: verificationDocumentsTable.verificationId, docType: verificationDocumentsTable.docType })
+        .from(verificationDocumentsTable)
+        .where(inArray(verificationDocumentsTable.verificationId, verifIdList))
+    : [];
+  const verifByVerifId = new Map(verifications.map(v => [v.id, v.instructorId]));
+  const docsByInstructor = new Map<number, Set<string>>();
+  for (const doc of uploadedDocs) {
+    const iid = verifByVerifId.get(doc.verificationId);
+    if (iid !== undefined) {
+      if (!docsByInstructor.has(iid)) docsByInstructor.set(iid, new Set());
+      docsByInstructor.get(iid)!.add(doc.docType);
+    }
+  }
+  const getComplianceStatus = (iid: number): "compliant" | "partial" | "incomplete" => {
+    const docs = docsByInstructor.get(iid) ?? new Set<string>();
+    const cnt = REQUIRED_COMPLIANCE_DOCS.filter(dt => docs.has(dt)).length;
+    if (cnt === REQUIRED_COMPLIANCE_DOCS.length) return "compliant";
+    if (cnt > 0) return "partial";
+    return "incomplete";
+  };
+
   const trainingCategory = req.query.trainingCategory as string | undefined;
 
-  let result = rows.map(i => formatInstructor(i, countMap.get(i.id) ?? 0, vehicleMap.get(i.id) ?? null));
+  let result = rows.map(i => ({
+    ...formatInstructor(i, countMap.get(i.id) ?? 0, vehicleMap.get(i.id) ?? null),
+    complianceStatus: getComplianceStatus(i.id),
+  }));
 
   if (trainingCategory) {
     result = result.filter(i => Array.isArray(i.trainingCategories) && i.trainingCategories.includes(trainingCategory));
@@ -137,7 +172,7 @@ router.get("/instructors/:id", requireAuth, async (req: any, res): Promise<void>
 
 router.patch("/instructors/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const { fullName, phone, licenseNumber, vehicleMake, vehicleModel, vehicleYear, qualifications } = req.body;
+  const { fullName, phone, licenseNumber, vehicleMake, vehicleModel, vehicleYear, qualifications, state } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
@@ -146,6 +181,7 @@ router.patch("/instructors/:id", requireAuth, async (req: any, res): Promise<voi
   if (vehicleModel !== undefined) updates.vehicleModel = vehicleModel;
   if (vehicleYear !== undefined) updates.vehicleYear = vehicleYear;
   if (qualifications !== undefined) updates.qualifications = qualifications;
+  if (state !== undefined) updates.state = state;
   const [updated] = await db.update(instructorsTable).set(updates).where(eq(instructorsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatInstructor(updated, 0, null));
@@ -164,6 +200,7 @@ function formatInstructor(i: any, activeStudents: number, primaryVehicle: any | 
     vehicleYear: i.vehicleYear ?? null,
     qualifications: i.qualifications ?? null,
     trainingCategories: i.trainingCategories ?? [],
+    state: i.state ?? null,
     isIndependent: i.isIndependent,
     activeStudents,
     primaryVehicle: primaryVehicle ? {
