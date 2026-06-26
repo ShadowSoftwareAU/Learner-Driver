@@ -1,4 +1,4 @@
-import { useGetMySchool, useUpdateSchool, useGetSchoolFeedbackSettings, useUpdateSchoolFeedbackSettings } from "@workspace/api-client-react";
+import { useGetMySchool, useUpdateSchool, useGetSchoolFeedbackSettings, useUpdateSchoolFeedbackSettings, useRequestUploadUrl } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Loader2, Building2, Save, MessageSquare } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 const QK = "/api/schools/mine";
@@ -37,6 +37,45 @@ interface SchoolFields {
   secondaryColor: string;
   operatingStates: string[];
   rspRegistrationNumber: string;
+  rspApprovalDocPath: string;
+}
+
+function RspDocUpload({ currentPath, onUploaded }: { currentPath: string; onUploaded: (path: string) => void }) {
+  const { mutateAsync: requestUrl } = useRequestUploadUrl();
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const result = await requestUrl({ data: { contentType: file.type, name: file.name, size: file.size } });
+      await fetch(result.uploadURL, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+      onUploaded(result.objectPath);
+    } catch {
+      // ignore upload errors silently; user can retry
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/30">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium">RSP Approval Certificate</p>
+        <p className="text-xs text-muted-foreground">Upload your RSP approval letter from TMR (PDF or image)</p>
+        {currentPath && (
+          <p className="text-xs text-green-600 font-medium mt-0.5">✓ Certificate uploaded</p>
+        )}
+      </div>
+      <input ref={fileRef} type="file" hidden accept=".pdf,.jpg,.jpeg,.png" onChange={handleFile} />
+      <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : currentPath ? "Replace" : "Upload"}
+      </Button>
+    </div>
+  );
 }
 
 export default function SchoolSettings() {
@@ -66,6 +105,7 @@ export default function SchoolSettings() {
     secondaryColor: "",
     operatingStates: [],
     rspRegistrationNumber: "",
+    rspApprovalDocPath: "",
   });
 
   useEffect(() => {
@@ -83,6 +123,7 @@ export default function SchoolSettings() {
         secondaryColor: school.secondaryColor ?? "",
         operatingStates: (school as any).operatingStates ?? [],
         rspRegistrationNumber: (school as any).rspRegistrationNumber ?? "",
+        rspApprovalDocPath: (school as any).rspApprovalDocPath ?? "",
       });
     }
   }, [school]);
@@ -98,6 +139,7 @@ export default function SchoolSettings() {
         secondaryColor: fields.secondaryColor || undefined,
         operatingStates: fields.operatingStates,
         rspRegistrationNumber: fields.rspRegistrationNumber || undefined,
+        rspApprovalDocPath: fields.rspApprovalDocPath || undefined,
       },
     });
   }
@@ -285,11 +327,11 @@ export default function SchoolSettings() {
           <CardHeader>
             <CardTitle className="text-base">RSP Registration (Q-Ride)</CardTitle>
             <CardDescription>
-              Required to deliver Q-Ride training —{" "}
-              <span className="font-medium">Accreditation Reg 2015, Div 3, s.70–77</span>.
+              Required to deliver Q-Ride motorcycle training —{" "}
+              <span className="font-medium">Transport Operations (Road Use Management) Act 1995, s.91H; Accreditation Reg 2015, Div 3, s.70–77</span>.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="rspRegNo">RSP Registration Number</Label>
               <Input
@@ -300,6 +342,15 @@ export default function SchoolSettings() {
                 className="max-w-xs"
               />
               <p className="text-xs text-muted-foreground">Leave blank if your school does not deliver Q-Ride.</p>
+            </div>
+            <RspDocUpload
+              currentPath={fields.rspApprovalDocPath}
+              onUploaded={path => setFields(prev => ({ ...prev, rspApprovalDocPath: path }))}
+            />
+            <div className="text-xs text-muted-foreground space-y-1 pt-1 border-t">
+              <p className="font-medium text-foreground">TMR references</p>
+              <p>• <a href="https://www.tmr.qld.gov.au/Licensing/Motorcycle-rider-training/Ride-on-training" target="_blank" rel="noopener noreferrer" className="text-primary underline">Q-Ride RSP information — TMR Queensland</a></p>
+              <p>• <a href="https://www.legislation.qld.gov.au/view/html/inforce/current/sl-2015-0042" target="_blank" rel="noopener noreferrer" className="text-primary underline">Accreditation of Persons to Inspect Vehicles Reg 2015</a></p>
             </div>
           </CardContent>
         </Card>

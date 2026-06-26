@@ -1,5 +1,7 @@
 import { useState, useRef } from "react";
 import { useGetVerificationStatus, useSubmitVerification } from "@workspace/api-client-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +13,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+const AU_STATES = [
+  { value: "QLD", label: "Queensland (QLD)" },
+  { value: "NSW", label: "New South Wales (NSW)" },
+  { value: "VIC", label: "Victoria (VIC)" },
+  { value: "SA", label: "South Australia (SA)" },
+  { value: "WA", label: "Western Australia (WA)" },
+  { value: "TAS", label: "Tasmania (TAS)" },
+  { value: "NT", label: "Northern Territory (NT)" },
+  { value: "ACT", label: "Australian Capital Territory (ACT)" },
+];
 
 type DocType =
   | "wwcc"
@@ -288,6 +301,7 @@ export default function InstructorVerification() {
     qualification: null,
   });
   const [deliversQRide, setDeliversQRide] = useState(false);
+  const [instructorState, setInstructorState] = useState("");
 
   const requiredDocs: DocType[] = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
   const allRequiredUploaded = requiredDocs.every((dt) => uploads[dt] !== null) &&
@@ -297,7 +311,7 @@ export default function InstructorVerification() {
   const handleSubmit = () => {
     const docs = Object.values(uploads).filter(Boolean) as UploadedDoc[];
     submitVerification.mutate(
-      { data: { documents: docs } },
+      { data: { documents: docs, state: instructorState || undefined } as any },
       {
         onSuccess: () => {
           toast({ title: "Application submitted", description: "We'll review your documents and notify you." });
@@ -373,6 +387,21 @@ export default function InstructorVerification() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label>State / Territory</Label>
+                <p className="text-xs text-muted-foreground">The state where you primarily operate as an instructor.</p>
+                <Select value={instructorState} onValueChange={setInstructorState}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {AU_STATES.map(s => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <UploadSlot
                 docType="wwcc"
                 uploaded={uploads.wwcc}

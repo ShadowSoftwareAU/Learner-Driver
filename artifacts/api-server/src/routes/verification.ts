@@ -95,10 +95,20 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
     return;
   }
 
-  const { documents } = req.body as { documents: Array<{ docType: string; fileName: string; fileSize?: number; objectPath: string }> };
+  const { documents, state } = req.body as {
+    documents: Array<{ docType: string; fileName: string; fileSize?: number; objectPath: string }>;
+    state?: string;
+  };
   if (!Array.isArray(documents) || documents.length === 0) {
     res.status(400).json({ error: "At least one document is required" });
     return;
+  }
+
+  // Persist instructor state if provided
+  if (state) {
+    await db.update(instructorsTable)
+      .set({ state })
+      .where(eq(instructorsTable.id, instructor.id));
   }
 
   const [verification] = await db
@@ -123,7 +133,7 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
     )
     .returning();
 
-  req.log.info({ verificationId: verification.id }, "Verification application submitted");
+  req.log.info({ verificationId: verification.id, state }, "Verification application submitted");
   res.status(201).json({ verification, documents: docRows });
 });
 

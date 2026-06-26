@@ -1280,6 +1280,11 @@ export interface DrivingSchool {
      * @nullable
      */
   rspRegistrationNumber?: string | null;
+  /**
+     * Object storage path for the uploaded RSP approval certificate
+     * @nullable
+     */
+  rspApprovalDocPath?: string | null;
   isActive?: boolean;
   createdAt?: string;
 }
@@ -1590,6 +1595,8 @@ export interface SchoolPatch {
   operatingStates?: string[];
   /** RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3) */
   rspRegistrationNumber?: string;
+  /** Object storage path for the uploaded RSP approval certificate */
+  rspApprovalDocPath?: string;
 }
 
 export type SchoolInstructorInputRoleWithinSchool = typeof SchoolInstructorInputRoleWithinSchool[keyof typeof SchoolInstructorInputRoleWithinSchool];

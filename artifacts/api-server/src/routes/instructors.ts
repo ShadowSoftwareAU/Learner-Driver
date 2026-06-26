@@ -73,9 +73,9 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
   }
   const getComplianceStatus = (iid: number): "compliant" | "partial" | "incomplete" => {
     const docs = docsByInstructor.get(iid) ?? new Set<string>();
-    const cnt = REQUIRED_COMPLIANCE_DOCS.filter(dt => docs.has(dt)).length;
-    if (cnt === REQUIRED_COMPLIANCE_DOCS.length) return "compliant";
-    if (cnt > 0) return "partial";
+    const reqCnt = REQUIRED_COMPLIANCE_DOCS.filter(dt => docs.has(dt)).length;
+    if (reqCnt === REQUIRED_COMPLIANCE_DOCS.length) return "compliant";
+    if (docs.size > 0) return "partial";
     return "incomplete";
   };
 

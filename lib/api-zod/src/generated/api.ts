@@ -1908,6 +1908,7 @@ export const GetMySchoolResponse = zod.object({
   "secondaryColor": zod.string().nullish(),
   "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
   "rspRegistrationNumber": zod.string().nullish().describe('Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)'),
+  "rspApprovalDocPath": zod.string().nullish().describe('Object storage path for the uploaded RSP approval certificate'),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string().optional()
 })
@@ -1935,6 +1936,7 @@ export const GetSchoolResponse = zod.object({
   "secondaryColor": zod.string().nullish(),
   "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
   "rspRegistrationNumber": zod.string().nullish().describe('Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)'),
+  "rspApprovalDocPath": zod.string().nullish().describe('Object storage path for the uploaded RSP approval certificate'),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string().optional()
 })
@@ -1958,7 +1960,8 @@ export const UpdateSchoolBody = zod.object({
   "billingContactPhone": zod.string().optional(),
   "seatLimit": zod.number().optional(),
   "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
-  "rspRegistrationNumber": zod.string().optional().describe('RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3)')
+  "rspRegistrationNumber": zod.string().optional().describe('RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3)'),
+  "rspApprovalDocPath": zod.string().optional().describe('Object storage path for the uploaded RSP approval certificate')
 })
 
 export const UpdateSchoolResponse = zod.object({
@@ -1976,6 +1979,7 @@ export const UpdateSchoolResponse = zod.object({
   "secondaryColor": zod.string().nullish(),
   "operatingStates": zod.array(zod.string()).optional().describe('AU state\/territory codes where this school operates'),
   "rspRegistrationNumber": zod.string().nullish().describe('Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)'),
+  "rspApprovalDocPath": zod.string().nullish().describe('Object storage path for the uploaded RSP approval certificate'),
   "isActive": zod.boolean().optional(),
   "createdAt": zod.string().optional()
 })

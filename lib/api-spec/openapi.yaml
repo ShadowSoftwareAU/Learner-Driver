@@ -3785,6 +3785,9 @@ components:
         rspRegistrationNumber:
           type: ["string", "null"]
           description: "Registered Service Provider number (Q-Ride, Accreditation Reg 2015 Div 3)"
+        rspApprovalDocPath:
+          type: ["string", "null"]
+          description: "Object storage path for the uploaded RSP approval certificate"
         isActive:
           type: boolean
         createdAt:
@@ -4117,6 +4120,9 @@ components:
         rspRegistrationNumber:
           type: string
           description: "RSP registration number (Q-Ride, Accreditation Reg 2015 Div 3)"
+        rspApprovalDocPath:
+          type: string
+          description: "Object storage path for the uploaded RSP approval certificate"
 
     SchoolInstructorInput:
       type: object

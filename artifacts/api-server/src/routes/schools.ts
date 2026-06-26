@@ -108,10 +108,10 @@ router.patch("/schools/:id", requireAuth, async (req: any, res): Promise<void> =
     res.status(403).json({ error: "school_admin or super_admin required" }); return;
   }
 
-  const { name, abn, logoPath, primaryColor, secondaryColor, billingContactEmail, billingContactName, billingContactPhone, seatLimit, operatingStates, rspRegistrationNumber } = req.body as Partial<{
+  const { name, abn, logoPath, primaryColor, secondaryColor, billingContactEmail, billingContactName, billingContactPhone, seatLimit, operatingStates, rspRegistrationNumber, rspApprovalDocPath } = req.body as Partial<{
     name: string; abn: string; logoPath: string; primaryColor: string; secondaryColor: string;
     billingContactEmail: string; billingContactName: string; billingContactPhone: string; seatLimit: number;
-    operatingStates: string[]; rspRegistrationNumber: string;
+    operatingStates: string[]; rspRegistrationNumber: string; rspApprovalDocPath: string;
   }>;
 
   const updates: Record<string, unknown> = {};
@@ -126,6 +126,7 @@ router.patch("/schools/:id", requireAuth, async (req: any, res): Promise<void> =
   if (seatLimit !== undefined && isSuperAdmin(user.role)) updates.seatLimit = seatLimit;
   if (operatingStates !== undefined && (isSchoolAdmin(user.role) || isSuperAdmin(user.role))) updates.operatingStates = operatingStates;
   if (rspRegistrationNumber !== undefined && (isSchoolAdmin(user.role) || isSuperAdmin(user.role))) updates.rspRegistrationNumber = rspRegistrationNumber;
+  if (rspApprovalDocPath !== undefined && (isSchoolAdmin(user.role) || isSuperAdmin(user.role))) updates.rspApprovalDocPath = rspApprovalDocPath;
 
   const [updated] = await db.update(drivingSchoolsTable).set(updates as any).where(eq(drivingSchoolsTable.id, schoolId)).returning();
 
