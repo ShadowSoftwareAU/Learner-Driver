@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus } from "lucide-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,6 +156,21 @@ export default function ViewAssessment() {
             <Badge variant="secondary" className="text-sm px-3 py-1">
               {(assessment.status as string).replace("_", " ")}
             </Badge>
+            {/* Assessment program type badge */}
+            {(() => {
+              const type = (assessment as any).assessmentType ?? "qsafe";
+              const cfg: Record<string, { label: string; icon: React.ReactNode; className: string }> = {
+                qsafe:         { label: "QSAFE",        icon: <Car  className="w-3.5 h-3.5" />, className: "border-blue-200 bg-blue-50 text-blue-800" },
+                qride:         { label: "Q-Ride",       icon: <Bike className="w-3.5 h-3.5" />, className: "border-purple-200 bg-purple-50 text-purple-800" },
+                heavy_vehicle: { label: "Heavy Vehicle", icon: <Truck className="w-3.5 h-3.5" />, className: "border-orange-200 bg-orange-50 text-orange-800" },
+              };
+              const c = cfg[type] ?? cfg.qsafe;
+              return (
+                <Badge variant="outline" className={`flex items-center gap-1.5 text-sm px-3 py-1 ${c.className}`}>
+                  {c.icon}{c.label}
+                </Badge>
+              );
+            })()}
             {/* Preview report button — always available once there are results */}
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setPreviewOpen(true)}>
               <Eye className="w-4 h-4" /> Preview Report

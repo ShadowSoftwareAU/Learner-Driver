@@ -529,6 +529,16 @@ export default function GuidedAssessment() {
             </p>
           </div>
 
+          {assessmentType !== "qsafe" && (
+            <div className="flex items-start gap-3 rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
+              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-sm text-amber-800">
+                <span className="font-semibold">{assessmentType === "qride" ? "Q-Ride" : "Heavy Vehicle"} checklist coming soon.</span>{" "}
+                Using the QSAFE maneuver list as a placeholder until the dedicated checklist is available.
+              </p>
+            </div>
+          )}
+
           {Object.entries(groupedManeuvers).map(([category, items]) => (
             <Card key={category}>
               <CardHeader className="bg-gray-50 border-b p-4 flex flex-row items-center justify-between">
