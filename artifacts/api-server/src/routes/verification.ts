@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, lte, gte, and, isNotNull, inArray } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -96,7 +96,7 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
   }
 
   const { documents, state } = req.body as {
-    documents: Array<{ docType: string; fileName: string; fileSize?: number; objectPath: string }>;
+    documents: Array<{ docType: string; fileName: string; fileSize?: number; objectPath: string; expiresAt?: string }>;
     state?: string;
   };
   if (!Array.isArray(documents) || documents.length === 0) {
@@ -129,6 +129,7 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
         fileName: d.fileName,
         fileSize: d.fileSize ?? null,
         objectPath: d.objectPath,
+        expiresAt: d.expiresAt ?? null,
       }))
     )
     .returning();
@@ -220,6 +221,56 @@ router.patch("/admin/verifications/:id", requireAuth, requireAdmin, async (req: 
 
   req.log.info({ verificationId, action, reviewerId: req.dbUser.id }, "Verification reviewed");
   res.json(updated);
+});
+
+/**
+ * GET /admin/compliance/expiring
+ * Returns documents that expire within the next 30 days (or are already expired).
+ */
+router.get("/admin/compliance/expiring", requireAuth, requireAdmin, async (req: any, res): Promise<void> => {
+  const today = new Date();
+  const in30Days = new Date(today);
+  in30Days.setDate(in30Days.getDate() + 30);
+
+  const todayStr = today.toISOString().slice(0, 10);
+  const in30DaysStr = in30Days.toISOString().slice(0, 10);
+
+  // Fetch documents that have an expiresAt <= 30 days from now
+  const docs = await db
+    .select({
+      id: verificationDocumentsTable.id,
+      verificationId: verificationDocumentsTable.verificationId,
+      docType: verificationDocumentsTable.docType,
+      fileName: verificationDocumentsTable.fileName,
+      objectPath: verificationDocumentsTable.objectPath,
+      uploadedAt: verificationDocumentsTable.uploadedAt,
+      expiresAt: verificationDocumentsTable.expiresAt,
+      instructorId: instructorsTable.id,
+      instructorName: instructorsTable.fullName,
+      instructorEmail: instructorsTable.email,
+    })
+    .from(verificationDocumentsTable)
+    .innerJoin(instructorVerificationsTable, eq(verificationDocumentsTable.verificationId, instructorVerificationsTable.id))
+    .innerJoin(instructorsTable, eq(instructorVerificationsTable.instructorId, instructorsTable.id))
+    .where(
+      and(
+        isNotNull(verificationDocumentsTable.expiresAt),
+        lte(verificationDocumentsTable.expiresAt, in30DaysStr)
+      )
+    )
+    .orderBy(verificationDocumentsTable.expiresAt);
+
+  const result = docs.map((d) => {
+    const expiry = new Date(d.expiresAt!);
+    const msPerDay = 1000 * 60 * 60 * 24;
+    const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / msPerDay);
+    return {
+      ...d,
+      daysUntilExpiry,
+    };
+  });
+
+  res.json(result);
 });
 
 export default router;

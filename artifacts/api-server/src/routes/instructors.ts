@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, sql, count, desc, and, inArray } from "drizzle-orm";
+import { eq, sql, count, desc, and, inArray, isNotNull, lte } from "drizzle-orm";
 import {
   db,
   instructorsTable,
@@ -58,17 +58,30 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
     : [];
   const verifIdList = verifications.map(v => v.id);
   const uploadedDocs = verifIdList.length > 0
-    ? await db.select({ verificationId: verificationDocumentsTable.verificationId, docType: verificationDocumentsTable.docType })
+    ? await db.select({
+        verificationId: verificationDocumentsTable.verificationId,
+        docType: verificationDocumentsTable.docType,
+        expiresAt: verificationDocumentsTable.expiresAt,
+      })
         .from(verificationDocumentsTable)
         .where(inArray(verificationDocumentsTable.verificationId, verifIdList))
     : [];
   const verifByVerifId = new Map(verifications.map(v => [v.id, v.instructorId]));
   const docsByInstructor = new Map<number, Set<string>>();
+  const expiringByInstructor = new Map<number, boolean>();
+
+  const in30Days = new Date();
+  in30Days.setDate(in30Days.getDate() + 30);
+  const in30DaysStr = in30Days.toISOString().slice(0, 10);
+
   for (const doc of uploadedDocs) {
     const iid = verifByVerifId.get(doc.verificationId);
     if (iid !== undefined) {
       if (!docsByInstructor.has(iid)) docsByInstructor.set(iid, new Set());
       docsByInstructor.get(iid)!.add(doc.docType);
+      if (doc.expiresAt && doc.expiresAt <= in30DaysStr) {
+        expiringByInstructor.set(iid, true);
+      }
     }
   }
   const getComplianceStatus = (iid: number): "compliant" | "partial" | "incomplete" => {
@@ -84,6 +97,7 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
   let result = rows.map(i => ({
     ...formatInstructor(i, countMap.get(i.id) ?? 0, vehicleMap.get(i.id) ?? null),
     complianceStatus: getComplianceStatus(i.id),
+    hasExpiringDocs: expiringByInstructor.get(i.id) ?? false,
   }));
 
   if (trainingCategory) {

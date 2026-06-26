@@ -2,13 +2,14 @@ import { useState, useRef } from "react";
 import { useGetVerificationStatus, useSubmitVerification } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Upload, CheckCircle2, Clock, XCircle, AlertTriangle,
-  FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard, Award, HeartPulse,
+  FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard, Award, HeartPulse, CalendarDays,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,6 +41,7 @@ type UploadedDoc = {
   fileName: string;
   fileSize: number;
   objectPath: string;
+  expiresAt?: string;
 };
 
 const DOC_CONFIG: Record<DocType, { label: string; description: string; icon: React.ElementType; required: boolean }> = {
@@ -119,11 +121,20 @@ async function uploadFileToBucket(file: File): Promise<{ objectPath: string }> {
   return { objectPath };
 }
 
+const DOC_TYPES_WITH_EXPIRY: DocType[] = [
+  "wwcc",
+  "insurance",
+  "driver_trainer_accreditation",
+  "first_aid",
+  "rider_trainer_accreditation",
+];
+
 function UploadSlot({
   docType,
   uploaded,
   onUploaded,
   onRemove,
+  onExpiryChange,
   disabled,
   compact = false,
 }: {
@@ -131,6 +142,7 @@ function UploadSlot({
   uploaded: UploadedDoc | null;
   onUploaded: (doc: UploadedDoc) => void;
   onRemove: () => void;
+  onExpiryChange?: (docType: DocType, expiresAt: string) => void;
   disabled?: boolean;
   compact?: boolean;
 }) {
@@ -140,6 +152,7 @@ function UploadSlot({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const showExpiry = DOC_TYPES_WITH_EXPIRY.includes(docType);
 
   const handleFile = async (file: File) => {
     setUploading(true);
@@ -168,13 +181,32 @@ function UploadSlot({
           </div>
           <p className="text-xs text-muted-foreground">{cfg.description}</p>
           {uploaded && (
-            <div className="mt-2 flex items-center gap-2">
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
-              <span className="text-xs text-green-700 truncate max-w-[180px]">{uploaded.fileName}</span>
-              {!disabled && (
-                <button onClick={onRemove} className="ml-1 flex-shrink-0">
-                  <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive transition-colors" />
-                </button>
+            <div className="mt-2 space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+                <span className="text-xs text-green-700 truncate max-w-[180px]">{uploaded.fileName}</span>
+                {!disabled && (
+                  <button onClick={onRemove} className="ml-1 flex-shrink-0">
+                    <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive transition-colors" />
+                  </button>
+                )}
+              </div>
+              {showExpiry && !disabled && (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <label className="text-xs text-muted-foreground whitespace-nowrap">Expiry date</label>
+                  <Input
+                    type="date"
+                    value={uploaded.expiresAt ?? ""}
+                    onChange={(e) => onExpiryChange?.(docType, e.target.value)}
+                    className="h-7 text-xs py-0 px-2 max-w-[150px]"
+                  />
+                </div>
+              )}
+              {showExpiry && uploaded.expiresAt && (
+                <p className="text-xs text-muted-foreground pl-5">
+                  Expires {new Date(uploaded.expiresAt + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                </p>
               )}
             </div>
           )}
@@ -303,6 +335,14 @@ export default function InstructorVerification() {
   const [deliversQRide, setDeliversQRide] = useState(false);
   const [instructorState, setInstructorState] = useState("");
 
+  const handleExpiryChange = (docType: DocType, expiresAt: string) => {
+    setUploads((prev) => {
+      const doc = prev[docType];
+      if (!doc) return prev;
+      return { ...prev, [docType]: { ...doc, expiresAt: expiresAt || undefined } };
+    });
+  };
+
   const requiredDocs: DocType[] = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
   const allRequiredUploaded = requiredDocs.every((dt) => uploads[dt] !== null) &&
     (!deliversQRide || uploads.rider_trainer_accreditation !== null);
@@ -407,12 +447,14 @@ export default function InstructorVerification() {
                 uploaded={uploads.wwcc}
                 onUploaded={(doc) => setUploads((prev) => ({ ...prev, wwcc: doc }))}
                 onRemove={() => setUploads((prev) => ({ ...prev, wwcc: null }))}
+                onExpiryChange={handleExpiryChange}
               />
               <UploadSlot
                 docType="insurance"
                 uploaded={uploads.insurance}
                 onUploaded={(doc) => setUploads((prev) => ({ ...prev, insurance: doc }))}
                 onRemove={() => setUploads((prev) => ({ ...prev, insurance: null }))}
+                onExpiryChange={handleExpiryChange}
               />
 
               <LicenceSection
@@ -426,12 +468,14 @@ export default function InstructorVerification() {
                 uploaded={uploads.driver_trainer_accreditation}
                 onUploaded={(doc) => setUploads((prev) => ({ ...prev, driver_trainer_accreditation: doc }))}
                 onRemove={() => setUploads((prev) => ({ ...prev, driver_trainer_accreditation: null }))}
+                onExpiryChange={handleExpiryChange}
               />
               <UploadSlot
                 docType="first_aid"
                 uploaded={uploads.first_aid}
                 onUploaded={(doc) => setUploads((prev) => ({ ...prev, first_aid: doc }))}
                 onRemove={() => setUploads((prev) => ({ ...prev, first_aid: null }))}
+                onExpiryChange={handleExpiryChange}
               />
 
               <div className="flex items-start gap-3 p-3 rounded-lg border bg-purple-50 border-purple-200">
@@ -456,6 +500,7 @@ export default function InstructorVerification() {
                   uploaded={uploads.rider_trainer_accreditation}
                   onUploaded={(doc) => setUploads((prev) => ({ ...prev, rider_trainer_accreditation: doc }))}
                   onRemove={() => setUploads((prev) => ({ ...prev, rider_trainer_accreditation: null }))}
+                  onExpiryChange={handleExpiryChange}
                 />
               )}
 
@@ -494,15 +539,31 @@ export default function InstructorVerification() {
               <CardTitle className="text-base">Submitted Documents</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              {data.documents.map((doc: any) => (
-                <div key={doc.id} className="flex items-center gap-2 text-sm">
-                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="truncate">{doc.fileName}</span>
-                  <Badge variant="outline" className="ml-auto flex-shrink-0 text-xs capitalize">
-                    {doc.docType.replace(/_/g, " ")}
-                  </Badge>
-                </div>
-              ))}
+              {data.documents.map((doc: any) => {
+                const isExpiringSoon = doc.expiresAt && (() => {
+                  const expiry = new Date(doc.expiresAt + "T00:00:00");
+                  const now = new Date();
+                  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  return daysLeft <= 30;
+                })();
+                return (
+                  <div key={doc.id} className={`flex items-center gap-2 text-sm p-2 rounded-md ${isExpiringSoon ? "bg-amber-50 border border-amber-200" : ""}`}>
+                    <FileText className={`w-4 h-4 flex-shrink-0 ${isExpiringSoon ? "text-amber-500" : "text-muted-foreground"}`} />
+                    <span className="truncate">{doc.fileName}</span>
+                    <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                      {doc.expiresAt && (
+                        <span className={`text-xs flex items-center gap-1 ${isExpiringSoon ? "text-amber-700 font-medium" : "text-muted-foreground"}`}>
+                          {isExpiringSoon && <AlertTriangle className="w-3 h-3" />}
+                          Exp. {new Date(doc.expiresAt + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      )}
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {doc.docType.replace(/_/g, " ")}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })}
             </CardContent>
           </Card>
         )}

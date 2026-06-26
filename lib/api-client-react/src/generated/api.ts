@@ -46,6 +46,7 @@ import type {
   DrivingSchool,
   EntitlementSummary,
   EscalateModerationCaseBody,
+  ExpiringDocument,
   GenerateViewerCode200,
   GetGovNearbyParams,
   GetManeuverHeatmapParams,
@@ -4931,6 +4932,83 @@ export function useListVerifications<TData = Awaited<ReturnType<typeof listVerif
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListVerificationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetExpiringDocumentsUrl = () => {
+
+
+
+
+  return `/api/admin/compliance/expiring`
+}
+
+/**
+ * @summary List documents expiring within 30 days (admin)
+ */
+export const getExpiringDocuments = async ( options?: RequestInit): Promise<ExpiringDocument[]> => {
+
+  return customFetch<ExpiringDocument[]>(getGetExpiringDocumentsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetExpiringDocumentsQueryKey = () => {
+    return [
+    `/api/admin/compliance/expiring`
+    ] as const;
+    }
+
+
+export const getGetExpiringDocumentsQueryOptions = <TData = Awaited<ReturnType<typeof getExpiringDocuments>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExpiringDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetExpiringDocumentsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getExpiringDocuments>>> = ({ signal }) => getExpiringDocuments({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getExpiringDocuments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetExpiringDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof getExpiringDocuments>>>
+export type GetExpiringDocumentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List documents expiring within 30 days (admin)
+ */
+
+export function useGetExpiringDocuments<TData = Awaited<ReturnType<typeof getExpiringDocuments>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getExpiringDocuments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetExpiringDocumentsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

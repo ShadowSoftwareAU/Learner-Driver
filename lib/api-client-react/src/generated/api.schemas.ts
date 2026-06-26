@@ -300,6 +300,15 @@ export interface StudentProgress {
   recentAssessments?: Assessment[];
 }
 
+export type InstructorComplianceStatus = typeof InstructorComplianceStatus[keyof typeof InstructorComplianceStatus];
+
+
+export const InstructorComplianceStatus = {
+  compliant: 'compliant',
+  partial: 'partial',
+  incomplete: 'incomplete',
+} as const;
+
 export type InstructorVehicleSummaryVehicleType = typeof InstructorVehicleSummaryVehicleType[keyof typeof InstructorVehicleSummaryVehicleType];
 
 
@@ -355,6 +364,9 @@ export interface Instructor {
   activeStudents?: number;
   primaryVehicle?: InstructorVehicleSummary | null;
   createdAt?: string;
+  complianceStatus?: InstructorComplianceStatus;
+  /** True if any compliance document expires within 30 days */
+  hasExpiringDocs?: boolean;
 }
 
 export type InstructorDetailStats = {
@@ -1120,6 +1132,11 @@ export interface VerificationDocument {
   fileSize?: number | null;
   objectPath: string;
   uploadedAt: string;
+  /**
+     * ISO date string (YYYY-MM-DD) when this document expires
+     * @nullable
+     */
+  expiresAt?: string | null;
 }
 
 export type InstructorVerificationStatus = typeof InstructorVerificationStatus[keyof typeof InstructorVerificationStatus];
@@ -1156,6 +1173,22 @@ export interface VerificationStatusResponse {
   status: string;
   verification?: InstructorVerification | null;
   documents: VerificationDocument[];
+}
+
+export interface ExpiringDocument {
+  id: number;
+  verificationId: number;
+  docType: string;
+  fileName: string;
+  objectPath: string;
+  uploadedAt: string;
+  /** ISO date string (YYYY-MM-DD) */
+  expiresAt: string;
+  instructorId: number;
+  instructorName: string;
+  instructorEmail: string;
+  /** Number of days until this document expires (negative = already expired) */
+  daysUntilExpiry: number;
 }
 
 export type AdminVerificationStatus = typeof AdminVerificationStatus[keyof typeof AdminVerificationStatus];
@@ -2140,6 +2173,8 @@ export type SubmitVerificationBodyDocumentsItem = {
   fileName: string;
   fileSize?: number;
   objectPath: string;
+  /** ISO date string (YYYY-MM-DD) when this document expires */
+  expiresAt?: string;
 };
 
 export type SubmitVerificationBody = {

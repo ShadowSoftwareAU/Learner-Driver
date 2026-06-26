@@ -1398,6 +1398,9 @@ paths:
                         type: integer
                       objectPath:
                         type: string
+                      expiresAt:
+                        type: string
+                        description: "ISO date string (YYYY-MM-DD) when this document expires"
       responses:
         "201":
           description: Application submitted
@@ -1420,6 +1423,21 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AdminVerification"
+
+  /admin/compliance/expiring:
+    get:
+      operationId: getExpiringDocuments
+      tags: [verification]
+      summary: List documents expiring within 30 days (admin)
+      responses:
+        "200":
+          description: List of expiring documents with instructor info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpiringDocument"
 
   /admin/verifications/{id}:
     patch:
@@ -2625,6 +2643,12 @@ components:
             - type: "null"
         createdAt:
           type: string
+        complianceStatus:
+          type: string
+          enum: [compliant, partial, incomplete]
+        hasExpiringDocs:
+          type: boolean
+          description: "True if any compliance document expires within 30 days"
 
     InstructorDetail:
       allOf:
@@ -3612,6 +3636,9 @@ components:
           type: string
         uploadedAt:
           type: string
+        expiresAt:
+          type: ["string", "null"]
+          description: "ISO date string (YYYY-MM-DD) when this document expires"
 
     InstructorVerification:
       type: object
@@ -3660,6 +3687,35 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/VerificationDocument"
+
+    ExpiringDocument:
+      type: object
+      required: [id, verificationId, docType, fileName, objectPath, uploadedAt, expiresAt, instructorId, instructorName, instructorEmail, daysUntilExpiry]
+      properties:
+        id:
+          type: integer
+        verificationId:
+          type: integer
+        docType:
+          type: string
+        fileName:
+          type: string
+        objectPath:
+          type: string
+        uploadedAt:
+          type: string
+        expiresAt:
+          type: string
+          description: "ISO date string (YYYY-MM-DD)"
+        instructorId:
+          type: integer
+        instructorName:
+          type: string
+        instructorEmail:
+          type: string
+        daysUntilExpiry:
+          type: integer
+          description: "Number of days until this document expires (negative = already expired)"
 
     AdminVerification:
       type: object

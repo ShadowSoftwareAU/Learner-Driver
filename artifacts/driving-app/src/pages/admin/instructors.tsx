@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Search, Car, Bike, Truck, ChevronRight, Users, ShieldCheck, AlertTriangle, AlertCircle } from "lucide-react";
+import { Loader2, Search, Car, Bike, Truck, ChevronRight, Users, ShieldCheck, AlertTriangle, AlertCircle, Clock } from "lucide-react";
 
 const TRAINING_CATEGORIES = [
   { value: "all", label: "All categories" },
@@ -39,27 +39,31 @@ const CAT_SHORT: Record<string, string> = {
   mr: "MR", hr: "HR", hc: "HC", mc: "MC",
 };
 
-function ComplianceBadge({ status }: { status?: string }) {
-  if (status === "compliant") {
-    return (
-      <div className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-        <ShieldCheck className="w-3 h-3" />
-        Compliant
-      </div>
-    );
-  }
-  if (status === "partial") {
-    return (
-      <div className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
-        <AlertTriangle className="w-3 h-3" />
-        Docs incomplete
-      </div>
-    );
-  }
+function ComplianceBadge({ status, hasExpiringDocs }: { status?: string; hasExpiringDocs?: boolean }) {
   return (
-    <div className="flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
-      <AlertCircle className="w-3 h-3" />
-      No docs
+    <div className="flex items-center gap-1.5 flex-wrap">
+      {status === "compliant" ? (
+        <div className="flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
+          <ShieldCheck className="w-3 h-3" />
+          Compliant
+        </div>
+      ) : status === "partial" ? (
+        <div className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+          <AlertTriangle className="w-3 h-3" />
+          Docs incomplete
+        </div>
+      ) : (
+        <div className="flex items-center gap-1 text-xs font-medium text-gray-500 bg-gray-50 border border-gray-200 rounded-full px-2 py-0.5">
+          <AlertCircle className="w-3 h-3" />
+          No docs
+        </div>
+      )}
+      {hasExpiringDocs && (
+        <div className="flex items-center gap-1 text-xs font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-full px-2 py-0.5">
+          <Clock className="w-3 h-3" />
+          Expiring soon
+        </div>
+      )}
     </div>
   );
 }
@@ -141,7 +145,7 @@ export default function AdminInstructors() {
                             <p className="text-sm text-muted-foreground truncate">{instructor.email}</p>
                             {instructor.phone && <p className="text-sm text-muted-foreground">{instructor.phone}</p>}
                             <div className="mt-1.5">
-                              <ComplianceBadge status={(instructor as any).complianceStatus} />
+                              <ComplianceBadge status={(instructor as any).complianceStatus} hasExpiringDocs={(instructor as any).hasExpiringDocs} />
                             </div>
                           </div>
                         </div>

@@ -381,7 +381,9 @@ export const ListInstructorsResponseItem = zod.object({
   "regoState": zod.string().nullish(),
   "isDualControl": zod.boolean().optional()
 }),zod.null()]).optional(),
-  "createdAt": zod.string().optional()
+  "createdAt": zod.string().optional(),
+  "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
 })
 export const ListInstructorsResponse = zod.array(ListInstructorsResponseItem)
 
@@ -419,7 +421,9 @@ export const GetInstructorResponse = zod.object({
   "regoState": zod.string().nullish(),
   "isDualControl": zod.boolean().optional()
 }),zod.null()]).optional(),
-  "createdAt": zod.string().optional()
+  "createdAt": zod.string().optional(),
+  "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
 }).and(zod.object({
   "vehicles": zod.array(zod.object({
   "id": zod.number(),
@@ -498,7 +502,9 @@ export const UpdateInstructorResponse = zod.object({
   "regoState": zod.string().nullish(),
   "isDualControl": zod.boolean().optional()
 }),zod.null()]).optional(),
-  "createdAt": zod.string().optional()
+  "createdAt": zod.string().optional(),
+  "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
 })
 
 
@@ -1735,7 +1741,8 @@ export const GetVerificationStatusResponse = zod.object({
   "fileName": zod.string(),
   "fileSize": zod.number().nullish(),
   "objectPath": zod.string(),
-  "uploadedAt": zod.string()
+  "uploadedAt": zod.string(),
+  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires')
 }))
 })
 
@@ -1748,7 +1755,8 @@ export const SubmitVerificationBody = zod.object({
   "docType": zod.string(),
   "fileName": zod.string(),
   "fileSize": zod.number().optional(),
-  "objectPath": zod.string()
+  "objectPath": zod.string(),
+  "expiresAt": zod.string().optional().describe('ISO date string (YYYY-MM-DD) when this document expires')
 }))
 })
 
@@ -1773,10 +1781,30 @@ export const ListVerificationsResponseItem = zod.object({
   "fileName": zod.string(),
   "fileSize": zod.number().nullish(),
   "objectPath": zod.string(),
-  "uploadedAt": zod.string()
+  "uploadedAt": zod.string(),
+  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires')
 }))
 })
 export const ListVerificationsResponse = zod.array(ListVerificationsResponseItem)
+
+
+/**
+ * @summary List documents expiring within 30 days (admin)
+ */
+export const GetExpiringDocumentsResponseItem = zod.object({
+  "id": zod.number(),
+  "verificationId": zod.number(),
+  "docType": zod.string(),
+  "fileName": zod.string(),
+  "objectPath": zod.string(),
+  "uploadedAt": zod.string(),
+  "expiresAt": zod.string().describe('ISO date string (YYYY-MM-DD)'),
+  "instructorId": zod.number(),
+  "instructorName": zod.string(),
+  "instructorEmail": zod.string(),
+  "daysUntilExpiry": zod.number().describe('Number of days until this document expires (negative = already expired)')
+})
+export const GetExpiringDocumentsResponse = zod.array(GetExpiringDocumentsResponseItem)
 
 
 /**
