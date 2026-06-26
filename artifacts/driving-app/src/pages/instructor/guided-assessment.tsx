@@ -477,8 +477,8 @@ export default function GuidedAssessment() {
     const levels = [
       { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted", color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-300", active: "bg-gray-300 border-gray-500 text-gray-900 ring-2 ring-gray-500" },
       { val: ManeuverResultItemCompetencyLevel.attempted, label: "Attempted", color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-200", active: "bg-red-200 border-red-500 text-red-900 ring-2 ring-red-500" },
-      { val: ManeuverResultItemCompetencyLevel.practiced, label: "Practiced", color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200", active: "bg-yellow-200 border-yellow-500 text-yellow-900 ring-2 ring-yellow-500" },
-      { val: ManeuverResultItemCompetencyLevel.mastered, label: "Mastered", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-200", active: "bg-green-200 border-green-500 text-green-900 ring-2 ring-green-500" },
+      { val: ManeuverResultItemCompetencyLevel.practiced, label: "Not yet Competent", color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200", active: "bg-yellow-200 border-yellow-500 text-yellow-900 ring-2 ring-yellow-500" },
+      { val: ManeuverResultItemCompetencyLevel.mastered, label: "Competent", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-200", active: "bg-green-200 border-green-500 text-green-900 ring-2 ring-green-500" },
     ];
 
     const isFirst = currentIndex === 0;
@@ -562,7 +562,7 @@ export default function GuidedAssessment() {
 
               {results[currentManeuver.id] === ManeuverResultItemCompetencyLevel.mastered && currentManeuver.masteryDefinition && (
                 <div className="rounded-md bg-green-50 border border-green-200 px-4 py-3">
-                  <p className="text-sm font-semibold text-green-900 mb-1">Mastered means:</p>
+                  <p className="text-sm font-semibold text-green-900 mb-1">Competent means:</p>
                   <p className="text-sm text-green-900/80 whitespace-pre-wrap italic">{currentManeuver.masteryDefinition}</p>
                 </div>
               )}
@@ -625,8 +625,8 @@ export default function GuidedAssessment() {
     const levelLabel: Record<string, string> = {
       not_attempted: "Not Attempted",
       attempted: "Attempted",
-      practiced: "Practiced",
-      mastered: "Mastered",
+      practiced: "Not yet Competent",
+      mastered: "Competent",
     };
     const levelColor: Record<string, string> = {
       not_attempted: "bg-gray-100 text-gray-800 border-gray-200",

@@ -62,12 +62,12 @@ export default function StudentDashboard() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Mastered Maneuvers</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Competent Maneuvers</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{dashboard.completedManeuvers}<span className="text-base font-normal text-muted-foreground"> / {dashboard.totalManeuvers}</span></div>
-              <p className="text-xs text-muted-foreground mt-1">Skills you've fully mastered</p>
+              <p className="text-xs text-muted-foreground mt-1">Skills you're competent in</p>
             </CardContent>
           </Card>
           <Card>

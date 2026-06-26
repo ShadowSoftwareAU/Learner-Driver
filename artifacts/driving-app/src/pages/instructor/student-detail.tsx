@@ -25,8 +25,8 @@ const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
 const LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
   not_attempted: { label: "Not Started", color: "bg-gray-100 text-gray-600" },
   attempted: { label: "Attempted", color: "bg-red-100 text-red-700" },
-  practiced: { label: "Practiced", color: "bg-amber-100 text-amber-700" },
-  mastered: { label: "Mastered", color: "bg-green-100 text-green-700" },
+  practiced: { label: "Not yet Competent", color: "bg-amber-100 text-amber-700" },
+  mastered: { label: "Competent", color: "bg-green-100 text-green-700" },
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; variant: "destructive" | "default" | "secondary" }> = {

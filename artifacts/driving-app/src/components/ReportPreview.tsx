@@ -7,8 +7,8 @@ import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star 
 // ─── Competency helpers ───────────────────────────────────────────────────────
 
 const COMPETENCY_CONFIG: Record<string, { label: string; className: string; rank: number }> = {
-  mastered:      { label: "Mastered",      className: "bg-green-100 text-green-800 border-green-200",  rank: 3 },
-  practiced:     { label: "Practiced",     className: "bg-yellow-100 text-yellow-800 border-yellow-200", rank: 2 },
+  mastered:      { label: "Competent",         className: "bg-green-100 text-green-800 border-green-200",  rank: 3 },
+  practiced:     { label: "Not yet Competent", className: "bg-yellow-100 text-yellow-800 border-yellow-200", rank: 2 },
   attempted:     { label: "Attempted",     className: "bg-red-100 text-red-800 border-red-200",     rank: 1 },
   not_attempted: { label: "Not Attempted", className: "bg-gray-100 text-gray-600 border-gray-200",  rank: 0 },
 };

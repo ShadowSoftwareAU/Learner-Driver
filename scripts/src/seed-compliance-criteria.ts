@@ -49,21 +49,11 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
   },
   "U-turns": {
     complianceCriteria: [
-      "Must check for 'No U-Turn' signs before attempting",
-      "Must have clear visibility for at least 100m in both directions",
-      "Must indicate right for at least 5 seconds before commencing",
-      "Must give way to all other road users",
-      "Must check mirrors and blind spots",
-      "Must complete in a single continuous movement",
-      "Must not mount the kerb or median",
+      "Turn the vehicle around in one forward movement at an intersection with appropriate space for the turn or within the confines of a wide street.",
+      "A right signal should be displayed and the turn should be commenced from as close as practicable to the centre of the road where there is a dividing line and/or median strip. Where there is no dividing line or median strip, the turn should be commenced from a position to the left of the centre of the road.",
+      "For the purpose of this exercise, a U-turn can be conducted at any intersection or road where the driver has clear view of any approaching traffic, and the driver can safely make the U-turn without unreasonably obstructing the free movement of traffic.",
     ].join("\n"),
-    masteryDefinition: [
-      "Correctly identifies safe and legal U-turn locations",
-      "Single smooth movement with appropriate speed",
-      "Full observation checks completed independently",
-      "Gives way to all traffic without hesitation or confusion",
-      "Confident execution in varied traffic conditions",
-    ].join("\n"),
+    masteryDefinition: "",
   },
   "Lane changing": {
     complianceCriteria: [
@@ -129,19 +119,8 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
     ].join("\n"),
   },
   "Hill starts": {
-    complianceCriteria: [
-      "Must not roll back more than 500mm",
-      "Must use handbrake or brake-to-accelerator technique",
-      "Must check mirrors and blind spots before moving off",
-      "Must indicate if pulling out from kerb",
-      "Clutch control (manual): smooth engagement, no stalling",
-    ].join("\n"),
-    masteryDefinition: [
-      "No rollback on any gradient",
-      "Smooth clutch engagement (manual) or brake release (auto)",
-      "Confident starts on steep inclines",
-      "Can perform hill start in traffic without hesitation",
-    ].join("\n"),
+    complianceCriteria: "Move off smoothly from a stationary position and travel up a moderate incline without rolling back.",
+    masteryDefinition: "",
   },
   "Stopping safely": {
     complianceCriteria: [
@@ -308,17 +287,10 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
   },
   "Decision making": {
     complianceCriteria: [
-      "Makes timely choices at intersections and merges",
-      "Commits to a decision once made (no hesitation)",
-      "Choices reflect road rules and current conditions",
-      "Avoids creating risk for other road users",
+      "The applicant should judge and utilise a safe gap in traffic when negotiating intersections, lane changing or merging and without causing other road users to take evasive action.",
+      "The applicant should make a correct decision and respond appropriately with regard to judgement of the speed and distance of any traffic or pedestrians.",
     ].join("\n"),
-    masteryDefinition: [
-      "Reads situations early and plans ahead",
-      "Decisions are consistently safe and lawful",
-      "Stays composed under pressure or in unexpected events",
-      "Communicates intentions clearly to other road users",
-    ].join("\n"),
+    masteryDefinition: "",
   },
   "Interaction with other road users": {
     complianceCriteria: [
@@ -407,18 +379,8 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
     ].join("\n"),
   },
   "Speed management": {
-    complianceCriteria: [
-      "Speed appropriate for road, weather, and traffic conditions",
-      "Slows for curves, crests, and reduced visibility",
-      "No excessive slowness that obstructs traffic flow",
-      "Smooth transitions between speeds",
-    ].join("\n"),
-    masteryDefinition: [
-      "Speed selection feels effortless and always suitable",
-      "Reads upcoming conditions and adjusts in advance",
-      "Maintains flow without surging or braking late",
-      "Confident driving at higher speeds when conditions allow",
-    ].join("\n"),
+    complianceCriteria: "The applicant should progress with the general flow of traffic (at a speed that is not excessive for the situation) and without exceeding the speed limit. Acceleration should be smooth, progressive and appropriate for the traffic conditions.",
+    masteryDefinition: "",
   },
 
   // ─── Signs, signals, intersections ─────────────────────────────────────
@@ -674,18 +636,13 @@ const CRITERIA: Record<string, { complianceCriteria: string; masteryDefinition: 
   },
   "Reverse parking": {
     complianceCriteria: [
-      "Mirror and blind-spot checks before and during the manoeuvre",
-      "Indicator used to communicate intent",
-      "Vehicle ends within the bay or kerb-side markings",
-      "No contact with kerbs, vehicles, or obstacles",
-      "Maximum of one corrective movement permitted",
+      "Pull up alongside a parked vehicle.",
+      "Reverse into a space behind the parked vehicle using a maximum of two reverse movements and one forward movement. Must finish within 45cm of the kerb and 1m to 2m from the vehicle in front. The optimum distance will vary slightly, depending on the vehicle's steering geometry.",
+      "Any reverse movements must be conducted with a maximum distance of 3m between the parked vehicle and the front of the test vehicle.",
+      "Drive off from this position using a maximum of one change of direction (that is, one reverse movement) if required.",
+      "Must be performed on the designated vehicle unless circumstances necessitate a change.",
     ].join("\n"),
-    masteryDefinition: [
-      "Single smooth reverse with minimal correction",
-      "Vehicle accurately centred in the bay",
-      "Confident handling of tight or angled spaces",
-      "Continuous observation throughout, not just over one shoulder",
-    ].join("\n"),
+    masteryDefinition: "",
   },
 };
 

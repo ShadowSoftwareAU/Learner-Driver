@@ -1,0 +1,78 @@
+DriveTrack		Qsafe Guidance (Egs for starters)
+Pre-Drive Check	Mirrors Adjustment	
+	Headlight/Dip	
+	Wipers	
+	Washers	
+	Demister	
+	Air Conditioning	
+	Hazard Lights	
+	Seat Adjustment	
+Situations	Lane Change	
+	One Way	
+	Marked	
+	Unmarked	
+	Wider	
+	Narrower	
+	Curves/Bends	
+	High Speed Merge	
+	Low Speed Merge	
+	Roundabouts	
+	Combination	
+	Staggered	
+	One Way	
+	Uncontrolled	
+	Controlled - Stop	
+	Controlled - Give Way	
+	Controlled - Signals	
+	Direction Markings	
+	Direction Signs	
+	Multi-laned	
+	Edge Lines	
+	Cross Road	
+	'T' Section	
+	Higher Speed	
+	Lower Speed	
+	Higher Density Traffic	
+	Lower Density Traffic	
+	Pedestrian Crossing	
+	Children's Crossing	
+	Level Crossing	
+Manoeuvres	Reverse Park	"* Pull up alongside a parked vehicle.
+* Reverse into a space behind parked vehicle using a maximum of two reverse movements and one forward movement. Must finish within 45cm of the kerb and 1m to 2m from the vehicle in front. The optimum distance will vary slightly, depending on the vehicle’s steering geometry.
+* Any reverse movements must be conducted with a maximum distance of 3m between the parked vehicle and the front of the test vehicle.
+* Drive off from this position using a maximum of one change of direction (that is, one reverse movement) if required.
+* Must be performed on the designated vehicle unless circumstances necessitate a change."
+	Turn Around	"* Conduct the manoeuvre on a street 6m to 8m wide.
+* Turn the vehicle around between the kerbs using forward and reverse gears with a minimum number of attempts.
+* Should not touch the kerbs during the manoeuvre.
+* DEs need to take into consideration the constraints of the street width and the turning circle of the test vehicle. However, it should not require more than four direction changes to complete the turnaround manoeuvre (that is more than five points to the turn)."
+	'U' Turn	"* Turn the vehicle around in one forward movement at an intersection with appropriate space for the turn or within the confines of a wide street.
+* A right signal should be displayed and the turn should be commenced from as close as practicable to the centre of the road where there is a dividing line and or median strip. Where there is no dividing line or median strip, the turn should be commenced from a position to the left of the centre of the road.
+* For the purpose of this exercise, a U-turn can be conducted at any intersection or road where the driver has clear view of any approaching traffic, and the driver can safely make the U-turn without unreasonably obstructing the free movement of traffic."
+	Hill Start	* Move off smoothly from a stationary position and travel up a moderate incline without rolling back.
+	Reversing Exercise	* Reverse the vehicle along a straight stretch of road for a distance of between 25m and 30m, staying within approximately 50cm of the kerb.
+	Gear Changing (Automatics only) 	"* Select a lower gear of the vehicle and then re- select the normal “drive” gear while moving.
+* If practicable it is preferable to conduct this exercise while travelling down a slight to moderate decline."
+Vehicle Operation	Ancillary Controls	* The applicant should operate or adjust all the ancillary controls of the test vehicle correctly whilst maintaining full control of the vehicle and must demonstrate the ability to operate the vehicle safely, independently of (Advanced Driver Assistance Systems) ADAS technologies.
+	Clutch	
+	Clutch Coasting	
+	Stalling	
+	Accelerator	
+	Gears	
+	Steering Operation	
+	Braking	
+	Road Position	
+	Manoeuvre Positions	
+	Left Turn	
+	Right Turn	
+Hazard Recognition / Decision	Observation/Scanning	
+	Shoulder Checks	
+	Mirrors	
+	Signalling	
+	Traffic Hazard	
+	Judgement	"* The applicant should judge and utilise a safe gap in traffic when negotiating intersections, lane changing or merging and without causing other road users to take evasive action.
+* The applicant should make a correct decision and respond appropriately with regard to judgement of the speed and distance of any traffic or pedestrians."
+	Safety Margins	
+	Progress	* The applicant should progress with the general flow of traffic (at a speed that is not excessive for the situation) and without exceeding the speed limit. Acceleration should be smooth, progressive and appropriate for the traffic conditions.
+	Signs/Signals/Markings	
+	Speed	

@@ -22,8 +22,8 @@ interface CategorySummaryProps {
 const LEVEL_META: Record<string, { label: string; color: string }> = {
   not_attempted: { label: "Not Attempted", color: "bg-gray-100 text-gray-700" },
   attempted: { label: "Attempted", color: "bg-red-100 text-red-700" },
-  practiced: { label: "Practiced", color: "bg-yellow-100 text-yellow-700" },
-  mastered: { label: "Mastered", color: "bg-green-100 text-green-700" },
+  practiced: { label: "Not yet Competent", color: "bg-yellow-100 text-yellow-700" },
+  mastered: { label: "Competent", color: "bg-green-100 text-green-700" },
 };
 
 export function CategorySummary({
