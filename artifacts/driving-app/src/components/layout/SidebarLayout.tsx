@@ -20,6 +20,7 @@ import {
   FileText,
   MessageSquare,
   Settings,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -56,6 +57,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Students", href: "/admin/students", icon: Users },
       { label: "Instructors", href: "/admin/instructors", icon: Car },
       { label: "Verifications", href: "/admin/verifications", icon: ShieldCheck },
+      { label: "Compliance", href: "/admin/compliance", icon: AlertTriangle },
       { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
       { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText },
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
