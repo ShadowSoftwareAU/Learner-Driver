@@ -470,6 +470,26 @@ paths:
                     type: array
                     items: { type: string }
 
+  /instructors/{id}/verifications:
+    get:
+      operationId: listInstructorVerifications
+      tags: [instructors]
+      summary: List verification applications for a specific instructor (admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Verification applications with documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminVerification"
+
   # ─── Maneuvers / Competencies ─────────────────────────────────────────────────
   /maneuvers:
     get:
@@ -1470,6 +1490,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InstructorVerification"
+
+  /admin/verifications/{id}/documents/{docId}:
+    patch:
+      operationId: reviewVerificationDocument
+      tags: [verification]
+      summary: Approve, reject, or flag a single document within a verification application
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: docId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action:
+                  type: string
+                  enum: [approved, rejected, needs_revision]
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Updated document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationDocument"
 
   /terms/status:
     get:
@@ -3639,6 +3696,13 @@ components:
         expiresAt:
           type: ["string", "null"]
           description: "ISO date string (YYYY-MM-DD) when this document expires"
+        docStatus:
+          type: ["string", "null"]
+          enum: [approved, rejected, needs_revision, null]
+        docReviewNotes:
+          type: ["string", "null"]
+        docReviewedAt:
+          type: ["string", "null"]
 
     InstructorVerification:
       type: object

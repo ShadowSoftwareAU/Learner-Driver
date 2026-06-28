@@ -102,6 +102,7 @@ import type {
   RequestUploadUrlBody,
   ReviewBookingChangeRequestBody,
   ReviewVerificationBody,
+  ReviewVerificationDocumentBody,
   RoleUpdate,
   SchoolFeedbackSettings,
   SchoolInput,
@@ -128,6 +129,7 @@ import type {
   UpdateInstructorTrainingCategories200,
   UpdateInstructorTrainingCategoriesBody,
   UserProfile,
+  VerificationDocument,
   VerificationStatusResponse,
   VerificationWithDocs,
   ViewerLinkRequest,
@@ -1641,6 +1643,83 @@ export const useUpdateInstructorTrainingCategories = <TError = ErrorType<unknown
       > => {
       return useMutation(getUpdateInstructorTrainingCategoriesMutationOptions(options));
     }
+
+export const getListInstructorVerificationsUrl = (id: number,) => {
+
+
+
+
+  return `/api/instructors/${id}/verifications`
+}
+
+/**
+ * @summary List verification applications for a specific instructor (admin)
+ */
+export const listInstructorVerifications = async (id: number, options?: RequestInit): Promise<AdminVerification[]> => {
+
+  return customFetch<AdminVerification[]>(getListInstructorVerificationsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListInstructorVerificationsQueryKey = (id: number,) => {
+    return [
+    `/api/instructors/${id}/verifications`
+    ] as const;
+    }
+
+
+export const getListInstructorVerificationsQueryOptions = <TData = Awaited<ReturnType<typeof listInstructorVerifications>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructorVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListInstructorVerificationsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listInstructorVerifications>>> = ({ signal }) => listInstructorVerifications(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listInstructorVerifications>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListInstructorVerificationsQueryResult = NonNullable<Awaited<ReturnType<typeof listInstructorVerifications>>>
+export type ListInstructorVerificationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List verification applications for a specific instructor (admin)
+ */
+
+export function useListInstructorVerifications<TData = Awaited<ReturnType<typeof listInstructorVerifications>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listInstructorVerifications>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListInstructorVerificationsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListManeuversUrl = () => {
 
@@ -5091,6 +5170,80 @@ export const useReviewVerification = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReviewVerificationMutationOptions(options));
+    }
+
+export const getReviewVerificationDocumentUrl = (id: number,
+    docId: number,) => {
+
+
+
+
+  return `/api/admin/verifications/${id}/documents/${docId}`
+}
+
+/**
+ * @summary Approve, reject, or flag a single document within a verification application
+ */
+export const reviewVerificationDocument = async (id: number,
+    docId: number,
+    reviewVerificationDocumentBody: ReviewVerificationDocumentBody, options?: RequestInit): Promise<VerificationDocument> => {
+
+  return customFetch<VerificationDocument>(getReviewVerificationDocumentUrl(id,docId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      reviewVerificationDocumentBody,)
+  }
+);}
+
+
+
+
+export const getReviewVerificationDocumentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewVerificationDocument>>, TError,{id: number;docId: number;data: BodyType<ReviewVerificationDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewVerificationDocument>>, TError,{id: number;docId: number;data: BodyType<ReviewVerificationDocumentBody>}, TContext> => {
+
+const mutationKey = ['reviewVerificationDocument'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewVerificationDocument>>, {id: number;docId: number;data: BodyType<ReviewVerificationDocumentBody>}> = (props) => {
+          const {id,docId,data} = props ?? {};
+
+          return  reviewVerificationDocument(id,docId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewVerificationDocumentMutationResult = NonNullable<Awaited<ReturnType<typeof reviewVerificationDocument>>>
+    export type ReviewVerificationDocumentMutationBody = BodyType<ReviewVerificationDocumentBody>
+    export type ReviewVerificationDocumentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Approve, reject, or flag a single document within a verification application
+ */
+export const useReviewVerificationDocument = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewVerificationDocument>>, TError,{id: number;docId: number;data: BodyType<ReviewVerificationDocumentBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewVerificationDocument>>,
+        TError,
+        {id: number;docId: number;data: BodyType<ReviewVerificationDocumentBody>},
+        TContext
+      > => {
+      return useMutation(getReviewVerificationDocumentMutationOptions(options));
     }
 
 export const getGetTermsStatusUrl = () => {

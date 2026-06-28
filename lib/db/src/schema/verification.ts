@@ -25,6 +25,9 @@ export const verificationDocumentsTable = pgTable("verification_documents", {
   objectPath: text("object_path").notNull(),
   uploadedAt: timestamp("uploaded_at", { withTimezone: true }).notNull().defaultNow(),
   expiresAt: date("expires_at"),
+  docStatus: text("doc_status"),
+  docReviewNotes: text("doc_review_notes"),
+  docReviewedAt: timestamp("doc_reviewed_at", { withTimezone: true }),
 });
 
 export const termsAcceptancesTable = pgTable("terms_acceptances", {

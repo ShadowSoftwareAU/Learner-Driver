@@ -650,6 +650,39 @@ export const UpdateInstructorTrainingCategoriesResponse = zod.object({
 
 
 /**
+ * @summary List verification applications for a specific instructor (admin)
+ */
+export const ListInstructorVerificationsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListInstructorVerificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "status": zod.enum(['pending', 'approved', 'rejected', 'needs_revision']),
+  "submittedAt": zod.string().nullish(),
+  "reviewedAt": zod.string().nullish(),
+  "reviewerNotes": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "instructorId": zod.number(),
+  "instructorName": zod.string(),
+  "instructorEmail": zod.string(),
+  "documents": zod.array(zod.object({
+  "id": zod.number(),
+  "verificationId": zod.number(),
+  "docType": zod.string(),
+  "fileName": zod.string(),
+  "fileSize": zod.number().nullish(),
+  "objectPath": zod.string(),
+  "uploadedAt": zod.string(),
+  "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
+  "docReviewNotes": zod.string().nullish(),
+  "docReviewedAt": zod.string().nullish()
+}))
+})
+export const ListInstructorVerificationsResponse = zod.array(ListInstructorVerificationsResponseItem)
+
+
+/**
  * @summary List all maneuver/competency definitions (TMR + QSAFE)
  */
 export const ListManeuversResponseItem = zod.object({
@@ -1742,7 +1775,10 @@ export const GetVerificationStatusResponse = zod.object({
   "fileSize": zod.number().nullish(),
   "objectPath": zod.string(),
   "uploadedAt": zod.string(),
-  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires')
+  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
+  "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
+  "docReviewNotes": zod.string().nullish(),
+  "docReviewedAt": zod.string().nullish()
 }))
 })
 
@@ -1782,7 +1818,10 @@ export const ListVerificationsResponseItem = zod.object({
   "fileSize": zod.number().nullish(),
   "objectPath": zod.string(),
   "uploadedAt": zod.string(),
-  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires')
+  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
+  "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
+  "docReviewNotes": zod.string().nullish(),
+  "docReviewedAt": zod.string().nullish()
 }))
 })
 export const ListVerificationsResponse = zod.array(ListVerificationsResponseItem)
@@ -1828,6 +1867,33 @@ export const ReviewVerificationResponse = zod.object({
   "reviewerId": zod.number().nullish(),
   "reviewerNotes": zod.string().nullish(),
   "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Approve, reject, or flag a single document within a verification application
+ */
+export const ReviewVerificationDocumentParams = zod.object({
+  "id": zod.coerce.number(),
+  "docId": zod.coerce.number()
+})
+
+export const ReviewVerificationDocumentBody = zod.object({
+  "action": zod.enum(['approved', 'rejected', 'needs_revision']),
+  "notes": zod.string().optional()
+})
+
+export const ReviewVerificationDocumentResponse = zod.object({
+  "id": zod.number(),
+  "verificationId": zod.number(),
+  "docType": zod.string(),
+  "fileName": zod.string(),
+  "fileSize": zod.number().nullish(),
+  "objectPath": zod.string(),
+  "uploadedAt": zod.string(),
+  "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
+  "docReviewNotes": zod.string().nullish(),
+  "docReviewedAt": zod.string().nullish()
 })
 
 

@@ -1123,6 +1123,18 @@ export interface LessonPlan {
   summary: string;
 }
 
+/**
+ * @nullable
+ */
+export type VerificationDocumentDocStatus = typeof VerificationDocumentDocStatus[keyof typeof VerificationDocumentDocStatus] | null;
+
+
+export const VerificationDocumentDocStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+  needs_revision: 'needs_revision',
+} as const;
+
 export interface VerificationDocument {
   id: number;
   verificationId: number;
@@ -1137,6 +1149,12 @@ export interface VerificationDocument {
      * @nullable
      */
   expiresAt?: string | null;
+  /** @nullable */
+  docStatus?: VerificationDocumentDocStatus;
+  /** @nullable */
+  docReviewNotes?: string | null;
+  /** @nullable */
+  docReviewedAt?: string | null;
 }
 
 export type InstructorVerificationStatus = typeof InstructorVerificationStatus[keyof typeof InstructorVerificationStatus];
@@ -2192,6 +2210,20 @@ export const ReviewVerificationBodyAction = {
 
 export type ReviewVerificationBody = {
   action: ReviewVerificationBodyAction;
+  notes?: string;
+};
+
+export type ReviewVerificationDocumentBodyAction = typeof ReviewVerificationDocumentBodyAction[keyof typeof ReviewVerificationDocumentBodyAction];
+
+
+export const ReviewVerificationDocumentBodyAction = {
+  approved: 'approved',
+  rejected: 'rejected',
+  needs_revision: 'needs_revision',
+} as const;
+
+export type ReviewVerificationDocumentBody = {
+  action: ReviewVerificationDocumentBodyAction;
   notes?: string;
 };
 

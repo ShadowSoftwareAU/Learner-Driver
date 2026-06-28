@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { getAuth } from "@clerk/express";
-import { eq, desc, lte, gte, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, desc, lte, and, isNotNull } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -144,7 +144,7 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
 
 async function requireAdmin(req: any, res: any, next: any) {
   const user = await getDbUser(req.clerkUserId);
-  if (!user || user.role !== "admin") {
+  if (!user || !["admin", "super_admin"].includes(user.role)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -232,10 +232,8 @@ router.get("/admin/compliance/expiring", requireAuth, requireAdmin, async (req: 
   const in30Days = new Date(today);
   in30Days.setDate(in30Days.getDate() + 30);
 
-  const todayStr = today.toISOString().slice(0, 10);
   const in30DaysStr = in30Days.toISOString().slice(0, 10);
 
-  // Fetch documents that have an expiresAt <= 30 days from now
   const docs = await db
     .select({
       id: verificationDocumentsTable.id,
@@ -260,17 +258,55 @@ router.get("/admin/compliance/expiring", requireAuth, requireAdmin, async (req: 
     )
     .orderBy(verificationDocumentsTable.expiresAt);
 
-  const result = docs.map((d) => {
-    const expiry = new Date(d.expiresAt!);
-    const msPerDay = 1000 * 60 * 60 * 24;
-    const daysUntilExpiry = Math.ceil((expiry.getTime() - today.getTime()) / msPerDay);
-    return {
-      ...d,
-      daysUntilExpiry,
-    };
-  });
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const result = docs.map((d) => ({
+    ...d,
+    daysUntilExpiry: Math.ceil((new Date(d.expiresAt!).getTime() - today.getTime()) / msPerDay),
+  }));
 
   res.json(result);
+});
+
+/**
+ * PATCH /admin/verifications/:id/documents/:docId
+ * Approve, reject, or flag a single document within a verification application.
+ */
+router.patch("/admin/verifications/:id/documents/:docId", requireAuth, requireAdmin, async (req: any, res): Promise<void> => {
+  const verificationId = parseInt(req.params.id, 10);
+  const docId = parseInt(req.params.docId, 10);
+  const { action, notes } = req.body as { action: string; notes?: string };
+
+  if (!["approved", "rejected", "needs_revision"].includes(action)) {
+    res.status(400).json({ error: "Invalid action" });
+    return;
+  }
+
+  const existing = await db
+    .select()
+    .from(verificationDocumentsTable)
+    .where(and(
+      eq(verificationDocumentsTable.id, docId),
+      eq(verificationDocumentsTable.verificationId, verificationId),
+    ))
+    .limit(1);
+
+  if (existing.length === 0) {
+    res.status(404).json({ error: "Document not found" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(verificationDocumentsTable)
+    .set({
+      docStatus: action,
+      docReviewNotes: notes ?? null,
+      docReviewedAt: new Date(),
+    })
+    .where(eq(verificationDocumentsTable.id, docId))
+    .returning();
+
+  req.log.info({ verificationId, docId, action, reviewerId: req.dbUser.id }, "Verification document reviewed");
+  res.json(updated);
 });
 
 export default router;

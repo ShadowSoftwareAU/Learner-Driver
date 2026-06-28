@@ -49,14 +49,28 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
     : [];
   const countMap = new Map(studentCounts.map(s => [s.instructorId, Number(s.c)]));
 
-  // Compliance status: check which required docs each instructor has uploaded
-  const REQUIRED_COMPLIANCE_DOCS = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
-  const verifications = ids.length > 0
-    ? await db.select({ id: instructorVerificationsTable.id, instructorId: instructorVerificationsTable.instructorId })
+  // Compliance status: derive from the latest verification application status
+  const allVerifications = ids.length > 0
+    ? await db.select({
+        id: instructorVerificationsTable.id,
+        instructorId: instructorVerificationsTable.instructorId,
+        status: instructorVerificationsTable.status,
+        createdAt: instructorVerificationsTable.createdAt,
+      })
         .from(instructorVerificationsTable)
         .where(inArray(instructorVerificationsTable.instructorId, ids))
+        .orderBy(desc(instructorVerificationsTable.createdAt))
     : [];
-  const verifIdList = verifications.map(v => v.id);
+  // Keep only the latest verification per instructor
+  const latestVerifByInstructor = new Map<number, string>();
+  for (const v of allVerifications) {
+    if (!latestVerifByInstructor.has(v.instructorId)) {
+      latestVerifByInstructor.set(v.instructorId, v.status);
+    }
+  }
+
+  // Check for expiring documents across all verifications
+  const verifIdList = allVerifications.map(v => v.id);
   const uploadedDocs = verifIdList.length > 0
     ? await db.select({
         verificationId: verificationDocumentsTable.verificationId,
@@ -66,8 +80,7 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
         .from(verificationDocumentsTable)
         .where(inArray(verificationDocumentsTable.verificationId, verifIdList))
     : [];
-  const verifByVerifId = new Map(verifications.map(v => [v.id, v.instructorId]));
-  const docsByInstructor = new Map<number, Set<string>>();
+  const verifByVerifId = new Map(allVerifications.map(v => [v.id, v.instructorId]));
   const expiringByInstructor = new Map<number, boolean>();
 
   const in30Days = new Date();
@@ -76,19 +89,14 @@ router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => 
 
   for (const doc of uploadedDocs) {
     const iid = verifByVerifId.get(doc.verificationId);
-    if (iid !== undefined) {
-      if (!docsByInstructor.has(iid)) docsByInstructor.set(iid, new Set());
-      docsByInstructor.get(iid)!.add(doc.docType);
-      if (doc.expiresAt && doc.expiresAt <= in30DaysStr) {
-        expiringByInstructor.set(iid, true);
-      }
+    if (iid !== undefined && doc.expiresAt && doc.expiresAt <= in30DaysStr) {
+      expiringByInstructor.set(iid, true);
     }
   }
   const getComplianceStatus = (iid: number): "compliant" | "partial" | "incomplete" => {
-    const docs = docsByInstructor.get(iid) ?? new Set<string>();
-    const reqCnt = REQUIRED_COMPLIANCE_DOCS.filter(dt => docs.has(dt)).length;
-    if (reqCnt === REQUIRED_COMPLIANCE_DOCS.length) return "compliant";
-    if (docs.size > 0) return "partial";
+    const status = latestVerifByInstructor.get(iid);
+    if (status === "approved") return "compliant";
+    if (status === "pending" || status === "needs_revision" || status === "rejected") return "partial";
     return "incomplete";
   };
 
@@ -180,6 +188,50 @@ router.get("/instructors/:id", requireAuth, async (req: any, res): Promise<void>
       recommendRate,
     },
   });
+});
+
+// ─── List verifications for one instructor (admin) ────────────────────────────
+
+async function requireAdmin(req: any, res: any, next: any): Promise<void> {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (!["admin", "super_admin"].includes(user.role)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next();
+}
+
+router.get("/instructors/:id/verifications", requireAuth, requireAdmin, async (req: any, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+
+  const verifications = await db
+    .select({
+      id: instructorVerificationsTable.id,
+      status: instructorVerificationsTable.status,
+      submittedAt: instructorVerificationsTable.submittedAt,
+      reviewedAt: instructorVerificationsTable.reviewedAt,
+      reviewerNotes: instructorVerificationsTable.reviewerNotes,
+      createdAt: instructorVerificationsTable.createdAt,
+      instructorId: instructorVerificationsTable.instructorId,
+      instructorName: instructorsTable.fullName,
+      instructorEmail: instructorsTable.email,
+    })
+    .from(instructorVerificationsTable)
+    .innerJoin(instructorsTable, eq(instructorVerificationsTable.instructorId, instructorsTable.id))
+    .where(eq(instructorVerificationsTable.instructorId, id))
+    .orderBy(desc(instructorVerificationsTable.createdAt));
+
+  const withDocs = await Promise.all(
+    verifications.map(async (v) => {
+      const docs = await db
+        .select()
+        .from(verificationDocumentsTable)
+        .where(eq(verificationDocumentsTable.verificationId, v.id));
+      return { ...v, documents: docs };
+    })
+  );
+
+  res.json(withDocs);
 });
 
 // ─── Update instructor profile ────────────────────────────────────────────────
