@@ -8,6 +8,7 @@ import {
   instructorVerificationsTable,
   verificationDocumentsTable,
 } from "@workspace/db";
+import { sendNotification } from "../lib/notifications/notificationService";
 
 const router = Router();
 
@@ -220,8 +221,84 @@ router.patch("/admin/verifications/:id", requireAuth, requireAdmin, async (req: 
     .returning();
 
   req.log.info({ verificationId, action, reviewerId: req.dbUser.id }, "Verification reviewed");
+
+  // Send email + in-app notification to the instructor non-fatally
+  notifyInstructorOfReview({
+    verificationId,
+    instructorId: existing[0].instructorId,
+    action,
+    notes,
+  }).catch((err) => req.log.error({ err, verificationId, action }, "Failed to send verification review notification"));
+
   res.json(updated);
 });
+
+async function notifyInstructorOfReview({
+  verificationId,
+  instructorId,
+  action,
+  notes,
+}: {
+  verificationId: number;
+  instructorId: number;
+  action: string;
+  notes?: string;
+}): Promise<void> {
+  // Fetch instructor + their linked user account
+  const [instructor] = await db
+    .select()
+    .from(instructorsTable)
+    .where(eq(instructorsTable.id, instructorId))
+    .limit(1);
+
+  if (!instructor) return;
+
+  // Find the user row for this instructor (may be null for manual profiles)
+  const userId = instructor.userId ?? null;
+  const email = instructor.email ?? null;
+
+  if (!userId || !email) return;
+
+  const { title, body } = buildReviewMessage(action, notes);
+
+  await sendNotification({
+    userId,
+    email,
+    payload: {
+      type: "verification_reviewed",
+      title,
+      body,
+      relatedId: verificationId,
+      relatedType: "instructor_verification",
+      priority: action === "approved" ? "normal" : "high",
+    },
+    channels: ["in_app", "email"],
+  });
+}
+
+function buildReviewMessage(action: string, notes?: string): { title: string; body: string } {
+  const notesLine = notes ? `\n\nReviewer notes: ${notes}` : "";
+
+  if (action === "approved") {
+    return {
+      title: "Your compliance application has been approved",
+      body: `Great news — your compliance application has been reviewed and approved. You are now fully verified on Learner Log.${notesLine}`,
+    };
+  }
+
+  if (action === "rejected") {
+    return {
+      title: "Your compliance application was not approved",
+      body: `Your compliance application has been reviewed and unfortunately could not be approved at this time. Please log in to review the feedback and resubmit if appropriate.${notesLine}`,
+    };
+  }
+
+  // needs_revision
+  return {
+    title: "Your compliance application needs revision",
+    body: `Your compliance application has been reviewed and requires some changes before it can be approved. Please log in to see what needs updating and resubmit.${notesLine}`,
+  };
+}
 
 /**
  * GET /admin/compliance/expiring
