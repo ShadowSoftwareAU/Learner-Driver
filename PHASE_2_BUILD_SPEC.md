@@ -2023,6 +2023,216 @@ Include:
 
 ---
 
+# 20A. 2026-07-09 Meeting Outcomes, Explicit Delivery Register
+
+This section captures the full set of outcomes from the 9 July 2026 meeting so nothing is missed in implementation.
+These items are binding delivery inputs for Phase 2 and should be treated as an explicit execution register alongside the architectural sections above.
+
+## 20A.1 Priority 1, Bug Fixes and UX Corrections (Immediate)
+
+1. **Student pre-population in New Assessment**
+   - When navigating `Students -> Student Profile -> New Assessment`, the student selector must auto-populate.
+   - The system already knows the student context and must not ask again.
+
+2. **Duration pre-population from booking**
+   - Assessment duration must pull from the booking length, for example `120 mins`.
+   - Manual duration entry should only be fallback behaviour, not the default.
+
+3. **Assessment history not showing on student profile**
+   - Completed assessments must appear in the student's assessment history list.
+   - This is a bug and must be treated as immediate remediation.
+
+4. **Handover notes missing from assessment**
+   - Notes entered during assessment, such as `too wide`, `too tight`, `missed mirror check`, must flow into the handover output correctly.
+
+5. **Recent Assessments not clickable**
+   - The conducting instructor must be able to click a recent assessment and open the full report.
+   - Other instructors should only see handover-note-level visibility where policy requires.
+
+6. **Approved instructor still in review list**
+   - Approved instructor entries, such as James Hewin, must disappear from the review queue once approved.
+   - Fix state refresh and query invalidation behaviour.
+
+7. **Report terminology and order**
+   - Change `Mastered` to `Competent`.
+   - Reorder the summary to `Attempted -> Practiced -> Competent`.
+
+## 20A.2 Priority 2, Assessment Logic Changes
+
+8. **Hide assessment types by instructor certification**
+   - If instructor verification does not include `Q-Ride` or `Heavy Vehicle`, those options must not appear in New Assessment.
+
+9. **Remove pedal control for Q-Ride and Heavy Vehicle**
+   - Pedal control is only relevant for car-style `Q-Safe` assessments.
+   - Do not show it for Q-Ride or Heavy Vehicle flows.
+
+10. **Conditional notes fields by competency state**
+   - `Competent` = no sub-notes.
+   - `Not Attempted` = no sub-notes.
+   - `Attempted` and `Not Yet Competent` = show multi-select issue notes plus free text.
+
+11. **Mandatory handover notes**
+   - Every assessment must include handover notes.
+   - Minimum 20 characters.
+   - `No-show` still requires a note, for example: `Student no-show, attempted contact`.
+
+12. **Pre-drive student fitness and safety confirmation**
+   - Add a pre-drive safety check acknowledgement that confirms the student is well-rested, not stressed, and not affected by medication, alcohol, or drugs.
+   - One tick-box is acceptable.
+   - This must block lesson start if not acknowledged.
+
+## 20A.3 Priority 3, Instructor and Academy Structure
+
+13. **Academy team codes**
+   - Each academy gets a unique code.
+   - Instructors enter the code to join that academy group.
+   - Instructors may hold multiple codes for multi-academy work.
+   - Academies must not see the other academy codes an instructor holds.
+
+14. **Two onboarding workflows**
+   - `Solo trader`: requires active ABN, own vehicle, full verification, then receives own team code.
+   - `Academy instructor`: joins via academy code, and the school manages compliance.
+
+15. **ABN validation integration**
+   - Integrate ABR Lookup API to validate ABN is active at registration and on ongoing checks where practical.
+
+16. **Add PI/PL insurance field**
+   - Add Professional Indemnity and Public Liability insurance to instructor verification.
+   - Support tick box plus currency letter upload.
+
+17. **Instructor hourly rate field**
+   - Instructors set their own hourly rate in profile.
+   - This rate must appear in booking flow and feed payment calculations.
+
+18. **Fleet management for academies**
+   - Academies can list multiple vehicles per instructor or academy.
+   - Track auto versus manual.
+   - Vehicle counts should appear on the academy dashboard.
+
+19. **Instructor compliance front-end display**
+   - Show green-tick style compliance indicators for:
+     - Working with Children
+     - Q-Ride certified
+     - Heavy Vehicle certified
+     - NDIS registered assessor
+     - insurance current
+
+## 20A.4 Priority 4, Booking and Payment System
+
+20. **Booking request flow**
+   - Student selects availability.
+   - Booking request is sent.
+   - Push notification plus email go to instructor.
+   - Hourly reminders continue until accepted or declined.
+
+21. **Unassigned job board**
+   - If request goes to an academy instead of a named instructor, it must appear on a job board.
+   - Only eligible instructors in that teaching zone receive the push.
+   - First to accept gets it.
+
+22. **Teaching zone filtering**
+   - Students only see availability for instructors operating in their area.
+   - Job-board items must also be zone-filtered.
+
+23. **Favourite instructor**
+   - Students can favourite an instructor so that instructor appears first or exclusively in booking choices.
+
+24. **Cashless payments only**
+   - No cash.
+   - All payments flow through the platform.
+   - The operating model is closer to Uber than traditional cash lesson collection.
+
+25. **50% deposit / 50% pre-lesson split**
+   - 50% deposit at booking.
+   - Remaining 50% attempted 2 hours before lesson.
+   - If payment fails, notify the student and prevent lesson progression until resolved.
+
+26. **Pay in full option**
+   - Student may choose deposit-only or pay in full at booking.
+
+27. **Payment check at assessment start**
+   - When instructor hits `New Assessment`, the system must verify payment completion before allowing the lesson to proceed.
+
+28. **Funds held by platform**
+   - Payments go into the platform-controlled business account first.
+   - Funds are later disbursed to instructor or academy after hold period.
+   - This aligns with the virtual ledger and payout architecture in section 18.5.
+
+29. **Academy and instructor bank details in profile**
+   - ABN and bank details must be configurable in account or profile settings.
+   - Users must be able to update them when bank or company details change.
+
+30. **Cancellation and reschedule policy**
+   - Cancel or reschedule within 24 hours means deposit is forfeited or moved to credit.
+   - No cash refund by default.
+   - Credit remains within system ledger.
+
+31. **Pre-paid credit balances**
+   - Parents, NDIS, and schools can add credits to a student account.
+   - Funds are ring-fenced to that student.
+   - Include NDIS checkbox on student profile.
+
+32. **Calendar buffers and breaks**
+   - Calendar must support instructor-configured buffers between lessons and break windows.
+   - Example discussed: 30 minutes travel plus 1 hour break.
+   - These blocked times must affect actual booking availability.
+
+## 20A.5 Priority 5, Reporting and Compliance
+
+33. **Assessment report with route map**
+   - Completed assessment report includes GPS route map at the bottom.
+   - Only show the route traversed during that lesson.
+
+34. **Audit log enhancements**
+   - Add search or filter by instructor name and student name.
+   - Sort by timestamp.
+   - Track who viewed which student record and when.
+
+35. **Student feedback system**
+   - Send push notification plus email 1 hour after lesson for student rating.
+   - If not submitted, follow up next day.
+   - Do not send follow-up if feedback already submitted.
+
+36. **Academy handover audit**
+   - Academy dashboard should show handover notes across instructors for review and quality control.
+
+37. **Compliance expiry notifications**
+   - Automated alerts when instructor documents approach renewal, including Working with Children, insurance, licence, first aid, and related compliance items.
+
+## 20A.6 Priority 6, Parent, Mentor Access and Monetisation
+
+38. **Student nominates parent or mentor**
+   - At registration or in profile, student adds parent or mentor email.
+   - Notification is sent with hyperlink and team code to create account.
+
+39. **Parent or mentor account type**
+   - Can view lesson reports, progress summaries, handover notes, and guided lesson plans from the QSA manual.
+
+40. **Parent pricing model**
+   - Option A: annual subscription that can cover multiple children.
+   - Option B: pay-per-report at roughly `$5/report`.
+   - Final pricing still to be confirmed.
+
+41. **Mentor role**
+   - Mentors, including PCYC-style mentors, can run assessments or supervised-practice style sessions in a role separate from instructor.
+   - Parent role remains view-only.
+
+42. **School and academy credit allocation**
+   - Academy dashboard can allocate grant or funding balances to specific students.
+   - Examples include NDIS support and school grants.
+
+## 20A.7 Pricing guidance from meeting
+
+Current pricing guidance discussed in the meeting:
+- `Student`: Free, create account, book lessons, view own progress
+- `Parent/Mentor`: around `$5/report` or annual subscription, exact pricing TBD
+- `Sole Trader Instructor`: lower fee TBD, full assessment, booking, and compliance tools
+- `Academy/School`: around `$2,000/year` introductory, with broad academy operations access
+
+If any earlier section of this spec conflicts with these commercial notes, treat these pricing notes as the current meeting guidance pending final commercial sign-off.
+
+---
+
 # 21. OpenAPI and Codegen Work Required
 
 Every Phase 2 backend change must be mirrored in:
