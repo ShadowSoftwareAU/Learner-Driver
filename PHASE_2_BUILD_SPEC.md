@@ -1652,16 +1652,237 @@ Feature keys to define now:
 - `demo_mode_reset`
 - `moderation_dashboard`
 
-## 18.5 Stripe integration skeleton
-Create provider abstraction, example:
-- `artifacts/api-server/src/lib/billing/stripe.ts`
-- `artifacts/api-server/src/routes/billing.ts`
+## 18.5 Payments, virtual ledger, and payout architecture
+Phase 2 payment design is no longer just a subscription skeleton. It must support:
+- student and parent pay-in through Stripe Checkout
+- an internal virtual ledger and student wallet model
+- booking deposit locks and credit reallocation logic
+- instructor and academy internal balances
+- automated payout orchestration, with Airwallex as the preferred payout API
 
-Phase 2 only needs:
-- customer creation helper
-- subscription placeholder create/sync hooks
-- webhook endpoint scaffold
-- plan code mapping constants
+Create provider abstractions, example:
+- `artifacts/api-server/src/lib/billing/stripe.ts`
+- `artifacts/api-server/src/lib/billing/airwallex.ts`
+- `artifacts/api-server/src/lib/billing/ledger.ts`
+- `artifacts/api-server/src/lib/billing/payouts.ts`
+- `artifacts/api-server/src/routes/billing.ts`
+- `artifacts/api-server/src/routes/payouts.ts`
+- `artifacts/api-server/src/routes/wallets.ts`
+
+### 18.5.1 Core business principle
+The platform should treat Stripe as the pay-in rail only.
+Parents and students pay the platform business through standard Stripe Checkout.
+Stripe does not need to understand lesson deposits, reschedules, internal credits, or instructor splits.
+Those rules are controlled by the application database through a virtual ledger.
+
+### 18.5.2 Virtual ledger model
+The platform must maintain an internal double-entry-style ledger for operational balances.
+This avoids complex refund and transfer API calls every time a booking changes.
+
+The ledger should track at minimum:
+- student wallet balance
+- student reserved balance
+- booking deposit reserved amount
+- booking final payment reserved amount
+- academy available balance
+- academy pending payout balance
+- instructor available balance
+- instructor pending payout balance
+- platform held funds balance
+- refund liability or credit liability balance where relevant
+
+Recommended principle:
+- Stripe records real money entering the platform
+- the platform ledger records ownership, reservation, release, and payout eligibility
+- Airwallex records outbound payout execution when funds are sent to academy or instructor bank accounts
+
+### 18.5.3 Deposit and credit logic
+Confirmed commercial logic for lessons:
+- student may pay **50% deposit** at booking, or **pay in full** upfront
+- if cancelled or rescheduled more than 24 hours before lesson, policy can follow normal business rules
+- if cancelled within 24 hours, the **deposit is non-refundable**
+- however, that deposit may be converted to **platform credit** and applied to a future lesson
+- because the platform controls the virtual ledger, moving a deposit from one booking to another is a database ledger update, not a Stripe refund/recharge flow
+
+This is a key implementation rule:
+- do **not** model every reschedule as a refund through Stripe
+- do **not** rely on Stripe Connect destination payments for this workflow
+- instead, preserve funds inside the platform business account and move internal balances in the ledger
+
+### 18.5.4 Student wallet and pay-in flow
+The pay-in flow should work like this:
+1. parent or student buys a block of credits using Stripe Checkout
+2. Stripe processes the payment into the platform's business account
+3. Stripe webhook confirms settlement event
+4. the platform writes a ledger entry crediting the student's virtual wallet
+5. the student's wallet balance becomes available for booking deposits and lesson settlement
+
+This wallet model must support:
+- self-funded students
+- parent-funded students
+- school-funded students
+- NDIS or grant-funded students
+- mixed funding sources if needed later
+
+### 18.5.5 Booking lock logic
+When a lesson is booked:
+- the app reserves 50% deposit from the student wallet if the student selected deposit-only flow
+- or reserves 100% if the student paid in full
+- the reserved amount is tied to the booking record
+- the ledger marks the funds as locked, not yet earned by instructor or academy
+
+If the booking is rescheduled:
+- transfer the reserved value to the new booking allocation in the ledger
+- keep the money within the business-controlled wallet system
+- avoid external payment reversals unless there is a true refund event approved by business policy
+
+### 18.5.6 Lesson completion and payout trigger
+When a lesson is marked `completed` in the app:
+- the booking is eligible for financial settlement
+- the ledger moves the relevant funds from reserved to earned state
+- the system flags the instructor or academy internal balance as `ready_for_payout`
+
+Payout target rules:
+- if instructor is an independent sole trader, payout can go directly to the instructor
+- if instructor belongs to a driving academy, payout normally goes to the academy first
+- academy may optionally configure internal auto-payout rules to split earnings to instructors based on their arrangement
+
+This means the system must support two payout pathways:
+1. **direct-to-instructor payout**
+2. **academy-first payout**, with optional downstream instructor split automation
+
+### 18.5.7 Airwallex payout direction
+Preferred outbound payout provider: **Airwallex**
+
+Reasoning:
+- allows programmatic payouts from the central business account
+- supports direct bank transfer workflows
+- keeps onboarding friction low for instructor and academy recipients
+- aligns with requirement that recipients only provide bank details in account configuration
+
+Phase 2 implementation must assume:
+- instructors or academies provide bank account details inside profile settings
+- the platform stores payout destination details securely
+- Airwallex executes the actual payout from platform-controlled funds
+- payout status is synced back into the platform ledger and payout tables
+
+### 18.5.8 Zero-friction recipient onboarding
+Commercial requirement:
+- instructor and academy should experience near-zero payout onboarding
+- they should not need a separate complex payments account setup just to receive funds
+- they provide bank details and legal business identity details in profile configuration
+
+Required profile fields for payout recipients:
+- account holder name
+- bank account name if different
+- BSB / account number for AU flows, or country-specific routing fields later
+- business name
+- ABN if applicable
+- recipient type: `independent_instructor | academy | academy_instructor_split_recipient`
+- payout preference: `manual | automatic`
+- payout schedule: `real_time | daily | weekly | custom`
+
+### 18.5.9 Academy split and arrangement model
+Academies may choose one of two operating modes:
+1. **academy receives full payout** and manages instructor payments off-platform according to its own internal payroll or contractor process
+2. **academy-managed autopayout split** where the academy configures each instructor's split or arrangement inside the app, and the platform calculates and issues downstream payouts automatically
+
+This requires configurable academy payout policies, including:
+- fixed percentage split
+- fixed dollar per lesson
+- instructor-specific override
+- default academy holdback or platform fee deduction if required later
+
+### 18.5.10 Recommended new ledger and payout tables
+Add new tables such as:
+- `wallet_accounts`
+- `wallet_transactions`
+- `wallet_reservations`
+- `ledger_entries`
+- `payout_recipients`
+- `payout_batches`
+- `payouts`
+- `academy_payout_rules`
+- `lesson_financial_settlements`
+
+Suggested responsibilities:
+- `wallet_accounts`: current balances by owner and account type
+- `wallet_transactions`: user-facing wallet events such as credit purchase, booking reservation, credit release
+- `wallet_reservations`: reserved booking-linked amounts
+- `ledger_entries`: immutable accounting-style movement rows
+- `payout_recipients`: bank and payout destination metadata
+- `payout_batches`: grouped payout runs
+- `payouts`: individual payout attempts and statuses
+- `academy_payout_rules`: split configuration per academy and optionally per instructor
+- `lesson_financial_settlements`: mapping from completed lesson to earned balances and payout eligibility
+
+### 18.5.11 Suggested ledger account types
+Account types should include at minimum:
+- `student_wallet_available`
+- `student_wallet_reserved`
+- `platform_cash_cleared`
+- `platform_credit_liability`
+- `platform_unearned_booking_liability`
+- `academy_payable`
+- `instructor_payable`
+- `academy_reserved_payout`
+- `instructor_reserved_payout`
+- `platform_revenue`
+
+Use immutable ledger rows.
+Do not update historical money movement rows in place.
+Use compensating entries when business logic changes.
+
+### 18.5.12 Trigger and state model
+Key financial state transitions:
+- `wallet_funded`
+- `booking_reserved`
+- `booking_rescheduled`
+- `booking_cancelled_credit_retained`
+- `booking_cancelled_refund_requested`
+- `lesson_completed`
+- `academy_payable_created`
+- `instructor_payable_created`
+- `payout_queued`
+- `payout_sent`
+- `payout_failed`
+- `payout_reversed` if ever needed
+
+### 18.5.13 API and service areas
+Add service areas such as:
+- `artifacts/api-server/src/lib/billing/ledger/`
+- `artifacts/api-server/src/lib/billing/wallet/`
+- `artifacts/api-server/src/lib/billing/payouts/`
+
+Suggested endpoints:
+- `POST /wallets/checkout-session`
+- `POST /wallets/webhooks/stripe`
+- `GET /wallets/me`
+- `GET /wallets/:studentId/transactions`
+- `POST /bookings/:id/reserve-funds`
+- `POST /bookings/:id/reallocate-credit`
+- `POST /bookings/:id/financial-settlement`
+- `GET /payouts/me`
+- `POST /payouts/run`
+- `POST /payouts/webhooks/airwallex`
+- `PATCH /academy-payout-rules/:id`
+
+### 18.5.14 Risk and compliance note
+This design handles business logic cleanly, but the legal and regulatory position of holding and disbursing client funds still needs review.
+Document this clearly:
+- the virtual ledger is an internal operational ledger, not a bank account
+- platform-held balances and payout workflows may trigger financial services, trust accounting, or stored-value compliance considerations depending on jurisdiction and scale
+- legal review is required before broad rollout
+
+### 18.5.15 Phase 2 implementation scope
+Phase 2 should include:
+- Stripe Checkout pay-in flow for wallet top-up
+- virtual ledger and wallet architecture
+- booking deposit reservation and reschedule credit transfer logic
+- completed-lesson settlement logic
+- payout recipient configuration model
+- Airwallex payout abstraction and initial implementation path
+- academy payout policy configuration scaffolding
 
 Do not fully block app usage yet.
 
@@ -1676,8 +1897,13 @@ Just avoid hard-coding Stripe-only assumptions into entitlement model.
 Use generic `billingProvider` and `planCode` fields.
 
 ## 18.8 Acceptance criteria
-- subscription and entitlement schema exists
-- Stripe integration skeleton exists
+- Stripe Checkout pay-in flow exists for student or parent wallet funding
+- virtual ledger and wallet schema exist and are wired into backend service design
+- booking deposit reservation logic exists
+- rescheduled booking credit transfer logic is ledger-based, not refund-based
+- lesson completion can create payout-eligible balances
+- Airwallex payout abstraction exists with recipient configuration model
+- academy payout policy scaffolding exists
 - pricing tiers are represented in constants/config
 - feature flags can enable or disable enforcement separately from entitlement storage
 
@@ -1894,6 +2120,8 @@ After OpenAPI update:
 - `artifacts/api-server/src/routes/viewer-links.ts`
 - `artifacts/api-server/src/routes/moderation.ts`
 - `artifacts/api-server/src/routes/billing.ts`
+- `artifacts/api-server/src/routes/payouts.ts`
+- `artifacts/api-server/src/routes/wallets.ts`
 - `artifacts/api-server/src/routes/demo.ts`
 
 ## New backend service areas likely needed
@@ -1901,6 +2129,9 @@ After OpenAPI update:
 - `artifacts/api-server/src/lib/notifications/`
 - `artifacts/api-server/src/lib/contentFiltering/`
 - `artifacts/api-server/src/lib/billing/`
+- `artifacts/api-server/src/lib/billing/ledger/`
+- `artifacts/api-server/src/lib/billing/wallet/`
+- `artifacts/api-server/src/lib/billing/payouts/`
 - `artifacts/api-server/src/lib/demo/`
 - `artifacts/api-server/src/lib/crypto.ts`
 
@@ -1924,6 +2155,9 @@ After OpenAPI update:
 - `lib/db/src/schema/moderation.ts`
 - `lib/db/src/schema/subscriptions.ts`
 - `lib/db/src/schema/permissions.ts`
+- `lib/db/src/schema/wallets.ts`
+- `lib/db/src/schema/ledger.ts`
+- `lib/db/src/schema/payouts.ts`
 
 ---
 
@@ -1940,24 +2174,47 @@ Need data backfills for:
 
 ## 25.2 Incremental rollout recommendation
 ### Wave 1
-- pedal control
-- medical/allergies
-- handover safety card
-- no-show tracking
+- student pre-population in assessment flow
+- duration pre-population from booking
+- assessment history visibility fix
+- handover notes persistence fix
+- clickable recent assessments for conducting instructor
+- approved instructor queue refresh fix
+- terminology update: `Mastered` -> `Competent`
+- reorder report summary: Attempted -> Practiced -> Competent
+- pre-drive student fitness and safety confirmation tick-box
 
 ### Wave 2
-- notification service
-- content filtering and moderation
+- assessment logic by instructor certification
+- remove pedal control from Q-Ride and Heavy Vehicle assessments
+- conditional notes fields by competency state
+- mandatory handover note enforcement
+- calendar buffers and break management
+- notification service foundation
 
 ### Wave 3
 - schools and tenant scoping
+- academy team code model
+- solo trader vs academy onboarding workflow
+- ABR validation integration
+- instructor compliance enhancements including PI/PL insurance
+- fleet management foundation
+- viewer and mentor access model
 - RBAC hardening
-- viewer role
 
 ### Wave 4
 - booking approvals
-- Stripe skeleton
+- wallet top-up and virtual ledger foundation
+- Stripe Checkout pay-in flow
+- deposit reservation and booking credit transfer logic
+- payout recipient configuration
+- Airwallex payout abstraction
+- academy payout rule scaffolding
+
+### Wave 5
+- content filtering and moderation
 - demo mode
+- advanced billing/reporting/payout automation polish
 
 ## 25.3 Compatibility note
 Because current routes and UI use `admin`, avoid a big-bang rename.
@@ -2026,13 +2283,24 @@ Prefer:
 - send booking event and verify in-app and email records
 - verify disabled channels are respected
 
-## 26.9 Demo mode
+## 26.9 Wallet, ledger, and payout flow
+- fund a student wallet through Stripe Checkout test flow
+- verify webhook creates wallet credit and ledger entries
+- create booking with 50% deposit and confirm reservation is locked
+- reschedule booking and verify reserved credit moves by ledger update only
+- complete lesson and verify settlement creates payout-eligible balance
+- verify independent instructor payout target is instructor recipient
+- verify academy-linked instructor payout target defaults to academy recipient
+- verify academy auto-split rules can calculate downstream allocation scaffolding
+- verify Airwallex payout abstraction records queued, sent, and failed states
+
+## 26.10 Demo mode
 - run demo reset
 - verify sample data restored
 - verify reset audit log written
 - verify only authorised user can trigger reset
 
-## 26.10 Session timeout
+## 26.11 Session timeout
 - idle for 25 minutes, warning shows
 - idle for 30 minutes, session is ended
 - activity before timeout resets timer
