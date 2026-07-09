@@ -255,6 +255,7 @@ export const GetStudentProgressResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -674,6 +675,7 @@ export const ListInstructorVerificationsResponseItem = zod.object({
   "fileSize": zod.number().nullish(),
   "objectPath": zod.string(),
   "uploadedAt": zod.string(),
+  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
   "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
   "docReviewNotes": zod.string().nullish(),
   "docReviewedAt": zod.string().nullish()
@@ -727,6 +729,7 @@ export const ListAssessmentsResponseItem = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -811,7 +814,8 @@ export const UpdateAssessmentBody = zod.object({
   "lng": zod.number(),
   "ts": zod.number()
 })).nullish(),
-  "acknowledgeBriefing": zod.boolean().optional().describe('If true, records pre-lesson briefing acknowledged at now()')
+  "acknowledgeBriefing": zod.boolean().optional().describe('If true, records pre-lesson briefing acknowledged at now()'),
+  "acknowledgeFitness": zod.boolean().optional().describe('If true, records pre-drive fitness and sobriety check confirmed at now()')
 })
 
 export const updateAssessmentResponseAssessmentTypeDefault = `qsafe`;
@@ -835,6 +839,7 @@ export const UpdateAssessmentResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -872,6 +877,7 @@ export const SubmitAssessmentResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -914,6 +920,7 @@ export const ApproveAssessmentResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -1053,6 +1060,7 @@ export const GetHandoverResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -1184,6 +1192,7 @@ export const GetInstructorDashboardResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -1232,6 +1241,7 @@ export const GetStudentDashboardResponse = zod.object({
   "ts": zod.number()
 })).nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
   "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
   "approvedAt": zod.string().nullish(),
   "approvedByUserId": zod.number().nullish(),
@@ -1891,6 +1901,7 @@ export const ReviewVerificationDocumentResponse = zod.object({
   "fileSize": zod.number().nullish(),
   "objectPath": zod.string(),
   "uploadedAt": zod.string(),
+  "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
   "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
   "docReviewNotes": zod.string().nullish(),
   "docReviewedAt": zod.string().nullish()

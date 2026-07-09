@@ -77,9 +77,9 @@ export function CategorySummary({
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-6 pt-0 space-y-5">
-        {/* Totals row */}
-        <div className="grid grid-cols-4 gap-2">
-          {(["not_attempted", "attempted", "practiced", "mastered"] as const).map(level => {
+        {/* Totals row — Attempted → Practiced → Competent first, Not Attempted last */}
+        <div className="grid grid-cols-3 gap-2">
+          {(["attempted", "practiced", "mastered"] as const).map(level => {
             const meta = LEVEL_META[level];
             return (
               <div key={level} className={`rounded-md p-3 text-center ${meta.color}`}>
@@ -89,6 +89,12 @@ export function CategorySummary({
             );
           })}
         </div>
+        {(totals.not_attempted ?? 0) > 0 && (
+          <div className={`rounded-md p-2.5 text-center text-sm ${LEVEL_META.not_attempted.color}`}>
+            <span className="font-semibold">{totals.not_attempted}</span>
+            <span className="ml-1 font-medium">Not Attempted</span>
+          </div>
+        )}
 
         {/* Per-category breakdown */}
         {Object.keys(byCategory).length > 0 && (
@@ -99,7 +105,7 @@ export function CategorySummary({
                 <div key={cat} className="flex items-center gap-2 text-sm">
                   <span className="flex-1 truncate font-medium">{cat}</span>
                   <div className="flex gap-1.5 flex-shrink-0">
-                    {(["not_attempted", "attempted", "practiced", "mastered"] as const).map(level => {
+                    {(["attempted", "practiced", "mastered", "not_attempted"] as const).map(level => {
                       const count = counts[level] ?? 0;
                       if (count === 0) return null;
                       const meta = LEVEL_META[level];

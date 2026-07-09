@@ -410,7 +410,7 @@ export default function HeatmapPage() {
                   </SelectTrigger>
                   <SelectContent className="z-[9999]">
                     <SelectItem value="all">All levels</SelectItem>
-                    <SelectItem value="mastered">Mastered</SelectItem>
+                    <SelectItem value="mastered">Competent</SelectItem>
                     <SelectItem value="practiced">Practiced</SelectItem>
                     <SelectItem value="attempted">Attempted</SelectItem>
                     <SelectItem value="not_attempted">Not Attempted</SelectItem>

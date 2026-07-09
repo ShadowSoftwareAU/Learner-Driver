@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useListVerifications, useReviewVerification } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -189,6 +190,7 @@ function VerificationRow({ item, onReview }: { item: VerificationItem; onReview:
 
 export default function AdminVerifications() {
   const { data, isLoading, refetch } = useListVerifications({ query: { queryKey: ["/api/admin/verifications"] } });
+  const queryClient = useQueryClient();
   const [reviewing, setReviewing] = useState<VerificationItem | null>(null);
 
   const all = (data ?? []) as VerificationItem[];
@@ -260,7 +262,10 @@ export default function AdminVerifications() {
         <ReviewDialog
           verification={reviewing}
           onClose={() => setReviewing(null)}
-          onDone={() => refetch()}
+          onDone={() => {
+            refetch();
+            queryClient.invalidateQueries({ queryKey: ["/api/admin/verifications"] });
+          }}
         />
       )}
     </SidebarLayout>

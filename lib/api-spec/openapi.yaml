@@ -2940,6 +2940,9 @@ components:
                 type: integer
         preLessonBriefingAcknowledgedAt:
           type: ["string", "null"]
+        preDriveFitnessConfirmedAt:
+          type: ["string", "null"]
+          description: "Timestamp when the pre-drive fitness and sobriety check was confirmed"
         # Report finalization workflow
         finalizationStatus:
           type: string
@@ -3036,6 +3039,9 @@ components:
         acknowledgeBriefing:
           type: boolean
           description: "If true, records pre-lesson briefing acknowledged at now()"
+        acknowledgeFitness:
+          type: boolean
+          description: "If true, records pre-drive fitness and sobriety check confirmed at now()"
 
     AssessmentDetail:
       type: object

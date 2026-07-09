@@ -179,7 +179,7 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-green-700">{masteredCount}</p>
-            <p className="text-xs text-muted-foreground">Mastered</p>
+            <p className="text-xs text-muted-foreground">Competent</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-yellow-700">

@@ -120,15 +120,40 @@ router.get("/handover/:studentId", requireAuth, async (req: any, res): Promise<v
     result: "success",
   }, req);
 
-  const recentAssessments = assessments.slice(0, 5).map(a => ({
-    id: a.id, studentId: a.studentId, instructorId: a.instructorId,
-    studentName: null, instructorName: null,
-    lessonDate: a.lessonDate, durationMinutes: a.durationMinutes,
-    status: a.status, pedalOperator: a.pedalOperator ?? "student",
-    confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext,
-    preLessonBriefingAcknowledgedAt: a.preLessonBriefingAcknowledgedAt ?? null,
-    createdAt: a.createdAt,
+  // Enrich recent assessments with instructor names and maneuver note summaries
+  const recentFive = assessments.slice(0, 5);
+  const recentInstructorIds = [...new Set(recentFive.map(a => a.instructorId))];
+  const recentInstructors = recentInstructorIds.length > 0
+    ? await db.select({ id: instructorsTable.id, fullName: instructorsTable.fullName }).from(instructorsTable)
+        .where(sql`${instructorsTable.id} = ANY(${sql.raw(`ARRAY[${recentInstructorIds.join(",")}]::integer[]`)})`)
+    : [];
+  const instructorNameMap: Record<number, string> = {};
+  for (const i of recentInstructors) instructorNameMap[i.id] = i.fullName;
+
+  const recentAssessments = await Promise.all(recentFive.map(async (a) => {
+    // Collect maneuver notes for this assessment
+    const mNotes = allResults
+      .filter(r => r.assessmentId === a.id && r.notes)
+      .map(r => r.notes as string);
+    return {
+      id: a.id, studentId: a.studentId, instructorId: a.instructorId,
+      studentName: null, instructorName: instructorNameMap[a.instructorId] ?? null,
+      lessonDate: a.lessonDate, durationMinutes: a.durationMinutes,
+      status: a.status, pedalOperator: a.pedalOperator ?? "student",
+      confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext,
+      maneuverNoteSummary: mNotes.length > 0 ? mNotes.join(" | ") : null,
+      preLessonBriefingAcknowledgedAt: a.preLessonBriefingAcknowledgedAt ?? null,
+      createdAt: a.createdAt,
+    };
   }));
+
+  // Expose the logged-in instructor's own ID so the frontend can determine ownership
+  let currentInstructorId: number | null = null;
+  if (user.role === "instructor") {
+    const [selfInstructor] = await db.select({ id: instructorsTable.id }).from(instructorsTable)
+      .where(eq(instructorsTable.userId, user.id));
+    currentInstructorId = selfInstructor?.id ?? null;
+  }
 
   res.json({
     student: formatStudent(student, canSeeMedical, medicalConditions, allergies),
@@ -138,6 +163,7 @@ router.get("/handover/:studentId", requireAuth, async (req: any, res): Promise<v
     skillBreakdown,
     notes,
     recentAssessments,
+    currentInstructorId,
     // Pre-lesson briefing payload
     safetyBriefing: {
       pedalOperator: latestPedalOperator,

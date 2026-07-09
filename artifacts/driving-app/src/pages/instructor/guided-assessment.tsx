@@ -2,7 +2,7 @@ import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListS
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin, Car, Bike, Truck, AlertTriangle } from "lucide-react";
+import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin, Car, Bike, Truck, AlertTriangle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
@@ -55,6 +55,7 @@ const ASSESSMENT_TYPES: { value: AssessmentType; label: string; subtitle: string
 
 export default function GuidedAssessment() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const { data: students, isLoading: isStudentsLoading } = useListStudents();
   const { data: maneuvers, isLoading: isManeuversLoading } = useListManeuvers();
@@ -62,16 +63,24 @@ export default function GuidedAssessment() {
   const saveResults = useSaveManeuverResults();
   const submitForApproval = useSubmitAssessment();
 
+  // Pre-populate from URL params (e.g. from student profile or booking)
+  const urlParams = new URLSearchParams(search);
+  const urlStudentId = urlParams.get("studentId") ?? "";
+  const urlDuration = urlParams.get("durationMinutes") ?? "60";
+
   // Assessment type — must be selected first
   const [assessmentType, setAssessmentType] = useState<AssessmentType>("qsafe");
 
   // Setup state
-  const [studentId, setStudentId] = useState<string>("");
-  const [duration, setDuration] = useState("60");
+  const [studentId, setStudentId] = useState<string>(urlStudentId);
+  const [duration, setDuration] = useState(urlDuration);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Pedal control — required before saving
   const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
+
+  // Pre-drive fitness confirmation — must be acknowledged before assessment can proceed
+  const [fitnessConfirmed, setFitnessConfirmed] = useState(false);
 
   // Flow state — starts at "type" selection
   const [step, setStep] = useState<GuidedStep>("type");
@@ -299,7 +308,8 @@ export default function GuidedAssessment() {
           confidenceNote,
           focusAreasNext: focusAreas,
           routePath: routePointsRef.current.length > 0 ? routePointsRef.current : undefined,
-        }
+          acknowledgeFitness: fitnessConfirmed ? true : undefined,
+        } as any
       });
 
       const maneuverResultsArray = Object.entries(results).map(([id, level]) => ({
@@ -487,6 +497,31 @@ export default function GuidedAssessment() {
             </CardContent>
           </Card>
 
+          {/* Pre-drive fitness & sobriety check — must be acknowledged before maneuver selection */}
+          <Card className={fitnessConfirmed ? "border-green-300 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}>
+            <CardContent className="p-6">
+              <div className="flex items-start gap-4">
+                <ShieldCheck className={`w-6 h-6 mt-0.5 shrink-0 ${fitnessConfirmed ? "text-green-600" : "text-amber-600"}`} />
+                <div className="flex-1 space-y-3">
+                  <div>
+                    <p className="font-semibold text-base">Pre-drive Safety Check</p>
+                    <p className="text-sm text-muted-foreground mt-0.5">Must be confirmed before the assessment can begin.</p>
+                  </div>
+                  <label className="flex items-start gap-3 cursor-pointer group">
+                    <Checkbox
+                      checked={fitnessConfirmed}
+                      onCheckedChange={(v) => setFitnessConfirmed(!!v)}
+                      className="mt-0.5 h-5 w-5"
+                    />
+                    <span className="text-sm leading-relaxed group-hover:text-foreground transition-colors">
+                      Student confirms they are well-rested, not stressed, and not affected by any medication, alcohol, or drugs.
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <PreviousLessonCard
             studentId={studentId ? parseInt(studentId) : null}
             onUseFocus={(focus) => {
@@ -506,7 +541,7 @@ export default function GuidedAssessment() {
             <Button
               className="flex-1 h-16 text-lg"
               onClick={() => setStep("select")}
-              disabled={!studentId || !pedalOperator}
+              disabled={!studentId || !pedalOperator || !fitnessConfirmed}
             >
               Choose Maneuvers <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
@@ -647,7 +682,7 @@ export default function GuidedAssessment() {
                         )}
                         {currentManeuver.masteryDefinition && (
                           <div>
-                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Mastery Definition</h4>
+                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Competency Definition</h4>
                             <p className="text-sm text-foreground whitespace-pre-wrap">{currentManeuver.masteryDefinition}</p>
                           </div>
                         )}

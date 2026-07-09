@@ -1,16 +1,17 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle, Car, Bike, Truck, AlertTriangle } from "lucide-react";
+import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle, Car, Bike, Truck, AlertTriangle, ShieldCheck } from "lucide-react";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useLocation, Link } from "wouter";
+import { useLocation, useSearch, Link } from "wouter";
 import { useState, useMemo } from "react";
 import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
@@ -47,18 +48,25 @@ const ASSESSMENT_TYPES: { value: AssessmentType; label: string; subtitle: string
 
 export default function NewAssessment() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
   const { toast } = useToast();
   const { data: students, isLoading: isStudentsLoading } = useListStudents();
   const { data: maneuvers, isLoading: isManeuversLoading } = useListManeuvers();
   const createAssessment = useCreateAssessment();
   const saveResults = useSaveManeuverResults();
 
+  // Pre-populate from URL params (e.g. from student profile or booking)
+  const urlParams = new URLSearchParams(search);
+  const urlStudentId = urlParams.get("studentId") ?? "";
+  const urlDuration = urlParams.get("durationMinutes") ?? "60";
+
   const [assessmentType, setAssessmentType] = useState<AssessmentType>("qsafe");
-  const [studentId, setStudentId] = useState<string>("");
-  const [duration, setDuration] = useState("60");
+  const [studentId, setStudentId] = useState<string>(urlStudentId);
+  const [duration, setDuration] = useState(urlDuration);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
+  const [fitnessConfirmed, setFitnessConfirmed] = useState(false);
   const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>({});
   const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>({});
   const [expandedManeuver, setExpandedManeuver] = useState<number | null>(null);
@@ -96,6 +104,10 @@ export default function NewAssessment() {
       toast({ title: "Pedal control required", description: "Please select who controls the pedals for this lesson.", variant: "destructive" });
       return;
     }
+    if (!fitnessConfirmed) {
+      toast({ title: "Fitness check required", description: "Please confirm the pre-drive fitness check before saving.", variant: "destructive" });
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -108,7 +120,8 @@ export default function NewAssessment() {
           pedalOperator: pedalOperator || undefined,
           confidenceNote,
           focusAreasNext: focusAreas,
-        }
+          acknowledgeFitness: true,
+        } as any
       });
 
       const maneuverResultsArray = Object.entries(results).map(([id, level]) => ({
@@ -252,6 +265,31 @@ export default function NewAssessment() {
           </CardContent>
         </Card>
 
+        {/* Pre-drive fitness & sobriety check — must be acknowledged before assessment can be saved */}
+        <Card className={fitnessConfirmed ? "border-green-300 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}>
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <ShieldCheck className={`w-6 h-6 mt-0.5 shrink-0 ${fitnessConfirmed ? "text-green-600" : "text-amber-600"}`} />
+              <div className="flex-1 space-y-3">
+                <div>
+                  <p className="font-semibold text-base">Pre-drive Safety Check</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">Must be confirmed before the assessment can be saved.</p>
+                </div>
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <Checkbox
+                    checked={fitnessConfirmed}
+                    onCheckedChange={(v) => setFitnessConfirmed(!!v)}
+                    className="mt-0.5 h-5 w-5"
+                  />
+                  <span className="text-sm leading-relaxed group-hover:text-foreground transition-colors">
+                    Student confirms they are well-rested, not stressed, and not affected by any medication, alcohol, or drugs.
+                  </span>
+                </label>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <PreviousLessonCard
           studentId={studentId ? parseInt(studentId) : null}
           onUseFocus={(focus) => {
@@ -291,7 +329,7 @@ export default function NewAssessment() {
                               )}
                               {m.masteryDefinition && (
                                 <div>
-                                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Mastery Definition</h4>
+                                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Competency Definition</h4>
                                   <p className="text-sm text-foreground whitespace-pre-wrap">{m.masteryDefinition}</p>
                                 </div>
                               )}
@@ -398,7 +436,7 @@ export default function NewAssessment() {
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
           <Button variant="outline" onClick={() => setLocation("/instructor/students")} className="h-16 text-base px-6">Cancel</Button>
-          <Button onClick={handleSave} disabled={isSubmitting || !studentId || !pedalOperator} className="h-16 text-base px-6">
+          <Button onClick={handleSave} disabled={isSubmitting || !studentId || !pedalOperator || !fitnessConfirmed} className="h-16 text-base px-6">
             {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
             Save Assessment
           </Button>

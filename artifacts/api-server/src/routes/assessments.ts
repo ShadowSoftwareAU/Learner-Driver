@@ -22,6 +22,7 @@ const createAssessmentBody = z.object({
   confidenceNote: z.string().max(5000).optional(),
   focusAreasNext: z.string().max(2000).optional(),
   routePath: z.array(routePointSchema).optional().nullable(),
+  acknowledgeFitness: z.boolean().optional(),
 });
 
 const patchAssessmentBody = z.object({
@@ -32,6 +33,7 @@ const patchAssessmentBody = z.object({
   routePath: z.array(routePointSchema).optional().nullable(),
   pedalOperator: z.enum(["student", "instructor", "shared"]).optional(),
   acknowledgeBriefing: z.boolean().optional(),
+  acknowledgeFitness: z.boolean().optional(),
 });
 
 const maneuverResultItemSchema = z.object({
@@ -92,7 +94,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, pedalOperator } = parsed.data;
+  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, pedalOperator, acknowledgeFitness } = parsed.data;
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
@@ -115,6 +117,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     }
   }
 
+  const now = new Date();
   const [a] = await db.insert(assessmentsTable).values({
     studentId, instructorId: instructor.id,
     lessonDate, durationMinutes,
@@ -124,6 +127,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     focusAreasNext: focusAreasNext ?? null,
     routePath: routePath ?? null,
     status: "in_progress",
+    ...(acknowledgeFitness === true ? { preDriveFitnessConfirmedAt: now, preDriveFitnessConfirmedByUserId: user.id } : {}),
   }).returning();
 
   const hours = durationMinutes / 60;
@@ -238,7 +242,7 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
     res.status(400).json({ error: "Invalid request body", issues: bodyParsed.error.issues });
     return;
   }
-  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, pedalOperator, acknowledgeBriefing } = bodyParsed.data;
+  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, pedalOperator, acknowledgeBriefing, acknowledgeFitness } = bodyParsed.data;
 
   // Scan any updated free-text fields
   const textsToScan = [confidenceNote, focusAreasNext].filter(Boolean).join(" ");
@@ -269,6 +273,10 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
   if (acknowledgeBriefing === true && !a.preLessonBriefingAcknowledgedAt) {
     updates.preLessonBriefingAcknowledgedAt = new Date();
     updates.preLessonBriefingAcknowledgedBy = user.id;
+  }
+  if (acknowledgeFitness === true && !a.preDriveFitnessConfirmedAt) {
+    updates.preDriveFitnessConfirmedAt = new Date();
+    updates.preDriveFitnessConfirmedByUserId = user.id;
   }
 
   const [updated] = await db.update(assessmentsTable).set(updates).where(eq(assessmentsTable.id, id)).returning();
@@ -480,6 +488,7 @@ function formatAssessment(a: any) {
     focusAreasNext: a.focusAreasNext ?? null,
     routePath: a.routePath ?? null,
     preLessonBriefingAcknowledgedAt: a.preLessonBriefingAcknowledgedAt ?? null,
+    preDriveFitnessConfirmedAt: a.preDriveFitnessConfirmedAt ?? null,
     finalizationStatus: a.finalizationStatus ?? "draft",
     approvedAt: a.approvedAt ?? null,
     approvedByUserId: a.approvedByUserId ?? null,

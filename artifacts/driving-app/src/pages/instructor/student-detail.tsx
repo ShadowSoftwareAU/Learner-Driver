@@ -160,7 +160,7 @@ export default function InstructorStudentDetail() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Maneuvers Mastered</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Maneuvers Competent</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -282,7 +282,7 @@ export default function InstructorStudentDetail() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-between text-sm">
-                      <span className="text-green-600 font-medium">{skill.mastered} Mastered</span>
+                      <span className="text-green-600 font-medium">{skill.mastered} Competent</span>
                       <span className="text-yellow-600 font-medium">{skill.practicing} Practicing</span>
                       <span className="text-gray-400">{skill.notStarted} Not Started</span>
                     </div>
@@ -317,7 +317,7 @@ export default function InstructorStudentDetail() {
                 {lessonPlan.lessonFocus?.length === 0 ? (
                   <div className="text-center py-12 border border-dashed rounded-lg">
                     <Award className="w-10 h-10 text-green-500 mx-auto mb-3" />
-                    <p className="font-semibold text-green-700">All skills mastered!</p>
+                    <p className="font-semibold text-green-700">All skills competent!</p>
                     <p className="text-sm text-muted-foreground mt-1">This student is ready for a QSAFE pre-test assessment.</p>
                   </div>
                 ) : (

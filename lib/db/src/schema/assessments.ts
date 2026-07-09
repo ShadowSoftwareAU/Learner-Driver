@@ -21,6 +21,9 @@ export const assessmentsTable = pgTable("assessments", {
   // Pre-lesson briefing acknowledgement
   preLessonBriefingAcknowledgedAt: timestamp("pre_lesson_briefing_acknowledged_at", { withTimezone: true }),
   preLessonBriefingAcknowledgedBy: integer("pre_lesson_briefing_acknowledged_by"),
+  // Pre-drive fitness & sobriety confirmation (Wave 1 — safety-critical)
+  preDriveFitnessConfirmedAt: timestamp("pre_drive_fitness_confirmed_at", { withTimezone: true }),
+  preDriveFitnessConfirmedByUserId: integer("pre_drive_fitness_confirmed_by_user_id"),
   // Assessment program type — determines which checklist/regulations apply
   assessmentType: text("assessment_type").notNull().default("qsafe"), // qsafe | qride | heavy_vehicle
   // Report finalization workflow

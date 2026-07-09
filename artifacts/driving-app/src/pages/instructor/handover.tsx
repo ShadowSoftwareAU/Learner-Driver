@@ -1,7 +1,7 @@
 import { useGetHandover, getGetHandoverQueryKey } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Clock, Award, FileText } from "lucide-react";
+import { Loader2, ArrowLeft, Clock, Award, FileText, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
@@ -91,7 +91,7 @@ export default function HandoverView() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Maneuvers Mastered</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Maneuvers Competent</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -131,15 +131,37 @@ export default function HandoverView() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {handover.recentAssessments?.map(assessment => (
-                <div key={assessment.id} className="p-4 rounded-lg border border-border bg-gray-50/50">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="font-semibold">{format(new Date(assessment.lessonDate), 'PPP')}</span>
-                    <span className="text-sm text-muted-foreground">{assessment.instructorName}</span>
+              {handover.recentAssessments?.map(assessment => {
+                const currentInstructorId = (handover as any).currentInstructorId as number | null;
+                const isOwn = currentInstructorId != null && assessment.instructorId === currentInstructorId;
+                const maneuverNoteSummary = (assessment as any).maneuverNoteSummary as string | null;
+                const inner = (
+                  <div className={`p-4 rounded-lg border border-border bg-gray-50/50 transition-colors ${isOwn ? "hover:border-primary/50 hover:bg-primary/5 cursor-pointer" : ""}`}>
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="font-semibold">{format(new Date(assessment.lessonDate), 'PPP')}</span>
+                      <div className="flex items-center gap-1.5">
+                        {assessment.instructorName && (
+                          <span className="text-sm text-muted-foreground">{assessment.instructorName}</span>
+                        )}
+                        {isOwn && <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </div>
+                    </div>
+                    <p className="text-sm mt-1"><span className="font-medium">Focus next:</span> {assessment.focusAreasNext || 'None specified'}</p>
+                    {maneuverNoteSummary && (
+                      <p className="text-xs text-muted-foreground mt-2 border-t border-border pt-2 line-clamp-2">
+                        <span className="font-medium">Notes:</span> {maneuverNoteSummary}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm mt-2"><span className="font-medium">Focus next:</span> {assessment.focusAreasNext || 'None specified'}</p>
-                </div>
-              ))}
+                );
+                return isOwn ? (
+                  <Link key={assessment.id} href={`/instructor/assessments/${assessment.id}`}>
+                    {inner}
+                  </Link>
+                ) : (
+                  <div key={assessment.id}>{inner}</div>
+                );
+              })}
               {(!handover.recentAssessments || handover.recentAssessments.length === 0) && (
                 <p className="text-muted-foreground text-center py-4">No recent assessments.</p>
               )}

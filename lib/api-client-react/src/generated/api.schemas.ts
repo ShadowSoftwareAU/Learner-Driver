@@ -276,6 +276,11 @@ export interface Assessment {
   routePath?: AssessmentRoutePathItem[] | null;
   /** @nullable */
   preLessonBriefingAcknowledgedAt?: string | null;
+  /**
+     * Timestamp when the pre-drive fitness and sobriety check was confirmed
+     * @nullable
+     */
+  preDriveFitnessConfirmedAt?: string | null;
   finalizationStatus?: AssessmentFinalizationStatus;
   /** @nullable */
   approvedAt?: string | null;
@@ -585,6 +590,8 @@ export interface AssessmentUpdate {
   routePath?: AssessmentUpdateRoutePathItem[] | null;
   /** If true, records pre-lesson briefing acknowledged at now() */
   acknowledgeBriefing?: boolean;
+  /** If true, records pre-drive fitness and sobriety check confirmed at now() */
+  acknowledgeFitness?: boolean;
 }
 
 export type AssessmentDetailStatus = typeof AssessmentDetailStatus[keyof typeof AssessmentDetailStatus];
