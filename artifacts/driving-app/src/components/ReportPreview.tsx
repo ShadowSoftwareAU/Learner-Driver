@@ -2,7 +2,8 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star } from "lucide-react";
+import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star, MapPin } from "lucide-react";
+import AssessmentRouteMap from "@/components/AssessmentRouteMap";
 
 // ─── Competency helpers ───────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ type ManeuverResult = {
   category?: string | null;
   competencyLevel: string;
   notes?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 };
 
 const ASSESSMENT_TYPE_LABELS: Record<string, string> = {
@@ -61,6 +64,7 @@ type ReportPreviewProps = {
     reportDispatchedAt?: string | null;
     reportDispatchedTo?: string | null;
     maneuverResults?: ManeuverResult[];
+    routePath?: Array<{ lat: number; lng: number; ts: number }> | null;
   };
   /** Compact mode for inline rendering inside a Sheet — omits outer padding */
   compact?: boolean;
@@ -93,6 +97,20 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
     try { return format(new Date(assessment.lessonDate), "EEEE d MMMM yyyy"); }
     catch { return assessment.lessonDate; }
   }, [assessment.lessonDate]);
+
+  const maneuverPoints = useMemo(() => {
+    return (assessment.maneuverResults ?? [])
+      .filter(r => typeof r.lat === "number" && typeof r.lng === "number")
+      .map(r => ({
+        lat: r.lat as number,
+        lng: r.lng as number,
+        maneuverId: r.maneuverId,
+        name: r.maneuverName ?? "Maneuver",
+        level: r.competencyLevel,
+      }));
+  }, [assessment.maneuverResults]);
+
+  const hasRoutePath = (assessment.routePath?.length ?? 0) > 0 || maneuverPoints.length > 0;
 
   const wrapClass = compact ? "space-y-5" : "space-y-5 p-1";
 
@@ -247,6 +265,23 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
             {assessment.focusAreasNext || <span className="text-muted-foreground italic">No focus areas provided.</span>}
           </p>
         </div>
+      </div>
+
+      {/* Lesson route map — GPS trail recorded during the drive */}
+      <Separator />
+      <div className="space-y-2">
+        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+          <MapPin className="w-3.5 h-3.5" /> Lesson Route
+        </h3>
+        <AssessmentRouteMap
+          routePath={assessment.routePath}
+          maneuverPoints={maneuverPoints}
+        />
+        {!hasRoutePath && (
+          <p className="text-xs text-muted-foreground">
+            No GPS route was recorded for this lesson.
+          </p>
+        )}
       </div>
 
       {/* Dispatch record */}

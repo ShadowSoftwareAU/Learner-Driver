@@ -84,6 +84,54 @@ export async function sendEmail(
     .where(eq(notificationsTable.id, row.id));
 }
 
+/**
+ * Send an email to a recipient who does NOT have a Learner Log user account
+ * (e.g. a parent/guardian, a partner school's inbox, or an external group).
+ * Does not touch notificationsTable (which requires a userId) — logs via the
+ * shared logger instead so delivery attempts are still traceable.
+ */
+export async function sendExternalEmail(
+  to: string,
+  subject: string,
+  bodyHtml: string,
+  bodyText: string,
+): Promise<{ delivered: boolean }> {
+  const provider = process.env.EMAIL_PROVIDER;
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.EMAIL_FROM ?? "Learner Log <noreply@learnerlog.app>";
+
+  if (!provider || !apiKey) {
+    logger.info({ event: "external_email_skipped_no_provider", to, subject });
+    return { delivered: false };
+  }
+
+  if (provider === "resend") {
+    try {
+      const { Resend } = await import("resend");
+      const resend = new Resend(apiKey);
+      const { error } = await resend.emails.send({
+        from: fromAddress,
+        to,
+        subject,
+        html: bodyHtml,
+        text: bodyText,
+      });
+      if (error) {
+        logger.error({ event: "external_email_send_failed", provider, to, subject, error });
+        return { delivered: false };
+      }
+      logger.info({ event: "external_email_sent", provider, to, subject });
+      return { delivered: true };
+    } catch (err) {
+      logger.error({ event: "external_email_send_error", provider, to, subject, err });
+      return { delivered: false };
+    }
+  }
+
+  logger.warn({ event: "external_email_unknown_provider", provider, to, subject });
+  return { delivered: false };
+}
+
 function buildEmailHtml(payload: NotificationPayload): string {
   const body = payload.body.replace(/\n/g, "<br>");
   return `<!DOCTYPE html>

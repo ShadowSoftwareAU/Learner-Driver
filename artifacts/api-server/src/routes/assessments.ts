@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
 import { z } from "zod";
-import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable, sessionFeedbackTable, usersTable } from "@workspace/db";
+import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable, sessionFeedbackTable, usersTable, schoolInstructorsTable, handoverNotesTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
 import { scanContent } from "../lib/contentFiltering/scanContent";
 import { sendNotification } from "../lib/notifications/notificationService";
+import { sendExternalEmail } from "../lib/notifications/emailChannel";
 
 const router = Router();
 
@@ -432,8 +433,41 @@ router.post("/assessments/:id/approve", requireAuth, async (req: any, res): Prom
     return;
   }
 
-  const { dispatchEmails } = bodyParsed.data;
+  const { dispatchEmails: manualDispatchEmails } = bodyParsed.data;
   const now = new Date();
+
+  // ── Build the full recipient list ─────────────────────────────────────────
+  // Always include: the instructor who ran the lesson, the guardian/parent
+  // and any external school/group registered on the student, and — if the
+  // student was booked through a driving school (not an independent
+  // instructor) — that school's admins.
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, a.studentId));
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.id, a.instructorId));
+
+  const autoRecipients = new Set<string>();
+  if (student?.guardianEmail) autoRecipients.add(student.guardianEmail);
+  if (student?.pcycSchoolEmail) autoRecipients.add(student.pcycSchoolEmail);
+  if (instructor?.email) autoRecipients.add(instructor.email);
+
+  if (student?.schoolId) {
+    const schoolAdminLinks = await db.select({ instructorId: schoolInstructorsTable.instructorId })
+      .from(schoolInstructorsTable)
+      .where(and(
+        eq(schoolInstructorsTable.schoolId, student.schoolId),
+        eq(schoolInstructorsTable.roleWithinSchool, "school_admin"),
+        eq(schoolInstructorsTable.status, "active"),
+      ));
+    if (schoolAdminLinks.length > 0) {
+      const adminInstructors = await db.select({ email: instructorsTable.email })
+        .from(instructorsTable)
+        .where(sql`${instructorsTable.id} = ANY(${sql.raw(`ARRAY[${schoolAdminLinks.map(l => l.instructorId).join(",")}]::integer[]`)})`);
+      for (const admin of adminInstructors) {
+        if (admin.email) autoRecipients.add(admin.email);
+      }
+    }
+  }
+
+  const dispatchEmails = Array.from(new Set([...manualDispatchEmails, ...autoRecipients]));
 
   const [updated] = await db.update(assessmentsTable)
     .set({
@@ -449,7 +483,6 @@ router.post("/assessments/:id/approve", requireAuth, async (req: any, res): Prom
   await logAudit({ actorId: user.id, actorRole: user.role, action: "approve_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
 
   // Fire-and-forget notification to student
-  const [student] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, a.studentId));
   if (student?.userId) {
     const [studentUser] = await db.select({ id: usersTable.id, email: usersTable.email }).from(usersTable).where(eq(usersTable.id, student.userId));
     if (studentUser) {
@@ -465,6 +498,35 @@ router.post("/assessments/:id/approve", requireAuth, async (req: any, res): Prom
         },
       }).catch(() => null);
     }
+  }
+
+  // Fire-and-forget dispatch to guardian / school / external group emails —
+  // includes the report summary plus the student's latest handover note so
+  // it can be used for further training.
+  if (dispatchEmails.length > 0 && student) {
+    const [latestHandoverNote] = await db.select().from(handoverNotesTable)
+      .where(and(eq(handoverNotesTable.studentId, a.studentId), eq(handoverNotesTable.contentStatus, "approved")))
+      .orderBy(desc(handoverNotesTable.createdAt))
+      .limit(1);
+
+    const reportUrl = `${process.env.APP_BASE_URL ?? ""}/student/dashboard`;
+    const subject = `Lesson report ready — ${student.fullName}`;
+    const lines = [
+      `A new lesson assessment report is ready for ${student.fullName}.`,
+      `Instructor: ${instructor?.fullName ?? "Unknown"}`,
+      `Date: ${a.lessonDate} · Duration: ${a.durationMinutes} minutes`,
+      a.confidenceNote ? `Instructor notes: ${a.confidenceNote}` : null,
+      a.focusAreasNext ? `Focus areas for next lesson: ${a.focusAreasNext}` : null,
+      latestHandoverNote ? `Handover note: ${latestHandoverNote.note}` : null,
+    ].filter(Boolean) as string[];
+
+    const bodyText = lines.join("\n\n");
+    const bodyHtml = `<div>${lines.map(l => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`).join("")}</div>`;
+
+    for (const email of dispatchEmails) {
+      sendExternalEmail(email, subject, bodyHtml, bodyText).catch(() => null);
+    }
+    void reportUrl; // reserved for a deep-link once a public report view exists
   }
 
   res.json(formatAssessment(updated));
