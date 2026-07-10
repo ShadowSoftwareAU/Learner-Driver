@@ -2402,6 +2402,51 @@ export const StripeWebhookResponse = zod.object({
 
 
 /**
+ * @summary Get the current viewer's credit balance and recent transactions
+ */
+export const GetMyWalletResponse = zod.object({
+  "balanceCents": zod.number(),
+  "lessonPriceCents": zod.number(),
+  "creditPackOptionsCents": zod.array(zod.number()),
+  "transactions": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "viewerUserId": zod.number().optional(),
+  "type": zod.string().optional(),
+  "amountCents": zod.number().optional(),
+  "bookingId": zod.number().nullish(),
+  "studentId": zod.number().nullish(),
+  "status": zod.string().optional(),
+  "createdAt": zod.string().optional()
+}))
+})
+
+
+/**
+ * @summary Create a Stripe Checkout session to top up wallet credits
+ */
+export const CreateWalletCheckoutBody = zod.object({
+  "packCents": zod.number()
+})
+
+export const CreateWalletCheckoutResponse = zod.object({
+  "checkoutUrl": zod.string().optional()
+})
+
+
+/**
+ * @summary Pay for a booking using wallet credits
+ */
+export const PayBookingWithCreditsParams = zod.object({
+  "bookingId": zod.coerce.number()
+})
+
+export const PayBookingWithCreditsResponse = zod.object({
+  "ok": zod.boolean().optional(),
+  "balanceCents": zod.number().optional()
+})
+
+
+/**
  * @summary Get demo mode status (super_admin only)
  */
 export const GetDemoStatusResponse = zod.object({

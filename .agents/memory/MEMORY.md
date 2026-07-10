@@ -7,3 +7,4 @@
 - [Dialog z-index & Leaflet](dialog-leaflet-zindex.md) — Radix Dialog uses z-50 (z-index:50); Leaflet controls sit at 1000 in document stacking context; shadcn dialog.tsx bumped to z-[2000].
 - [Map click + Radix Dialog](map-click-dialog.md) — Leaflet click event propagates and triggers Radix outside-click dismiss; fix: setTimeout(()=>setState(...), 0) to defer state update past the click event.
 - [Report dispatch recipients](report-dispatch-recipients.md) — non-account emails (guardian/school) need a separate sendExternalEmail() path, not the notificationsTable-backed sendEmail().
+- [Stripe with manual keys](stripe-manual-keys.md) — when user declines the connector and supplies STRIPE_SECRET_KEY/WEBHOOK_SECRET directly, use plain `stripe` SDK, not stripe-replit-sync; webhook route needs express.raw() before express.json().

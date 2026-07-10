@@ -53,6 +53,12 @@ export const PRICING = {
   SCHOOL_ADDITIONAL_SEAT_MONTHLY: 15_00, // $15.00 per seat
 } as const;
 
+/** Guardian wallet — credit pack options for topping up, and standard lesson price */
+export const WALLET = {
+  CREDIT_PACKS_CENTS: [5_000, 10_000, 20_000] as const, // $50 / $100 / $200
+  STANDARD_LESSON_PRICE_CENTS: 75_00, // $75.00 flat rate per booked lesson, paid via credits
+} as const;
+
 /** Roles — tolerate legacy 'admin' as alias during rollout */
 export const ROLES = {
   STUDENT: "student",

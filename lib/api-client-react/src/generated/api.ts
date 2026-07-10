@@ -38,6 +38,8 @@ import type {
   CreateBookingChangeRequestBody,
   CreateModerationExport201,
   CreateOrUpdateSubscriptionBody,
+  CreateWalletCheckout200,
+  CreateWalletCheckoutBody,
   CreateZone,
   DeleteInstructorVehicle200,
   DemoResetInput,
@@ -95,6 +97,7 @@ import type {
   NotificationPreferencesPatch,
   OkResponse,
   PatchBookingInput,
+  PayBookingWithCredits200,
   PushToken,
   PushTokenInput,
   ReleaseModerationCaseBody,
@@ -134,7 +137,8 @@ import type {
   VerificationWithDocs,
   ViewerLinkRequest,
   ViewerStudentDashboard,
-  ViewerStudentSummary
+  ViewerStudentSummary,
+  WalletInfo
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -7161,6 +7165,224 @@ export const useStripeWebhook = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getStripeWebhookMutationOptions(options));
+    }
+
+export const getGetMyWalletUrl = () => {
+
+
+
+
+  return `/api/wallet`
+}
+
+/**
+ * @summary Get the current viewer's credit balance and recent transactions
+ */
+export const getMyWallet = async ( options?: RequestInit): Promise<WalletInfo> => {
+
+  return customFetch<WalletInfo>(getGetMyWalletUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyWalletQueryKey = () => {
+    return [
+    `/api/wallet`
+    ] as const;
+    }
+
+
+export const getGetMyWalletQueryOptions = <TData = Awaited<ReturnType<typeof getMyWallet>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyWallet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyWalletQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyWallet>>> = ({ signal }) => getMyWallet({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyWallet>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyWalletQueryResult = NonNullable<Awaited<ReturnType<typeof getMyWallet>>>
+export type GetMyWalletQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the current viewer's credit balance and recent transactions
+ */
+
+export function useGetMyWallet<TData = Awaited<ReturnType<typeof getMyWallet>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyWallet>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyWalletQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateWalletCheckoutUrl = () => {
+
+
+
+
+  return `/api/wallet/checkout`
+}
+
+/**
+ * @summary Create a Stripe Checkout session to top up wallet credits
+ */
+export const createWalletCheckout = async (createWalletCheckoutBody: CreateWalletCheckoutBody, options?: RequestInit): Promise<CreateWalletCheckout200> => {
+
+  return customFetch<CreateWalletCheckout200>(getCreateWalletCheckoutUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      createWalletCheckoutBody,)
+  }
+);}
+
+
+
+
+export const getCreateWalletCheckoutMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWalletCheckout>>, TError,{data: BodyType<CreateWalletCheckoutBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWalletCheckout>>, TError,{data: BodyType<CreateWalletCheckoutBody>}, TContext> => {
+
+const mutationKey = ['createWalletCheckout'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWalletCheckout>>, {data: BodyType<CreateWalletCheckoutBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWalletCheckout(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWalletCheckoutMutationResult = NonNullable<Awaited<ReturnType<typeof createWalletCheckout>>>
+    export type CreateWalletCheckoutMutationBody = BodyType<CreateWalletCheckoutBody>
+    export type CreateWalletCheckoutMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a Stripe Checkout session to top up wallet credits
+ */
+export const useCreateWalletCheckout = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWalletCheckout>>, TError,{data: BodyType<CreateWalletCheckoutBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWalletCheckout>>,
+        TError,
+        {data: BodyType<CreateWalletCheckoutBody>},
+        TContext
+      > => {
+      return useMutation(getCreateWalletCheckoutMutationOptions(options));
+    }
+
+export const getPayBookingWithCreditsUrl = (bookingId: number,) => {
+
+
+
+
+  return `/api/wallet/pay-booking/${bookingId}`
+}
+
+/**
+ * @summary Pay for a booking using wallet credits
+ */
+export const payBookingWithCredits = async (bookingId: number, options?: RequestInit): Promise<PayBookingWithCredits200> => {
+
+  return customFetch<PayBookingWithCredits200>(getPayBookingWithCreditsUrl(bookingId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getPayBookingWithCreditsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payBookingWithCredits>>, TError,{bookingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof payBookingWithCredits>>, TError,{bookingId: number}, TContext> => {
+
+const mutationKey = ['payBookingWithCredits'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof payBookingWithCredits>>, {bookingId: number}> = (props) => {
+          const {bookingId} = props ?? {};
+
+          return  payBookingWithCredits(bookingId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PayBookingWithCreditsMutationResult = NonNullable<Awaited<ReturnType<typeof payBookingWithCredits>>>
+
+    export type PayBookingWithCreditsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Pay for a booking using wallet credits
+ */
+export const usePayBookingWithCredits = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof payBookingWithCredits>>, TError,{bookingId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof payBookingWithCredits>>,
+        TError,
+        {bookingId: number},
+        TContext
+      > => {
+      return useMutation(getPayBookingWithCreditsMutationOptions(options));
     }
 
 export const getGetDemoStatusUrl = () => {

@@ -1779,6 +1779,26 @@ export interface SubscriptionInfo {
   pricingInfo?: SubscriptionInfoPricingInfo;
 }
 
+export interface WalletTransaction {
+  id?: number;
+  viewerUserId?: number;
+  type?: string;
+  amountCents?: number;
+  /** @nullable */
+  bookingId?: number | null;
+  /** @nullable */
+  studentId?: number | null;
+  status?: string;
+  createdAt?: string;
+}
+
+export interface WalletInfo {
+  balanceCents: number;
+  lessonPriceCents: number;
+  creditPackOptionsCents: number[];
+  transactions: WalletTransaction[];
+}
+
 export type EntitlementSummarySource = typeof EntitlementSummarySource[keyof typeof EntitlementSummarySource];
 
 
@@ -2271,6 +2291,19 @@ export type CreateModerationExport201 = {
 export type CreateOrUpdateSubscriptionBody = {
   planCode: string;
   schoolId?: number;
+};
+
+export type CreateWalletCheckoutBody = {
+  packCents: number;
+};
+
+export type CreateWalletCheckout200 = {
+  checkoutUrl?: string;
+};
+
+export type PayBookingWithCredits200 = {
+  ok?: boolean;
+  balanceCents?: number;
 };
 
 export type GetGovNearbyParams = {

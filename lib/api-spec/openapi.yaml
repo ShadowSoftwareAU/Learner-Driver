@@ -40,6 +40,8 @@ tags:
     description: Subscriptions, feature entitlements, and Stripe skeleton
   - name: demo
     description: Demo mode controls (super_admin only)
+  - name: wallet
+    description: Guardian/parent prepaid credit wallet — Stripe top-ups and booking payments
   - name: toilets
     description: Community cleanliness ratings for public toilets (OSM-sourced)
 
@@ -2055,6 +2057,70 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OkResponse"
+
+  # ─── Wallet ───────────────────────────────────────────────────────────────────
+  /wallet:
+    get:
+      operationId: getMyWallet
+      tags: [wallet]
+      summary: Get the current viewer's credit balance and recent transactions
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletInfo"
+
+  /wallet/checkout:
+    post:
+      operationId: createWalletCheckout
+      tags: [wallet]
+      summary: Create a Stripe Checkout session to top up wallet credits
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packCents]
+              properties:
+                packCents:
+                  type: integer
+      responses:
+        "200":
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutUrl:
+                    type: string
+
+  /wallet/pay-booking/{bookingId}:
+    post:
+      operationId: payBookingWithCredits
+      tags: [wallet]
+      summary: Pay for a booking using wallet credits
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Booking paid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  balanceCents:
+                    type: integer
 
   # ─── Demo ─────────────────────────────────────────────────────────────────────
   /demo/status:
@@ -4413,6 +4479,43 @@ components:
               type: integer
             schoolAdditionalSeat:
               type: integer
+
+    WalletTransaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        viewerUserId:
+          type: integer
+        type:
+          type: string
+        amountCents:
+          type: integer
+        bookingId:
+          type: ["integer", "null"]
+        studentId:
+          type: ["integer", "null"]
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    WalletInfo:
+      type: object
+      required: [balanceCents, lessonPriceCents, creditPackOptionsCents, transactions]
+      properties:
+        balanceCents:
+          type: integer
+        lessonPriceCents:
+          type: integer
+        creditPackOptionsCents:
+          type: array
+          items:
+            type: integer
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletTransaction"
 
     EntitlementSummary:
       type: object

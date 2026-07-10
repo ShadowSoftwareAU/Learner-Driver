@@ -10,6 +10,7 @@ import {
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { handleWalletStripeWebhook } from "./routes/wallet";
 
 const app: Express = express();
 
@@ -36,6 +37,21 @@ app.use(
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
 app.use(cors({ credentials: true, origin: true }));
+
+// Stripe webhook needs the raw request body for signature verification —
+// must be registered BEFORE express.json() below.
+app.post("/api/wallet/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const signature = req.headers["stripe-signature"];
+  if (!signature) { res.status(400).json({ error: "Missing Stripe-Signature header" }); return; }
+  try {
+    await handleWalletStripeWebhook(req.body as Buffer, Array.isArray(signature) ? signature[0] : signature);
+    res.json({ received: true });
+  } catch (err) {
+    logger.error({ event: "wallet_webhook_error", err });
+    res.status(400).json({ error: "Webhook verification failed" });
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
