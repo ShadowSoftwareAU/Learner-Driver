@@ -233,7 +233,7 @@ router.patch("/admin/verifications/:id", requireAuth, requireAdmin, async (req: 
   res.json(updated);
 });
 
-async function notifyInstructorOfReview({
+export async function notifyInstructorOfReview({
   verificationId,
   instructorId,
   action,
@@ -276,7 +276,7 @@ async function notifyInstructorOfReview({
   });
 }
 
-function buildReviewMessage(action: string, notes?: string): { title: string; body: string } {
+export function buildReviewMessage(action: string, notes?: string): { title: string; body: string } {
   const notesLine = notes ? `\n\nReviewer notes: ${notes}` : "";
 
   if (action === "approved") {
