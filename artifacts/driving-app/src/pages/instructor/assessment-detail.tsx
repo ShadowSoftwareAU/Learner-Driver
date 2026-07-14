@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck } from "lucide-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -335,17 +335,27 @@ export default function ViewAssessment() {
               <ReportPreview assessment={assessment as any} compact />
             </div>
           </ScrollArea>
-          {finStatus === "pending_approval" && (
-            <div className="px-6 py-4 border-t bg-white shrink-0 flex justify-end gap-3">
+          <div className="px-6 py-4 border-t bg-white shrink-0 flex items-center justify-between gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => window.open(`${import.meta.env.BASE_URL}instructor/assessments/${assessment.id}/print`, "_blank")}
+            >
+              <Download className="w-4 h-4" /> Download PDF
+            </Button>
+            <div className="flex items-center gap-3">
               <Button variant="outline" onClick={() => setPreviewOpen(false)}>Close</Button>
-              <Button
-                className="gap-2"
-                onClick={() => { setPreviewOpen(false); setApproveOpen(true); }}
-              >
-                <Send className="w-4 h-4" /> Approve & Dispatch
-              </Button>
+              {finStatus === "pending_approval" && (
+                <Button
+                  className="gap-2"
+                  onClick={() => { setPreviewOpen(false); setApproveOpen(true); }}
+                >
+                  <Send className="w-4 h-4" /> Approve & Dispatch
+                </Button>
+              )}
             </div>
-          )}
+          </div>
         </SheetContent>
       </Sheet>
 

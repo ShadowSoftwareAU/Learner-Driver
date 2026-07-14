@@ -25,6 +25,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
+import { GeolocationBanner } from "@/components/GeolocationBanner";
 
 export function SidebarLayout({ children }: { children: React.ReactNode }) {
   const { data: user } = useGetMe();
@@ -152,6 +153,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 min-w-0 overflow-auto">
+          <GeolocationBanner role={user?.role ?? undefined} />
           <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
             {children}
           </div>

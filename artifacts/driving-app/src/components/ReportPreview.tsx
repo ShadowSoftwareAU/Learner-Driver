@@ -273,12 +273,21 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5" /> Lesson Route
         </h3>
-        <AssessmentRouteMap
-          routePath={assessment.routePath}
-          maneuverPoints={maneuverPoints}
-        />
+        {/* Map is hidden in print — Leaflet canvas doesn't reproduce in PDF */}
+        <div className="print:hidden">
+          <AssessmentRouteMap
+            routePath={assessment.routePath}
+            maneuverPoints={maneuverPoints}
+          />
+        </div>
+        {/* Print-only substitute */}
+        <p className="hidden print:block text-xs text-muted-foreground border border-dashed border-gray-300 rounded px-3 py-4 text-center">
+          {hasRoutePath
+            ? "GPS route recorded — view the interactive map in the Learner Log app."
+            : "No GPS route was recorded for this lesson."}
+        </p>
         {!hasRoutePath && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground print:hidden">
             No GPS route was recorded for this lesson.
           </p>
         )}

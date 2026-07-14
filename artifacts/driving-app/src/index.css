@@ -301,6 +301,33 @@
    after it receives keyboard focus (e.g. after clicking to pan or zoom).
    Leaflet adds tabindex="0" for keyboard nav; browsers default to a blue
    outline on :focus which bleeds out of the card's overflow:hidden boundary. */
+/* ── Print / PDF styles ─────────────────────────────────────────────────────
+   Applied when the browser's print dialog is open (window.print()) or when
+   the assessment-print page is used via Save as PDF. Hides all app chrome so
+   only the report content is printed. */
+@media print {
+  /* Remove page margins browsers impose by default */
+  @page {
+    margin: 1.5cm 1.5cm;
+  }
+
+  /* Hide Leaflet controls — the map div itself is already hidden via print:hidden */
+  .leaflet-control-container {
+    display: none !important;
+  }
+
+  /* Ensure white background and black text — some browsers print grey backgrounds */
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  /* Avoid page breaks mid-card */
+  .space-y-5 > * {
+    page-break-inside: avoid;
+  }
+}
+
 .leaflet-container:focus,
 .leaflet-container:focus-visible {
   outline: none;
