@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useLocation, useSearch, Link } from "wouter";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
 import { PreviousLessonCard } from "@/components/PreviousLessonCard";
@@ -54,6 +54,19 @@ export default function NewAssessment() {
   const { data: maneuvers, isLoading: isManeuversLoading } = useListManeuvers();
   const createAssessment = useCreateAssessment();
   const saveResults = useSaveManeuverResults();
+
+  // Request geolocation permission immediately on page load so the OS dialog
+  // appears before the instructor fills in the form, not after submission.
+  // Web browsers only capture location while the tab is active — no background tracking.
+  const currentPositionRef = useRef<GeolocationCoordinates | null>(null);
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { currentPositionRef.current = pos.coords; },
+      () => { /* denied or unavailable — form submission still works without GPS */ },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
 
   // Pre-populate from URL params (e.g. from student profile or booking)
   const urlParams = new URLSearchParams(search);
