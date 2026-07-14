@@ -99,6 +99,19 @@ export default function GuidedAssessment() {
   const trackingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [maneuverLocations, setManeuverLocations] = useState<Record<number, { lat: number; lng: number }>>({});
 
+  // Proactively request geolocation permission on page load so the OS dialog
+  // appears before the lesson starts, not mid-lesson when tracking begins.
+  // The one-shot position reading is discarded — this is purely a permission warm-up.
+  // Web browsers only track location while the tab is active (no background access).
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => { currentPositionRef.current = pos.coords; },
+      () => { /* permission denied or unavailable — tracking will be skipped */ },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, []);
+
   // ── Draft persistence (Fix #1: lesson data survives network drops) ──────────
   const { saveDraft, loadDraft, clearDraft } = useLessonDraft();
   const [hasDraft, setHasDraft] = useState(false);
