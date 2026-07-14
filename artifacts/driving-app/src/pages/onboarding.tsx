@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoCaptureField } from "@/components/PhotoCaptureField";
-import { Car, GraduationCap, Building2, Loader2, ArrowLeft, Info } from "lucide-react";
+import { Car, GraduationCap, Building2, Users, Loader2, ArrowLeft, Info } from "lucide-react";
 import { RoleUpdateRole } from "@/lib/enums";
 
 const AU_STATES = [
@@ -260,13 +260,13 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-gray-50 p-6">
-      <div className="max-w-3xl w-full">
+      <div className="max-w-5xl w-full">
         <div className="text-center mb-10">
           <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">Welcome to Learner Log</h1>
           <p className="text-muted-foreground text-lg">Select your role to get started.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md hover:-translate-y-1" onClick={() => handleSelectRole(RoleUpdateRole.student)}>
             <CardHeader className="text-center pb-2">
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
@@ -276,7 +276,7 @@ export default function Onboarding() {
             </CardHeader>
             <CardContent className="text-center">
               <CardDescription>
-                Track your logged hours, view assessment feedback, and see what you need to practice.
+                Track your logged hours, view assessment feedback, and see what you need to practise.
               </CardDescription>
               <Button className="w-full mt-6" variant="outline">Select Student</Button>
             </CardContent>
@@ -309,6 +309,21 @@ export default function Onboarding() {
                 Manage multiple instructors, oversee fleet compliance, and view school-wide analytics.
               </CardDescription>
               <Button className="w-full mt-6" variant="outline">Select Admin</Button>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer transition-all hover:border-primary hover:shadow-md hover:-translate-y-1" onClick={() => handleSelectRole(RoleUpdateRole.viewer)}>
+            <CardHeader className="text-center pb-2">
+              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4 text-primary">
+                <Users className="w-8 h-8" />
+              </div>
+              <CardTitle>Parent / Guardian</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center">
+              <CardDescription>
+                View your learner driver's progress, upcoming lessons, and add credits for bookings.
+              </CardDescription>
+              <Button className="w-full mt-6" variant="outline">Select Guardian</Button>
             </CardContent>
           </Card>
         </div>
