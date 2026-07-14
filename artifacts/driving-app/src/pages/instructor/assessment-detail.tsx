@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment } from "@workspace/api-client-react";
+import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck } from "lucide-react";
@@ -77,6 +77,15 @@ export default function ViewAssessment() {
   });
 
   const approveAssessment = useApproveAssessment();
+  const submitAssessment = useSubmitAssessment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetAssessmentQueryKey(id) });
+        toast({ title: "Assessment submitted", description: "Ready for approval and dispatch." });
+      },
+      onError: () => toast({ title: "Failed to submit assessment", variant: "destructive" }),
+    },
+  });
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
@@ -175,6 +184,20 @@ export default function ViewAssessment() {
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setPreviewOpen(true)}>
               <Eye className="w-4 h-4" /> Preview Report
             </Button>
+            {/* Submit button — draft only */}
+            {finStatus === "draft" && (
+              <Button
+                size="sm"
+                className="gap-2"
+                disabled={submitAssessment.isPending}
+                onClick={() => submitAssessment.mutate({ id })}
+              >
+                {submitAssessment.isPending
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : <Send className="w-4 h-4" />}
+                Submit Assessment
+              </Button>
+            )}
             {/* Approve button — only when pending */}
             {finStatus === "pending_approval" && (
               <Button size="sm" className="gap-2" onClick={() => setApproveOpen(true)}>
@@ -199,6 +222,19 @@ export default function ViewAssessment() {
               </p>
             )}
           </div>
+          {finStatus === "draft" && (
+            <Button
+              size="sm"
+              className="shrink-0 gap-1.5"
+              disabled={submitAssessment.isPending}
+              onClick={() => submitAssessment.mutate({ id })}
+            >
+              {submitAssessment.isPending
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Send className="w-3.5 h-3.5" />}
+              Submit
+            </Button>
+          )}
           {finStatus === "pending_approval" && (
             <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setApproveOpen(true)}>
               <Send className="w-3.5 h-3.5" /> Approve
