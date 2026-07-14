@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/learner-log-deck/"
+title = "Learner Log Pitch Deck"
+version = "1.0.0"
+id = "artifacts/learner-log-deck"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/learner-log-deck/" ]
+localPort = 22087
+
+[services.development]
+run = "pnpm --filter @workspace/learner-log-deck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/learner-log-deck", "run", "build" ]
+publicDir = "artifacts/learner-log-deck/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22087"
+BASE_PATH = "/learner-log-deck/"

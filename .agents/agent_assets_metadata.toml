@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "BjaxbsRsUWVkAFbJhasC_"
+uri = "file://.local/outputs/Learner-Log-Pitch-Deck.pptx"
+type = "slides"
+title = "Learner Log Pitch Deck (PPTX)"

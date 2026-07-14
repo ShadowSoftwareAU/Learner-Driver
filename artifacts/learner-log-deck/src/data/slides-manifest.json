@@ -1,0 +1,82 @@
+[
+  {
+    "id": "a1b2c3d4-0001-4000-8000-000000000001",
+    "position": 1,
+    "filepath": "src/pages/slides/Slide01Title.tsx",
+    "title": "Title — Learner Log",
+    "description": "Opening title slide with logo, tagline, and brand accents.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0002-4000-8000-000000000002",
+    "position": 2,
+    "filepath": "src/pages/slides/Slide02Problem.tsx",
+    "title": "The Problem",
+    "description": "Four pain points facing driving schools today.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0003-4000-8000-000000000003",
+    "position": 3,
+    "filepath": "src/pages/slides/Slide03Solution.tsx",
+    "title": "One Platform. Every Role.",
+    "description": "Overview of the four platform roles.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0004-4000-8000-000000000004",
+    "position": 4,
+    "filepath": "src/pages/slides/Slide04Instructors.tsx",
+    "title": "For Instructors",
+    "description": "Three core instructor capabilities.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0005-4000-8000-000000000005",
+    "position": 5,
+    "filepath": "src/pages/slides/Slide05Students.tsx",
+    "title": "For Learner Drivers",
+    "description": "Three core student features.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0006-4000-8000-000000000006",
+    "position": 6,
+    "filepath": "src/pages/slides/Slide06Parents.tsx",
+    "title": "For Parents & Guardians",
+    "description": "Three guardian portal features.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0007-4000-8000-000000000007",
+    "position": 7,
+    "filepath": "src/pages/slides/Slide07Compliance.tsx",
+    "title": "Compliance Built In",
+    "description": "44 TMR manoeuvres, three assessment programs, audit trail.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0008-4000-8000-000000000008",
+    "position": 8,
+    "filepath": "src/pages/slides/Slide08GPS.tsx",
+    "title": "GPS Route Tracking",
+    "description": "Four GPS tracking capabilities.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0009-4000-8000-000000000009",
+    "position": 9,
+    "filepath": "src/pages/slides/Slide09Platform.tsx",
+    "title": "Platform Overview",
+    "description": "Technical stack and platform capabilities.",
+    "speakerNotes": ""
+  },
+  {
+    "id": "a1b2c3d4-0010-4000-8000-000000000010",
+    "position": 10,
+    "filepath": "src/pages/slides/Slide10Closing.tsx",
+    "title": "Get Started — Learner Log",
+    "description": "Closing slide with logo and contact.",
+    "speakerNotes": ""
+  }
+]
