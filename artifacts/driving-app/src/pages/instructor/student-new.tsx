@@ -70,7 +70,7 @@ export default function InstructorStudentNew() {
           country: "AU",
         },
       });
-      await queryClient.invalidateQueries({ queryKey: getListStudentsQueryKey() });
+      queryClient.removeQueries({ queryKey: getListStudentsQueryKey() });
       toast({ title: "Student added", description: `${form.fullName.trim()} has been created.` });
       setLocation(`/instructor/students/${created.id}`);
     } catch {
