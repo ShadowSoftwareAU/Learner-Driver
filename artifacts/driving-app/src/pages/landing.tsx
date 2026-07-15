@@ -6,11 +6,8 @@ export default function Landing() {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <header className="h-16 flex items-center justify-between px-6 md:px-12 border-b border-border bg-white sticky top-0 z-10">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center text-primary-foreground font-bold">
-            LL
-          </div>
-          <span className="font-bold text-xl tracking-tight text-foreground">Learner Log</span>
+        <div className="flex items-center">
+          <img src="/learnerlog-logo.png" alt="Learner Log" className="h-10 w-auto" />
         </div>
         <div className="flex items-center gap-4">
           <Link href="/sign-in">

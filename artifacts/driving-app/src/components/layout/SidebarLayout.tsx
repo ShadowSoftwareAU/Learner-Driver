@@ -123,8 +123,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-[100dvh] w-full bg-gray-50">
       {/* Desktop sidebar */}
       <aside className="w-64 flex-shrink-0 bg-sidebar border-r border-sidebar-border text-sidebar-foreground hidden md:flex flex-col">
-        <div className="h-16 flex items-center px-6 border-b border-sidebar-border bg-sidebar-accent/50">
-          <span className="font-bold text-lg tracking-tight">Learner Log</span>
+        <div className="h-16 flex items-center px-4 border-b border-sidebar-border bg-sidebar-accent/50">
+          <img src="/learnerlog-logo.png" alt="Learner Log" className="h-9 w-auto" />
         </div>
         <NavList />
       </aside>
@@ -133,7 +133,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobile top bar */}
         <header className="md:hidden flex items-center justify-between h-14 px-4 bg-sidebar border-b border-sidebar-border text-sidebar-foreground sticky top-0 z-10">
-          <span className="font-bold text-base tracking-tight">Learner Log</span>
+          <img src="/learnerlog-logo.png" alt="Learner Log" className="h-8 w-auto" />
           <div className="flex items-center gap-2">
             <NotificationBell />
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -143,8 +143,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border text-sidebar-foreground flex flex-col">
-                <div className="h-14 flex items-center px-6 border-b border-sidebar-border bg-sidebar-accent/50">
-                  <span className="font-bold text-base tracking-tight">Learner Log</span>
+                <div className="h-14 flex items-center px-4 border-b border-sidebar-border bg-sidebar-accent/50">
+                  <img src="/learnerlog-logo.png" alt="Learner Log" className="h-8 w-auto" />
                 </div>
                 <NavList onItemClick={() => setMobileOpen(false)} />
               </SheetContent>
