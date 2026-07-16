@@ -42,3 +42,6 @@ channel = "stable-25_05"
 
 [userenv.shared]
 EMAIL_PROVIDER = "resend"
+
+[objectStorage]
+defaultBucketID = "replit-objstore-66064f4d-5153-4e07-9677-e316ce7c0ad9"
