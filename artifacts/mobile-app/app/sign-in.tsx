@@ -1,4 +1,4 @@
-import { useSignIn } from "@clerk/expo";
+import { useClerk } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -16,8 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SignInScreen() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { signIn, setActive, isLoaded } = useSignIn() as any;
+  const clerk = useClerk();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -28,13 +27,17 @@ export default function SignInScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
-    if (!isLoaded || !email || !password) return;
+    if (!email || !password) return;
+    if (!clerk.loaded || !clerk.client) {
+      setError("Still loading — please try again in a moment.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const result = await signIn.create({ identifier: email, password });
+      const result = await clerk.client.signIn.create({ identifier: email, password });
       if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
+        await clerk.setActive({ session: result.createdSessionId });
         router.replace("/");
       } else {
         setError("Sign in could not be completed. Please try again.");

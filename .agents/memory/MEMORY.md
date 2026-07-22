@@ -5,6 +5,7 @@
 - [Phase 2 completion state](phase2-completion.md) — all 26 tasks (T001–T026) complete; only gap was session inactivity timeout (built); codegen and DB push must be run after schema/spec changes.
 - [Assessment finalization workflow](assessment-finalization.md) — finalizationStatus (draft→pending_approval→approved→dispatched) on assessmentsTable; POST /:id/submit and /:id/approve routes; guided assessment auto-submits after saveResults; detail page has Preview Report sheet + Approve & Dispatch dialog.
 - [Dialog z-index & Leaflet](dialog-leaflet-zindex.md) — Radix Dialog uses z-50 (z-index:50); Leaflet controls sit at 1000 in document stacking context; shadcn dialog.tsx bumped to z-[2000].
+- [Clerk Expo sign-in API](clerk-expo-signin.md) — @clerk/react 6 useSignIn is signals-based (no isLoaded/setActive); use useClerk().client.signIn.create + clerk.setActive or handlers silently no-op.
 - [Map click + Radix Dialog](map-click-dialog.md) — Leaflet click event propagates and triggers Radix outside-click dismiss; fix: setTimeout(()=>setState(...), 0) to defer state update past the click event.
 - [Report dispatch recipients](report-dispatch-recipients.md) — non-account emails (guardian/school) need a separate sendExternalEmail() path, not the notificationsTable-backed sendEmail().
 - [Stripe with manual keys](stripe-manual-keys.md) — when user declines the connector and supplies STRIPE_SECRET_KEY/WEBHOOK_SECRET directly, use plain `stripe` SDK, not stripe-replit-sync; webhook route needs express.raw() before express.json().
