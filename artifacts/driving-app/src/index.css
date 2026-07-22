@@ -316,6 +316,19 @@
     display: none !important;
   }
 
+  /* Hide the injected Replit badge/banner so it never appears on printed reports */
+  a[href*="replit.com"],
+  iframe[src*="replit.com"],
+  #replit-badge,
+  .replit-badge,
+  [data-replit-badge],
+  replit-badge,
+  #replit-dev-banner,
+  [id^="replit"],
+  [class^="replit"] {
+    display: none !important;
+  }
+
   /* Ensure white background and black text — some browsers print grey backgrounds */
   body {
     background: white !important;
