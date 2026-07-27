@@ -1,8 +1,33 @@
-import { useGetViewerStudentDashboard, useGetMyWallet, usePayBookingWithCredits } from "@workspace/api-client-react";
+import {
+  useGetViewerStudentDashboard,
+  useGetMyWallet,
+  usePayBookingWithCredits,
+  useCreateSupervisedSession,
+  getGetViewerStudentDashboardQueryKey,
+  getGetViewerStudentsQueryKey,
+} from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, AlertTriangle, CreditCard, CheckCircle2, GraduationCap, Users } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, CreditCard, CheckCircle2, GraduationCap, Users, Plus } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -11,11 +36,56 @@ import { useState } from "react";
 
 const WALLET_QK = "/api/wallet";
 
+// Custom query keys used when fetching viewer data — must match what the
+// viewer dashboard and this page use so invalidation hits the right cache entries.
+const VIEWER_STUDENTS_QK = getGetViewerStudentsQueryKey();
+
 const PEDAL_LABELS: Record<string, string> = {
   standard: "Standard dual-control",
   instructor: "Instructor pedals only",
   student: "Student pedals only",
   none: "No pedal control",
+};
+
+const PEDAL_OPTIONS = [
+  { value: "student", label: "Student controls" },
+  { value: "instructor", label: "Supervisor controls" },
+  { value: "shared", label: "Shared controls" },
+];
+
+const WEATHER_OPTIONS = [
+  { value: "clear", label: "Clear" },
+  { value: "partly_cloudy", label: "Partly cloudy" },
+  { value: "overcast", label: "Overcast" },
+  { value: "light_rain", label: "Light rain" },
+  { value: "heavy_rain", label: "Heavy rain" },
+  { value: "foggy", label: "Foggy" },
+  { value: "windy", label: "Windy" },
+];
+
+const LIGHTING_OPTIONS = [
+  { value: "daylight", label: "Daylight" },
+  { value: "dawn", label: "Dawn" },
+  { value: "dusk", label: "Dusk" },
+  { value: "night", label: "Night" },
+];
+
+interface LogSessionForm {
+  lessonDate: string;
+  durationMinutes: string;
+  pedalOperator: string;
+  weatherCondition: string;
+  lightingCondition: string;
+  notes: string;
+}
+
+const DEFAULT_FORM: LogSessionForm = {
+  lessonDate: new Date().toISOString().slice(0, 10),
+  durationMinutes: "60",
+  pedalOperator: "student",
+  weatherCondition: "clear",
+  lightingCondition: "daylight",
+  notes: "",
 };
 
 export default function ViewerStudentDetail() {
@@ -25,9 +95,16 @@ export default function ViewerStudentDetail() {
   const qc = useQueryClient();
   const [payingId, setPayingId] = useState<number | null>(null);
   const [paidBookingIds, setPaidBookingIds] = useState<number[]>([]);
+  const [showLogSession, setShowLogSession] = useState(false);
+  const [form, setForm] = useState<LogSessionForm>(DEFAULT_FORM);
 
-  const { data, isLoading } = useGetViewerStudentDashboard(Number(id), {
-    query: { queryKey: ["/api/viewer/students", id] },
+  const studentId = Number(id);
+
+  // Custom query key so invalidation below hits this exact entry.
+  const dashboardQK = ["/api/viewer/students", id];
+
+  const { data, isLoading } = useGetViewerStudentDashboard(studentId, {
+    query: { queryKey: dashboardQK },
   });
 
   const { data: wallet } = useGetMyWallet({ query: { queryKey: [WALLET_QK] } });
@@ -47,6 +124,43 @@ export default function ViewerStudentDetail() {
       },
     },
   });
+
+  const { mutate: logSession, isPending: loggingSession } = useCreateSupervisedSession({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Session logged", description: "The supervised driving session has been recorded." });
+        setShowLogSession(false);
+        setForm(DEFAULT_FORM);
+        // Invalidate the student dashboard so the QLD hours breakdown refreshes immediately.
+        qc.invalidateQueries({ queryKey: dashboardQK });
+        // Also refresh the viewer student list so the summary hours stay in sync.
+        qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
+      },
+      onError: (err: any) => {
+        const message = err?.response?.data?.error ?? "Could not log the session.";
+        toast({ title: "Failed to log session", description: message, variant: "destructive" });
+      },
+    },
+  });
+
+  function handleLogSession() {
+    const duration = parseInt(form.durationMinutes, 10);
+    if (!form.lessonDate || isNaN(duration) || duration < 1) {
+      toast({ title: "Please fill in a valid date and duration.", variant: "destructive" });
+      return;
+    }
+    logSession({
+      studentId,
+      data: {
+        lessonDate: form.lessonDate,
+        durationMinutes: duration,
+        pedalOperator: form.pedalOperator as any,
+        weatherCondition: form.weatherCondition as any,
+        lightingCondition: form.lightingCondition as any,
+        notes: form.notes || null,
+      },
+    });
+  }
 
   function handlePay(bookingId: number) {
     setPayingId(bookingId);
@@ -68,22 +182,27 @@ export default function ViewerStudentDetail() {
   return (
     <SidebarLayout>
       <div className="space-y-6 max-w-3xl">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/viewer/dashboard")}>
-            <ArrowLeft className="w-4 h-4 mr-1" /> Back
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-primary" />
-              <h1 className="text-xl font-bold tracking-tight">{student.fullName}</h1>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/viewer/dashboard")}>
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Button>
+            <div>
+              <div className="flex items-center gap-2">
+                <Eye className="w-5 h-5 text-primary" />
+                <h1 className="text-xl font-bold tracking-tight">{student.fullName}</h1>
+              </div>
+              {link?.relationshipType && (
+                <p className="text-sm text-muted-foreground capitalize">
+                  {link.relationshipType.replace(/_/g, " ")}
+                  {link.linkedAt && ` · Linked ${format(new Date(link.linkedAt), "d MMM yyyy")}`}
+                </p>
+              )}
             </div>
-            {link?.relationshipType && (
-              <p className="text-sm text-muted-foreground capitalize">
-                {link.relationshipType.replace(/_/g, " ")}
-                {link.linkedAt && ` · Linked ${format(new Date(link.linkedAt), "d MMM yyyy")}`}
-              </p>
-            )}
           </div>
+          <Button size="sm" onClick={() => setShowLogSession(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Log session
+          </Button>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -342,6 +461,108 @@ export default function ViewerStudentDetail() {
             </Card>
           )}
       </div>
+
+      {/* Log supervised session dialog */}
+      <Dialog open={showLogSession} onOpenChange={setShowLogSession}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Log supervised session</DialogTitle>
+            <DialogDescription>
+              Record a supervised driving session for {student.fullName}. The hours will count toward their logbook immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="lessonDate">Date</Label>
+                <Input
+                  id="lessonDate"
+                  type="date"
+                  value={form.lessonDate}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setForm((f) => ({ ...f, lessonDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="durationMinutes">Duration (minutes)</Label>
+                <Input
+                  id="durationMinutes"
+                  type="number"
+                  min={1}
+                  max={480}
+                  value={form.durationMinutes}
+                  onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Pedal operator</Label>
+              <Select value={form.pedalOperator} onValueChange={(v) => setForm((f) => ({ ...f, pedalOperator: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PEDAL_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Weather</Label>
+                <Select value={form.weatherCondition} onValueChange={(v) => setForm((f) => ({ ...f, weatherCondition: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WEATHER_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Lighting</Label>
+                <Select value={form.lightingCondition} onValueChange={(v) => setForm((f) => ({ ...f, lightingCondition: v }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LIGHTING_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Textarea
+                id="notes"
+                placeholder="e.g. Practiced merging on the highway, handled well."
+                rows={3}
+                value={form.notes}
+                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLogSession(false)} disabled={loggingSession}>
+              Cancel
+            </Button>
+            <Button onClick={handleLogSession} disabled={loggingSession}>
+              {loggingSession && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Log session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </SidebarLayout>
   );
 }
