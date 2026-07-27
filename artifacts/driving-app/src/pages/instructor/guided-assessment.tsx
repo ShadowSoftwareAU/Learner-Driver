@@ -2,14 +2,14 @@ import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListS
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, ArrowRight, ArrowLeft, Info, CheckCircle2, MapPin, Car, Bike, Truck, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Loader2, Check, Save, ArrowRight, ArrowLeft, CheckCircle2, MapPin, Car, Bike, Truck, AlertTriangle, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { getManeuverImage } from "@/lib/maneuver-images";
 import { Badge } from "@/components/ui/badge";
 import { useLocation, useSearch } from "wouter";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
@@ -91,6 +91,10 @@ export default function GuidedAssessment() {
   const [confidenceNote, setConfidenceNote] = useState("");
   const [focusAreas, setFocusAreas] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Guidance panel — expanded per-maneuver in the assess step
+  const [guidanceOpen, setGuidanceOpen] = useState(false);
+  useEffect(() => { setGuidanceOpen(false); }, [currentIndex]);
 
   // Geolocation tracking
   const currentPositionRef = useRef<GeolocationCoordinates | null>(null);
@@ -673,38 +677,46 @@ export default function GuidedAssessment() {
           {/* Maneuver card */}
           <Card className="flex-1 flex flex-col">
             <CardHeader className="p-4 sm:p-6 border-b">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-xl sm:text-2xl flex-1">{currentManeuver.name}</CardTitle>
-                {(currentManeuver.complianceCriteria || currentManeuver.masteryDefinition) && (
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
-                        <Info className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>{currentManeuver.name}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4 mt-2">
-                        {currentManeuver.complianceCriteria && (
-                          <div>
-                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">QSAFE Compliance Criteria</h4>
-                            <p className="text-sm text-foreground whitespace-pre-wrap">{currentManeuver.complianceCriteria}</p>
-                          </div>
-                        )}
-                        {currentManeuver.masteryDefinition && (
-                          <div>
-                            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Competency Definition</h4>
-                            <p className="text-sm text-foreground whitespace-pre-wrap">{currentManeuver.masteryDefinition}</p>
-                          </div>
-                        )}
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+              <div className="flex items-start gap-2">
+                <div className="flex-1 min-w-0">
+                  <CardTitle className="text-xl sm:text-2xl">{currentManeuver.name}</CardTitle>
+                  <p className="text-muted-foreground text-sm sm:text-base mt-0.5">{currentManeuver.category}</p>
+                </div>
+                {(getManeuverImage(currentManeuver.name, currentManeuver.category) || currentManeuver.complianceCriteria || currentManeuver.masteryDefinition) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 gap-1.5 text-sm text-primary h-9 mt-0.5"
+                    onClick={() => setGuidanceOpen(prev => !prev)}
+                  >
+                    {guidanceOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {guidanceOpen ? "Hide" : "Guidance"}
+                  </Button>
                 )}
               </div>
-              <p className="text-muted-foreground text-sm sm:text-base">{currentManeuver.category}</p>
+
+              {guidanceOpen && (
+                <div className="mt-4 space-y-4 border-t pt-4">
+                  {(() => {
+                    const img = getManeuverImage(currentManeuver.name, currentManeuver.category);
+                    return img ? (
+                      <img src={img} alt={`${currentManeuver.category} reference`} className="w-full rounded-lg border border-border" />
+                    ) : null;
+                  })()}
+                  {currentManeuver.complianceCriteria && (
+                    <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                      <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">QSAFE Compliance Criteria</p>
+                      <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">{currentManeuver.complianceCriteria}</p>
+                    </div>
+                  )}
+                  {currentManeuver.masteryDefinition && (
+                    <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
+                      <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">Competency Definition</p>
+                      <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">{currentManeuver.masteryDefinition}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-center p-4 sm:p-6 space-y-4 sm:space-y-6">
               {/* Score buttons */}

@@ -135,6 +135,7 @@ import type {
   VerificationDocument,
   VerificationStatusResponse,
   VerificationWithDocs,
+  ViewerAssessmentDetail,
   ViewerLinkRequest,
   ViewerStudentDashboard,
   ViewerStudentSummary,
@@ -6412,6 +6413,83 @@ export function useGetViewerStudentDashboard<TData = Awaited<ReturnType<typeof g
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetViewerStudentDashboardQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetViewerAssessmentDetailUrl = (assessmentId: number,) => {
+
+
+
+
+  return `/api/viewer/assessments/${assessmentId}`
+}
+
+/**
+ * @summary Get full assessment detail for a linked student (including maneuver guidance)
+ */
+export const getViewerAssessmentDetail = async (assessmentId: number, options?: RequestInit): Promise<ViewerAssessmentDetail> => {
+
+  return customFetch<ViewerAssessmentDetail>(getGetViewerAssessmentDetailUrl(assessmentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetViewerAssessmentDetailQueryKey = (assessmentId: number,) => {
+    return [
+    `/api/viewer/assessments/${assessmentId}`
+    ] as const;
+    }
+
+
+export const getGetViewerAssessmentDetailQueryOptions = <TData = Awaited<ReturnType<typeof getViewerAssessmentDetail>>, TError = ErrorType<void>>(assessmentId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getViewerAssessmentDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetViewerAssessmentDetailQueryKey(assessmentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getViewerAssessmentDetail>>> = ({ signal }) => getViewerAssessmentDetail(assessmentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(assessmentId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getViewerAssessmentDetail>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetViewerAssessmentDetailQueryResult = NonNullable<Awaited<ReturnType<typeof getViewerAssessmentDetail>>>
+export type GetViewerAssessmentDetailQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get full assessment detail for a linked student (including maneuver guidance)
+ */
+
+export function useGetViewerAssessmentDetail<TData = Awaited<ReturnType<typeof getViewerAssessmentDetail>>, TError = ErrorType<void>>(
+ assessmentId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getViewerAssessmentDetail>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetViewerAssessmentDetailQueryOptions(assessmentId,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

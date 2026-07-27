@@ -17,6 +17,7 @@ import {
   studentsTable,
   assessmentsTable,
   maneuverResultsTable,
+  maneuversTable,
   bookingsTable,
   usersTable,
   auditLogsTable,
@@ -215,6 +216,64 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
   }).catch(() => null);
 
   res.json({ student, recentAssessments, upcomingBookings, link: { relationshipType: link.relationshipType, linkedAt: link.linkedAt } });
+});
+
+// ─── Viewer assessment detail ─────────────────────────────────────────────────
+// Full assessment including maneuver guidance (for supervising during a lesson).
+
+router.get("/viewer/assessments/:assessmentId", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const assessmentId = parseInt(req.params.assessmentId as string, 10);
+
+  // Load the assessment to find the student
+  const [assessment] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, assessmentId));
+  if (!assessment) { res.status(404).json({ error: "Assessment not found" }); return; }
+
+  // Verify viewer has an active link to this student
+  const [link] = await db.select().from(viewerLinksTable).where(
+    and(
+      eq(viewerLinksTable.viewerUserId, user.id),
+      eq(viewerLinksTable.studentId, assessment.studentId),
+      eq(viewerLinksTable.linkStatus, "active"),
+    )
+  );
+  if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
+
+  // Fetch student name
+  const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName })
+    .from(studentsTable).where(eq(studentsTable.id, assessment.studentId));
+
+  // Fetch maneuver results joined with maneuver details
+  const results = await db
+    .select({
+      id: maneuverResultsTable.id,
+      maneuverId: maneuverResultsTable.maneuverId,
+      competencyLevel: maneuverResultsTable.competencyLevel,
+      notes: maneuverResultsTable.notes,
+      maneuverName: maneuversTable.name,
+      category: maneuversTable.category,
+      complianceCriteria: maneuversTable.complianceCriteria,
+      masteryDefinition: maneuversTable.masteryDefinition,
+    })
+    .from(maneuverResultsTable)
+    .leftJoin(maneuversTable, eq(maneuverResultsTable.maneuverId, maneuversTable.id))
+    .where(eq(maneuverResultsTable.assessmentId, assessmentId));
+
+  res.json({
+    assessment: {
+      id: assessment.id,
+      lessonDate: assessment.lessonDate,
+      durationMinutes: assessment.durationMinutes,
+      pedalOperator: assessment.pedalOperator,
+      studentName: student?.fullName ?? "Unknown",
+      studentId: assessment.studentId,
+      focusAreasNext: assessment.focusAreasNext,
+      confidenceNote: assessment.confidenceNote,
+      weatherCondition: (assessment as any).weatherCondition ?? null,
+      lightingCondition: (assessment as any).lightingCondition ?? null,
+    },
+    maneuverResults: results,
+  });
 });
 
 export default router;

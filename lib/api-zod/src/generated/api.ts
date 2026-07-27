@@ -2223,6 +2223,39 @@ export const GetViewerStudentDashboardResponse = zod.object({
 
 
 /**
+ * @summary Get full assessment detail for a linked student (including maneuver guidance)
+ */
+export const GetViewerAssessmentDetailParams = zod.object({
+  "assessmentId": zod.coerce.number()
+})
+
+export const GetViewerAssessmentDetailResponse = zod.object({
+  "assessment": zod.object({
+  "id": zod.number(),
+  "lessonDate": zod.string(),
+  "durationMinutes": zod.number(),
+  "pedalOperator": zod.string(),
+  "studentName": zod.string(),
+  "studentId": zod.number().optional(),
+  "focusAreasNext": zod.string().nullish(),
+  "confidenceNote": zod.string().nullish(),
+  "weatherCondition": zod.string().nullish(),
+  "lightingCondition": zod.string().nullish()
+}),
+  "maneuverResults": zod.array(zod.object({
+  "id": zod.number(),
+  "maneuverId": zod.number(),
+  "competencyLevel": zod.string(),
+  "notes": zod.string().nullish(),
+  "maneuverName": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "complianceCriteria": zod.string().nullish(),
+  "masteryDefinition": zod.string().nullish()
+}))
+})
+
+
+/**
  * @summary List moderation cases (super_admin only)
  */
 export const GetModerationCasesQueryParams = zod.object({

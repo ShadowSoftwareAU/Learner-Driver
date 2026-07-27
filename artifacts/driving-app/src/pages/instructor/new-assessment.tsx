@@ -2,7 +2,7 @@ import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListS
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle,
+  Loader2, Check, Save, ChevronDown, ChevronUp, PlayCircle,
   Car, Bike, Truck, AlertTriangle, ShieldCheck, Sun, Cloud,
   CloudRain, Wind, Eye, Moon, Sunrise, Sunset, Pencil,
 } from "lucide-react";
@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -27,6 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
+import { getManeuverImage } from "@/lib/maneuver-images";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
 
 type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
@@ -482,39 +483,12 @@ export default function NewAssessment() {
                   <div key={m.id} className="p-4 sm:p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <p className="font-medium text-base flex-1">{m.name}</p>
-                      {(m.complianceCriteria || m.masteryDefinition) && (
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
-                              <Info className="w-5 h-5 text-blue-500" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="max-w-lg">
-                            <DialogHeader>
-                              <DialogTitle>{m.name}</DialogTitle>
-                            </DialogHeader>
-                            <div className="space-y-4 mt-2">
-                              {m.complianceCriteria && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">QSAFE Compliance Criteria</h4>
-                                  <p className="text-sm text-foreground whitespace-pre-wrap">{m.complianceCriteria}</p>
-                                </div>
-                              )}
-                              {m.masteryDefinition && (
-                                <div>
-                                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-1">Competency Definition</h4>
-                                  <p className="text-sm text-foreground whitespace-pre-wrap">{m.masteryDefinition}</p>
-                                </div>
-                              )}
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-                      )}
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-10 w-10 shrink-0"
                         onClick={() => toggleExpanded(m.id)}
+                        aria-label={expandedManeuver === m.id ? "Collapse guidance and notes" : "Expand guidance and notes"}
                       >
                         {expandedManeuver === m.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                       </Button>
@@ -547,19 +521,55 @@ export default function NewAssessment() {
                       </div>
                     )}
                     {expandedManeuver === m.id && (
-                      <div className="mt-4 space-y-2">
-                        <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
-                        <QuickNoteChips
-                          value={maneuverNotes[m.id] || ""}
-                          onChange={(next) => handleManeuverNoteChange(m.id, next)}
-                        />
-                        <Textarea
-                          placeholder="Add notes for this maneuver..."
-                          value={maneuverNotes[m.id] || ""}
-                          onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
-                          rows={2}
-                          className="text-base"
-                        />
+                      <div className="mt-4 space-y-4">
+                        {/* Reference image for this maneuver group */}
+                        {(() => {
+                          const img = getManeuverImage(m.name, m.category);
+                          return img ? (
+                            <img
+                              src={img}
+                              alt={`${m.category} reference guide`}
+                              className="w-full rounded-lg border border-border"
+                            />
+                          ) : null;
+                        })()}
+                        {/* QSAFE Compliance Criteria */}
+                        {m.complianceCriteria && (
+                          <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                            <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
+                              QSAFE Compliance Criteria
+                            </p>
+                            <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">
+                              {m.complianceCriteria}
+                            </p>
+                          </div>
+                        )}
+                        {/* Competency definition */}
+                        {m.masteryDefinition && (
+                          <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
+                            <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">
+                              Competency Definition
+                            </p>
+                            <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">
+                              {m.masteryDefinition}
+                            </p>
+                          </div>
+                        )}
+                        {/* Maneuver notes */}
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
+                          <QuickNoteChips
+                            value={maneuverNotes[m.id] || ""}
+                            onChange={(next) => handleManeuverNoteChange(m.id, next)}
+                          />
+                          <Textarea
+                            placeholder="Add notes for this maneuver..."
+                            value={maneuverNotes[m.id] || ""}
+                            onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
+                            rows={2}
+                            className="text-base"
+                          />
+                        </div>
                       </div>
                     )}
                   </div>

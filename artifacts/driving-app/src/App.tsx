@@ -63,6 +63,7 @@ import BookingApprovals from "@/pages/school-admin/booking-approvals";
 
 import ViewerDashboard from "@/pages/viewer/dashboard";
 import ViewerStudentDetail from "@/pages/viewer/student-detail";
+import ViewerAssessment from "@/pages/viewer/assessment";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string;
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
@@ -438,6 +439,7 @@ function ClerkProviderWithRoutes() {
           {/* Viewer routes */}
           <Route path="/viewer/dashboard" component={() => <ProtectedRoute component={ViewerDashboard} />} />
           <Route path="/viewer/students/:id" component={() => <ProtectedRoute component={ViewerStudentDetail} />} />
+          <Route path="/viewer/assessments/:id" component={() => <ProtectedRoute component={ViewerAssessment} />} />
 
           <Route component={NotFound} />
         </Switch>

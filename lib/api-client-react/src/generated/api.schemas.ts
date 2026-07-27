@@ -1805,6 +1805,44 @@ export interface ViewerStudentSummary {
   linkedAt?: string;
 }
 
+export type ViewerAssessmentDetailAssessment = {
+  id: number;
+  lessonDate: string;
+  durationMinutes: number;
+  pedalOperator: string;
+  studentName: string;
+  studentId?: number;
+  /** @nullable */
+  focusAreasNext?: string | null;
+  /** @nullable */
+  confidenceNote?: string | null;
+  /** @nullable */
+  weatherCondition?: string | null;
+  /** @nullable */
+  lightingCondition?: string | null;
+};
+
+export type ViewerAssessmentDetailManeuverResultsItem = {
+  id: number;
+  maneuverId: number;
+  competencyLevel: string;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  maneuverName?: string | null;
+  /** @nullable */
+  category?: string | null;
+  /** @nullable */
+  complianceCriteria?: string | null;
+  /** @nullable */
+  masteryDefinition?: string | null;
+};
+
+export interface ViewerAssessmentDetail {
+  assessment: ViewerAssessmentDetailAssessment;
+  maneuverResults: ViewerAssessmentDetailManeuverResultsItem[];
+}
+
 export type ViewerStudentDashboardRecentAssessmentsItem = {
   id?: number;
   lessonDate?: string;

@@ -1835,6 +1835,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/ViewerStudentDashboard"
 
+  /viewer/assessments/{assessmentId}:
+    get:
+      operationId: getViewerAssessmentDetail
+      tags: [viewer]
+      summary: Get full assessment detail for a linked student (including maneuver guidance)
+      parameters:
+        - name: assessmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Assessment detail with maneuver results and guidance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ViewerAssessmentDetail"
+        "403":
+          description: No active viewer link for this student
+
   # ─── Moderation ───────────────────────────────────────────────────────────────
   /moderation/cases:
     get:
@@ -4383,6 +4404,57 @@ components:
           type: ["string", "null"]
         linkedAt:
           type: string
+
+    ViewerAssessmentDetail:
+      type: object
+      required: [assessment, maneuverResults]
+      properties:
+        assessment:
+          type: object
+          required: [id, lessonDate, durationMinutes, pedalOperator, studentName]
+          properties:
+            id:
+              type: integer
+            lessonDate:
+              type: string
+            durationMinutes:
+              type: integer
+            pedalOperator:
+              type: string
+            studentName:
+              type: string
+            studentId:
+              type: integer
+            focusAreasNext:
+              type: ["string", "null"]
+            confidenceNote:
+              type: ["string", "null"]
+            weatherCondition:
+              type: ["string", "null"]
+            lightingCondition:
+              type: ["string", "null"]
+        maneuverResults:
+          type: array
+          items:
+            type: object
+            required: [id, maneuverId, competencyLevel]
+            properties:
+              id:
+                type: integer
+              maneuverId:
+                type: integer
+              competencyLevel:
+                type: string
+              notes:
+                type: ["string", "null"]
+              maneuverName:
+                type: ["string", "null"]
+              category:
+                type: ["string", "null"]
+              complianceCriteria:
+                type: ["string", "null"]
+              masteryDefinition:
+                type: ["string", "null"]
 
     ViewerStudentDashboard:
       type: object

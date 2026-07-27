@@ -237,24 +237,31 @@ export default function ViewerStudentDetail() {
                   focusAreasNext?: string | null;
                   totalHoursThisLesson?: number | null;
                 }) => (
-                  <li key={a.id} className="py-3 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {format(new Date(a.lessonDate), "d MMM yyyy")}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {a.durationMinutes} min
-                        {a.totalHoursThisLesson != null && ` · +${Number(a.totalHoursThisLesson).toFixed(1)} hrs`}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator}
-                    </p>
-                    {a.focusAreasNext && (
-                      <p className="text-xs text-muted-foreground italic">
-                        Focus next: {a.focusAreasNext}
+                  <li key={a.id} className="py-3">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/viewer/assessments/${a.id}`)}
+                      className="w-full text-left rounded-lg hover:bg-muted/50 transition-colors p-2 -mx-2 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {format(new Date(a.lessonDate), "d MMM yyyy")}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {a.durationMinutes} min
+                          {a.totalHoursThisLesson != null && ` · +${Number(a.totalHoursThisLesson).toFixed(1)} hrs`}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator}
                       </p>
-                    )}
+                      {a.focusAreasNext && (
+                        <p className="text-xs text-muted-foreground italic">
+                          Focus next: {a.focusAreasNext}
+                        </p>
+                      )}
+                      <p className="text-xs text-primary font-medium">View lesson details →</p>
+                    </button>
                   </li>
                 ))}
               </ul>
