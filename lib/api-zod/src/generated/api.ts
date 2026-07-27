@@ -2209,6 +2209,10 @@ export const GetViewerStudentDashboardResponse = zod.object({
   "relationshipType": zod.string().nullish(),
   "linkedAt": zod.string().optional()
 }),
+  "instructorHours": zod.number().optional().describe('Hours logged with a professional instructor'),
+  "supervisedHours": zod.number().optional().describe('Hours logged under parent\/guardian supervision'),
+  "effectiveTotalHours": zod.number().optional().describe('Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)'),
+  "isQLD": zod.boolean().optional().describe('Whether the student is in QLD (3x multiplier applies)'),
   "recentAssessments": zod.array(zod.object({
   "id": zod.number().optional(),
   "lessonDate": zod.string().optional(),

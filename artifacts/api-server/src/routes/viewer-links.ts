@@ -178,6 +178,9 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     attendanceReliabilityScore: studentsTable.attendanceReliabilityScore,
     schoolId: studentsTable.schoolId,
     headshotPath: studentsTable.headshotPath,
+    instructorHours: studentsTable.instructorHours,
+    supervisedHours: studentsTable.supervisedHours,
+    state: studentsTable.state,
     // Safe subset — NO encrypted medical data, NO private notes
   }).from(studentsTable).where(eq(studentsTable.id, studentId));
 
@@ -219,7 +222,25 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     route: `/viewer/students/${studentId}/dashboard`,
   }).catch(() => null);
 
-  res.json({ student, recentAssessments, upcomingBookings, link: { relationshipType: link.relationshipType, linkedAt: link.linkedAt } });
+  // QLD hours breakdown — mirrors the student dashboard calculation
+  const instructorHours = Math.round(Number(student.instructorHours ?? 0) * 10) / 10;
+  const supervisedHours = Math.round(Number(student.supervisedHours ?? 0) * 10) / 10;
+  const isQLD = student.state === "QLD";
+  // QLD: 1 instructor hour counts as 3 effective hours toward the 100-hour requirement
+  const effectiveTotalHours = isQLD
+    ? Math.round((instructorHours * 3 + supervisedHours) * 10) / 10
+    : Math.round((instructorHours + supervisedHours) * 10) / 10;
+
+  res.json({
+    student,
+    recentAssessments,
+    upcomingBookings,
+    link: { relationshipType: link.relationshipType, linkedAt: link.linkedAt },
+    instructorHours,
+    supervisedHours,
+    effectiveTotalHours,
+    isQLD,
+  });
 });
 
 // ─── Log a supervised session ─────────────────────────────────────────────────

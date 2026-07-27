@@ -1932,6 +1932,14 @@ export type ViewerStudentDashboardLink = {
 
 export interface ViewerStudentDashboard {
   student: ViewerStudentSummary;
+  /** Hours logged with a professional instructor */
+  instructorHours?: number;
+  /** Hours logged under parent/guardian supervision */
+  supervisedHours?: number;
+  /** Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD) */
+  effectiveTotalHours?: number;
+  /** Whether the student is in QLD (3x multiplier applies) */
+  isQLD?: boolean;
   recentAssessments: ViewerStudentDashboardRecentAssessmentsItem[];
   upcomingBookings: ViewerStudentDashboardUpcomingBookingsItem[];
   link?: ViewerStudentDashboardLink;

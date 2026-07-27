@@ -4540,6 +4540,18 @@ components:
       properties:
         student:
           $ref: "#/components/schemas/ViewerStudentSummary"
+        instructorHours:
+          type: number
+          description: "Hours logged with a professional instructor"
+        supervisedHours:
+          type: number
+          description: "Hours logged under parent/guardian supervision"
+        effectiveTotalHours:
+          type: number
+          description: "Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)"
+        isQLD:
+          type: boolean
+          description: "Whether the student is in QLD (3x multiplier applies)"
         recentAssessments:
           type: array
           items:

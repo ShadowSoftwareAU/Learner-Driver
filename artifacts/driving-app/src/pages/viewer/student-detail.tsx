@@ -2,7 +2,7 @@ import { useGetViewerStudentDashboard, useGetMyWallet, usePayBookingWithCredits 
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, AlertTriangle, CreditCard, CheckCircle2 } from "lucide-react";
+import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, AlertTriangle, CreditCard, CheckCircle2, GraduationCap, Users } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -63,7 +63,7 @@ export default function ViewerStudentDetail() {
     );
   }
 
-  const { student, recentAssessments, upcomingBookings, link } = data;
+  const { student, recentAssessments, upcomingBookings, link, instructorHours, supervisedHours, effectiveTotalHours, isQLD } = data as any;
 
   return (
     <SidebarLayout>
@@ -143,6 +143,60 @@ export default function ViewerStudentDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {isQLD && effectiveTotalHours != null && (
+          <Card className="border-amber-200 bg-amber-50/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold text-amber-900 flex items-center gap-2">
+                <GraduationCap className="w-4 h-4" />
+                QLD Hours Breakdown
+              </CardTitle>
+              <CardDescription className="text-xs text-amber-700">
+                Queensland's 100-hour requirement counts instructor hours at 3× towards your total.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="text-xs text-muted-foreground font-medium">Instructor</span>
+                  </div>
+                  <p className="text-xl font-bold text-blue-700">{Number(instructorHours).toFixed(1)}</p>
+                  <p className="text-[11px] text-muted-foreground">hrs × 3 = {(Number(instructorHours) * 3).toFixed(1)} effective</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <Users className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="text-xs text-muted-foreground font-medium">Supervised</span>
+                  </div>
+                  <p className="text-xl font-bold text-amber-700">{Number(supervisedHours).toFixed(1)}</p>
+                  <p className="text-[11px] text-muted-foreground">hrs (1× count)</p>
+                </div>
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-1.5 mb-1">
+                    <Clock className="w-3.5 h-3.5 text-green-600" />
+                    <span className="text-xs text-muted-foreground font-medium">Effective</span>
+                  </div>
+                  <p className="text-xl font-bold text-green-700">{Number(effectiveTotalHours).toFixed(1)}</p>
+                  <p className="text-[11px] text-muted-foreground">of 100 hrs needed</p>
+                </div>
+              </div>
+              <div className="mt-3">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-muted-foreground">Progress to 100 hrs</span>
+                  <span className="font-medium text-amber-900">{Math.min(100, Math.round(Number(effectiveTotalHours)))}%</span>
+                </div>
+                <div className="w-full h-2 rounded-full bg-amber-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all"
+                    style={{ width: `${Math.min(100, (Number(effectiveTotalHours) / 100) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {upcomingBookings && upcomingBookings.length > 0 && (
           <Card>
@@ -229,7 +283,7 @@ export default function ViewerStudentDetail() {
             </CardHeader>
             <CardContent>
               <ul className="divide-y">
-                {recentAssessments.map((a) => {
+                {recentAssessments.map((a: any) => {
                   const isSupervised = a.performedByRole === "supervised";
                   return (
                   <li key={a.id} className="py-3">
