@@ -1,68 +1,48 @@
 /**
- * Maps a maneuver name + category to a reference guide image.
- * Images live in /maneuver-guides/ (public folder).
- * Returns null if no image is relevant.
+ * Maps a maneuver name to its specific reference guide image.
+ * Images are individual crops from the composite sheets, stored in
+ * /maneuver-guides/individual/ (public folder).
+ * Returns null if no image is available for this maneuver.
  */
-export function getManeuverImage(name: string, category: string): string | null {
-  const n = name.toLowerCase();
-  const c = category.toLowerCase();
 
-  // Speed & Road Position group
-  if (
-    n.includes("lane") ||
-    n.includes("speed") ||
-    n.includes("following distance") ||
-    n.includes("overtaking") ||
-    n.includes("overtake") ||
-    n.includes("freeway") ||
-    n.includes("highway") ||
-    n.includes("motorway") ||
-    c.includes("speed") ||
-    c.includes("road position") ||
-    c.includes("freeway")
-  ) {
-    return "/maneuver-guides/speed-road-position.png";
-  }
+const IMAGE_MAP: Record<string, string> = {
+  // ── Observation & Hazards ─────────────────────────────────────────────────
+  "Mirror use & scanning":         "/maneuver-guides/individual/mirror-scanning.png",
+  "Blindspot checks":              "/maneuver-guides/individual/blindspot-checks.png",
+  "Pedestrian & cyclist hazards":  "/maneuver-guides/individual/pedestrian-cyclist-hazards.png",
+  "School zones":                  "/maneuver-guides/individual/school-zones.png",
+  "Night driving":                 "/maneuver-guides/individual/night-driving.png",
+  "Adverse weather conditions":    "/maneuver-guides/individual/adverse-weather.png",
 
-  // Observation & Hazards group
-  if (
-    n.includes("mirror") ||
-    n.includes("blind spot") ||
-    n.includes("scanning") ||
-    n.includes("scan") ||
-    n.includes("pedestrian") ||
-    n.includes("cyclist") ||
-    n.includes("school zone") ||
-    n.includes("night") ||
-    n.includes("weather") ||
-    n.includes("adverse") ||
-    n.includes("fog") ||
-    n.includes("rain") ||
-    c.includes("observation") ||
-    c.includes("hazard perception") ||
-    c.includes("scanning")
-  ) {
-    return "/maneuver-guides/observation-hazards.png";
-  }
+  // ── Road Rules & Traffic Management ──────────────────────────────────────
+  "Observation at intersections":          "/maneuver-guides/individual/observation-intersections.png",
+  "Giving way correctly":                  "/maneuver-guides/individual/giving-way.png",
+  "Controlled intersections (give way)":   "/maneuver-guides/individual/giving-way.png",
+  "Controlled intersections (stop sign)":  "/maneuver-guides/individual/giving-way.png",
+  "Uncontrolled intersections":            "/maneuver-guides/individual/giving-way.png",
+  "Traffic sign compliance":               "/maneuver-guides/individual/traffic-sign-compliance.png",
+  "Traffic lights":                        "/maneuver-guides/individual/traffic-sign-compliance.png",
+  "Communication (signals)":              "/maneuver-guides/individual/communication-signals.png",
+  "Smooth vehicle control":               "/maneuver-guides/individual/smooth-vehicle-control.png",
+  "Hazard response":                       "/maneuver-guides/individual/hazard-response.png",
+  "Decision making":                       "/maneuver-guides/individual/decision-making.png",
+  "Interaction with other road users":     "/maneuver-guides/individual/interaction-road-users.png",
 
-  // Road Rules & Traffic Management group
-  if (
-    n.includes("intersection") ||
-    n.includes("give way") ||
-    n.includes("traffic sign") ||
-    n.includes("signal") ||
-    n.includes("communication") ||
-    n.includes("decision") ||
-    n.includes("road user") ||
-    n.includes("hazard response") ||
-    n.includes("right of way") ||
-    c.includes("road rule") ||
-    c.includes("traffic") ||
-    c.includes("intersection") ||
-    c.includes("decision")
-  ) {
-    return "/maneuver-guides/road-rules.png";
-  }
+  // ── Speed & Road Position ─────────────────────────────────────────────────
+  "Lane position":      "/maneuver-guides/individual/lane-position.png",
+  "Positioning on road":"/maneuver-guides/individual/lane-position.png",
+  "Lane changing":      "/maneuver-guides/individual/lane-changing.png",
+  "Speed compliance":   "/maneuver-guides/individual/speed-management.png",
+  "Speed management":   "/maneuver-guides/individual/speed-management.png",
+  "Following distance": "/maneuver-guides/individual/following-distance.png",
+  "Overtaking":         "/maneuver-guides/individual/overtaking.png",
+  "Freeway driving":    "/maneuver-guides/individual/freeway-driving.png",
 
-  return null;
+  // Turning & intersections — use the giving-way or intersection image
+  "Turning left at intersections":  "/maneuver-guides/individual/observation-intersections.png",
+  "Turning right at intersections": "/maneuver-guides/individual/observation-intersections.png",
+};
+
+export function getManeuverImage(name: string, _category: string): string | null {
+  return IMAGE_MAP[name] ?? null;
 }
