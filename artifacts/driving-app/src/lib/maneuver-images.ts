@@ -5,7 +5,7 @@
  * ?v= param busts browser cache when images are replaced.
  */
 
-const V = "?v=13";
+const V = "?v=15";
 const P = (f: string) => `/maneuver-guides/individual/${f}.png${V}`;
 
 const IMAGE_MAP: Record<string, string> = {
@@ -21,6 +21,8 @@ const IMAGE_MAP: Record<string, string> = {
   "Stopping safely":            P("stopping-safely"),
   "Hill starts":                P("hill-starts"),
   "Reverse parking":            P("reverse-parking"),
+  "Roundabouts":                P("roundabouts"),
+  "U-turns":                    P("u-turns"),
 
   // ── Observation & Hazards ─────────────────────────────────────────────────
   "Mirror use & scanning":         P("mirror-scanning"),
