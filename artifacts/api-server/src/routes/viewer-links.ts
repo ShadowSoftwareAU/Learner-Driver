@@ -9,7 +9,8 @@
  *   GET  /viewer/students/:id/dashboard — viewer only (must have active link)
  */
 import { Router } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
+import { z } from "zod";
 import {
   db,
   viewerLinksTable,
@@ -21,8 +22,10 @@ import {
   bookingsTable,
   usersTable,
   auditLogsTable,
+  instructorsTable,
 } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
+import { logAudit } from "./audit";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -188,6 +191,7 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     pedalOperator: assessmentsTable.pedalOperator,
     focusAreasNext: assessmentsTable.focusAreasNext,
     totalHoursThisLesson: assessmentsTable.durationMinutes,
+    performedByRole: assessmentsTable.performedByRole,
   }).from(assessmentsTable)
     .where(eq(assessmentsTable.studentId, studentId))
     .orderBy(assessmentsTable.lessonDate)
@@ -217,6 +221,100 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
 
   res.json({ student, recentAssessments, upcomingBookings, link: { relationshipType: link.relationshipType, linkedAt: link.linkedAt } });
 });
+
+// ─── Log a supervised session ─────────────────────────────────────────────────
+// Parents / guardians / mentors use this to log hours driven under their
+// supervision. These sessions are tagged performedByRole='supervised' so they
+// never influence the instructor-only lesson plan.
+
+const supervisedSessionBody = z.object({
+  lessonDate: z.string().min(1),
+  durationMinutes: z.number().int().min(1).max(480),
+  pedalOperator: z.enum(["student", "instructor", "shared"]).default("student"),
+  weatherCondition: z.enum(["clear", "partly_cloudy", "overcast", "light_rain", "heavy_rain", "foggy", "windy"]).optional().nullable(),
+  lightingCondition: z.enum(["daylight", "dawn", "dusk", "night"]).optional().nullable(),
+  notes: z.string().max(2000).optional().nullable(),
+});
+
+router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const studentId = parseInt(req.params.studentId as string, 10);
+
+  // Verify viewer has an active link to this student
+  const [link] = await db.select().from(viewerLinksTable).where(
+    and(
+      eq(viewerLinksTable.viewerUserId, user.id),
+      eq(viewerLinksTable.studentId, studentId),
+      eq(viewerLinksTable.linkStatus, "active"),
+    )
+  );
+  if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
+
+  const parsed = supervisedSessionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
+    return;
+  }
+  const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes } = parsed.data;
+
+  // Get or create a supervisor record in the instructors table for this viewer user
+  // so the FK constraint on assessments.instructor_id is satisfied.
+  let supervisorRecord = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
+  if (!supervisorRecord) {
+    [supervisorRecord] = await db.insert(instructorsTable).values({
+      userId: user.id,
+      fullName: user.name ?? "Supervisor",
+      email: user.email ?? "",
+    }).returning();
+  }
+
+  const [session] = await db.insert(assessmentsTable).values({
+    studentId,
+    instructorId: supervisorRecord.id,
+    lessonDate,
+    durationMinutes,
+    pedalOperator,
+    performedByRole: "supervised",
+    assessmentType: "qsafe",
+    status: "completed",
+    finalizationStatus: "dispatched", // supervised sessions are pre-approved; no instructor workflow needed
+    confidenceNote: notes ?? null,
+    focusAreasNext: null,
+    weatherCondition: weatherCondition ?? null,
+    lightingCondition: lightingCondition ?? null,
+  }).returning();
+
+  // Accrue hours to student
+  const hours = durationMinutes / 60;
+  await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours} WHERE id = ${studentId}`);
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "create_supervised_session",
+    resourceType: "assessment",
+    resourceId: session.id,
+    studentId,
+  }, req);
+
+  res.status(201).json({ ...formatSupervisedSession(session), supervisorName: user.name ?? "Supervisor" });
+});
+
+function formatSupervisedSession(a: any) {
+  return {
+    id: a.id,
+    studentId: a.studentId,
+    lessonDate: a.lessonDate,
+    durationMinutes: a.durationMinutes,
+    pedalOperator: a.pedalOperator,
+    performedByRole: "supervised" as const,
+    status: a.status,
+    weatherCondition: a.weatherCondition ?? null,
+    lightingCondition: a.lightingCondition ?? null,
+    notes: a.confidenceNote ?? null,
+    createdAt: a.createdAt,
+  };
+}
 
 // ─── Viewer assessment detail ─────────────────────────────────────────────────
 // Full assessment including maneuver guidance (for supervising during a lesson).

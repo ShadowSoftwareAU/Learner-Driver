@@ -215,6 +215,17 @@ export const AssessmentStatus = {
 } as const;
 
 /**
+ * 'instructor' = licensed driving instructor (counts toward lesson plan); 'supervised' = parent/guardian/mentor (hours only, does not update lesson plan)
+ */
+export type AssessmentPerformedByRole = typeof AssessmentPerformedByRole[keyof typeof AssessmentPerformedByRole];
+
+
+export const AssessmentPerformedByRole = {
+  instructor: 'instructor',
+  supervised: 'supervised',
+} as const;
+
+/**
  * Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)
  */
 export type AssessmentAssessmentType = typeof AssessmentAssessmentType[keyof typeof AssessmentAssessmentType];
@@ -296,6 +307,8 @@ export interface Assessment {
   lessonDate: string;
   durationMinutes: number;
   status: AssessmentStatus;
+  /** 'instructor' = licensed driving instructor (counts toward lesson plan); 'supervised' = parent/guardian/mentor (hours only, does not update lesson plan) */
+  performedByRole?: AssessmentPerformedByRole;
   /** Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60) */
   assessmentType: AssessmentAssessmentType;
   /** Who controls the pedals — student, instructor (dual control), or shared */
@@ -909,6 +922,33 @@ export interface InstructorDashboard {
   studentSummaries: StudentSummary[];
 }
 
+export type StudentDashboardRecentAssessmentsItemPerformedByRole = typeof StudentDashboardRecentAssessmentsItemPerformedByRole[keyof typeof StudentDashboardRecentAssessmentsItemPerformedByRole];
+
+
+export const StudentDashboardRecentAssessmentsItemPerformedByRole = {
+  instructor: 'instructor',
+  supervised: 'supervised',
+} as const;
+
+export type StudentDashboardRecentAssessmentsItem = {
+  id?: number;
+  studentId?: number;
+  instructorId?: number;
+  /** @nullable */
+  studentName?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
+  lessonDate?: string;
+  durationMinutes?: number;
+  status?: string;
+  performedByRole?: StudentDashboardRecentAssessmentsItemPerformedByRole;
+  /** @nullable */
+  confidenceNote?: string | null;
+  /** @nullable */
+  focusAreasNext?: string | null;
+  createdAt?: string;
+};
+
 export interface StudentDashboard {
   totalHours: number;
   completedManeuvers: number;
@@ -916,7 +956,7 @@ export interface StudentDashboard {
   progressPercent: number;
   /** @nullable */
   nextFocusAreas?: string | null;
-  recentAssessments: Assessment[];
+  recentAssessments: StudentDashboardRecentAssessmentsItem[];
   skillBreakdown?: SkillBreakdownItem[];
 }
 
@@ -1843,11 +1883,20 @@ export interface ViewerAssessmentDetail {
   maneuverResults: ViewerAssessmentDetailManeuverResultsItem[];
 }
 
+export type ViewerStudentDashboardRecentAssessmentsItemPerformedByRole = typeof ViewerStudentDashboardRecentAssessmentsItemPerformedByRole[keyof typeof ViewerStudentDashboardRecentAssessmentsItemPerformedByRole];
+
+
+export const ViewerStudentDashboardRecentAssessmentsItemPerformedByRole = {
+  instructor: 'instructor',
+  supervised: 'supervised',
+} as const;
+
 export type ViewerStudentDashboardRecentAssessmentsItem = {
   id?: number;
   lessonDate?: string;
   durationMinutes?: number;
   pedalOperator?: string;
+  performedByRole?: ViewerStudentDashboardRecentAssessmentsItemPerformedByRole;
   /** @nullable */
   focusAreasNext?: string | null;
   /** @nullable */
@@ -2203,6 +2252,82 @@ export interface HandoverNoteReviewInput {
   verdict: HandoverNoteReviewInputVerdict;
   /** @maxLength 2000 */
   reviewComment?: string;
+}
+
+export type SupervisedSessionInputPedalOperator = typeof SupervisedSessionInputPedalOperator[keyof typeof SupervisedSessionInputPedalOperator];
+
+
+export const SupervisedSessionInputPedalOperator = {
+  student: 'student',
+  instructor: 'instructor',
+  shared: 'shared',
+} as const;
+
+/**
+ * @nullable
+ */
+export type SupervisedSessionInputWeatherCondition = typeof SupervisedSessionInputWeatherCondition[keyof typeof SupervisedSessionInputWeatherCondition] | null;
+
+
+export const SupervisedSessionInputWeatherCondition = {
+  clear: 'clear',
+  partly_cloudy: 'partly_cloudy',
+  overcast: 'overcast',
+  light_rain: 'light_rain',
+  heavy_rain: 'heavy_rain',
+  foggy: 'foggy',
+  windy: 'windy',
+} as const;
+
+/**
+ * @nullable
+ */
+export type SupervisedSessionInputLightingCondition = typeof SupervisedSessionInputLightingCondition[keyof typeof SupervisedSessionInputLightingCondition] | null;
+
+
+export const SupervisedSessionInputLightingCondition = {
+  daylight: 'daylight',
+  dawn: 'dawn',
+  dusk: 'dusk',
+  night: 'night',
+} as const;
+
+export interface SupervisedSessionInput {
+  lessonDate: string;
+  durationMinutes: number;
+  pedalOperator?: SupervisedSessionInputPedalOperator;
+  /** @nullable */
+  weatherCondition?: SupervisedSessionInputWeatherCondition;
+  /** @nullable */
+  lightingCondition?: SupervisedSessionInputLightingCondition;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export type SupervisedSessionPerformedByRole = typeof SupervisedSessionPerformedByRole[keyof typeof SupervisedSessionPerformedByRole];
+
+
+export const SupervisedSessionPerformedByRole = {
+  supervised: 'supervised',
+} as const;
+
+export interface SupervisedSession {
+  id: number;
+  studentId: number;
+  lessonDate: string;
+  durationMinutes: number;
+  pedalOperator?: string;
+  performedByRole: SupervisedSessionPerformedByRole;
+  status: string;
+  /** @nullable */
+  supervisorName?: string | null;
+  /** @nullable */
+  notes?: string | null;
+  /** @nullable */
+  weatherCondition?: string | null;
+  /** @nullable */
+  lightingCondition?: string | null;
+  createdAt?: string;
 }
 
 export interface SchoolFeedbackSettings {

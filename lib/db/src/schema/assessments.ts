@@ -24,6 +24,8 @@ export const assessmentsTable = pgTable("assessments", {
   // Pre-drive fitness & sobriety confirmation (Wave 1 — safety-critical)
   preDriveFitnessConfirmedAt: timestamp("pre_drive_fitness_confirmed_at", { withTimezone: true }),
   preDriveFitnessConfirmedByUserId: integer("pre_drive_fitness_confirmed_by_user_id"),
+  // Who performed the assessment — determines lesson plan influence and hours type
+  performedByRole: text("performed_by_role").notNull().default("instructor"), // instructor | supervised
   // Assessment program type — determines which checklist/regulations apply
   assessmentType: text("assessment_type").notNull().default("qsafe"), // qsafe | qride | heavy_vehicle
   // Lesson conditions — recorded at session start for regulatory and safety records

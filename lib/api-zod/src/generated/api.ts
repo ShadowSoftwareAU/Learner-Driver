@@ -222,6 +222,7 @@ export const GetStudentProgressParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getStudentProgressResponseRecentAssessmentsItemPerformedByRoleDefault = `instructor`;
 export const getStudentProgressResponseRecentAssessmentsItemAssessmentTypeDefault = `qsafe`;
 
 export const GetStudentProgressResponse = zod.object({
@@ -245,6 +246,7 @@ export const GetStudentProgressResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(getStudentProgressResponseRecentAssessmentsItemPerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(getStudentProgressResponseRecentAssessmentsItemAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -710,6 +712,7 @@ export const ListAssessmentsQueryParams = zod.object({
   "instructorId": zod.coerce.number().optional()
 })
 
+export const listAssessmentsResponsePerformedByRoleDefault = `instructor`;
 export const listAssessmentsResponseAssessmentTypeDefault = `qsafe`;
 
 export const ListAssessmentsResponseItem = zod.object({
@@ -721,6 +724,7 @@ export const ListAssessmentsResponseItem = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(listAssessmentsResponsePerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(listAssessmentsResponseAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -827,6 +831,7 @@ export const UpdateAssessmentBody = zod.object({
   "acknowledgeFitness": zod.boolean().optional().describe('If true, records pre-drive fitness and sobriety check confirmed at now()')
 })
 
+export const updateAssessmentResponsePerformedByRoleDefault = `instructor`;
 export const updateAssessmentResponseAssessmentTypeDefault = `qsafe`;
 
 export const UpdateAssessmentResponse = zod.object({
@@ -838,6 +843,7 @@ export const UpdateAssessmentResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(updateAssessmentResponsePerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(updateAssessmentResponseAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -867,6 +873,7 @@ export const SubmitAssessmentParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const submitAssessmentResponsePerformedByRoleDefault = `instructor`;
 export const submitAssessmentResponseAssessmentTypeDefault = `qsafe`;
 
 export const SubmitAssessmentResponse = zod.object({
@@ -878,6 +885,7 @@ export const SubmitAssessmentResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(submitAssessmentResponsePerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(submitAssessmentResponseAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -912,6 +920,7 @@ export const ApproveAssessmentBody = zod.object({
   "notes": zod.string().optional().describe('Optional approval notes')
 })
 
+export const approveAssessmentResponsePerformedByRoleDefault = `instructor`;
 export const approveAssessmentResponseAssessmentTypeDefault = `qsafe`;
 
 export const ApproveAssessmentResponse = zod.object({
@@ -923,6 +932,7 @@ export const ApproveAssessmentResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(approveAssessmentResponsePerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(approveAssessmentResponseAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -1000,6 +1010,7 @@ export const GetHandoverParams = zod.object({
   "studentId": zod.coerce.number()
 })
 
+export const getHandoverResponseRecentAssessmentsItemPerformedByRoleDefault = `instructor`;
 export const getHandoverResponseRecentAssessmentsItemAssessmentTypeDefault = `qsafe`;
 
 export const GetHandoverResponse = zod.object({
@@ -1065,6 +1076,7 @@ export const GetHandoverResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(getHandoverResponseRecentAssessmentsItemPerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(getHandoverResponseRecentAssessmentsItemAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -1184,6 +1196,7 @@ export const ListAuditLogsResponse = zod.array(ListAuditLogsResponseItem)
 /**
  * @summary Instructor dashboard — student counts, recent lessons, upcoming
  */
+export const getInstructorDashboardResponseRecentAssessmentsItemPerformedByRoleDefault = `instructor`;
 export const getInstructorDashboardResponseRecentAssessmentsItemAssessmentTypeDefault = `qsafe`;
 
 export const GetInstructorDashboardResponse = zod.object({
@@ -1199,6 +1212,7 @@ export const GetInstructorDashboardResponse = zod.object({
   "lessonDate": zod.string(),
   "durationMinutes": zod.number(),
   "status": zod.enum(['in_progress', 'completed']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(getInstructorDashboardResponseRecentAssessmentsItemPerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
   "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(getInstructorDashboardResponseRecentAssessmentsItemAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
   "confidenceNote": zod.string().nullish(),
@@ -1233,8 +1247,6 @@ export const GetInstructorDashboardResponse = zod.object({
 /**
  * @summary Student dashboard — hours, skill completion, recent assessments
  */
-export const getStudentDashboardResponseRecentAssessmentsItemAssessmentTypeDefault = `qsafe`;
-
 export const GetStudentDashboardResponse = zod.object({
   "totalHours": zod.number(),
   "completedManeuvers": zod.number(),
@@ -1242,32 +1254,17 @@ export const GetStudentDashboardResponse = zod.object({
   "progressPercent": zod.number(),
   "nextFocusAreas": zod.string().nullish(),
   "recentAssessments": zod.array(zod.object({
-  "id": zod.number(),
-  "studentId": zod.number(),
-  "instructorId": zod.number(),
+  "id": zod.number().optional(),
+  "studentId": zod.number().optional(),
+  "instructorId": zod.number().optional(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
-  "lessonDate": zod.string(),
-  "durationMinutes": zod.number(),
-  "status": zod.enum(['in_progress', 'completed']),
-  "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(getStudentDashboardResponseRecentAssessmentsItemAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
-  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
+  "lessonDate": zod.string().optional(),
+  "durationMinutes": zod.number().optional(),
+  "status": zod.string().optional(),
+  "performedByRole": zod.enum(['instructor', 'supervised']).optional(),
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
-  "routePath": zod.array(zod.object({
-  "lat": zod.number(),
-  "lng": zod.number(),
-  "ts": zod.number()
-})).nullish(),
-  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
-  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
-  "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
-  "approvedAt": zod.string().nullish(),
-  "approvedByUserId": zod.number().nullish(),
-  "reportDispatchedAt": zod.string().nullish(),
-  "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
-  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
-  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })),
   "skillBreakdown": zod.array(zod.object({
@@ -2205,6 +2202,7 @@ export const GetViewerStudentDashboardResponse = zod.object({
   "lessonDate": zod.string().optional(),
   "durationMinutes": zod.number().optional(),
   "pedalOperator": zod.string().optional(),
+  "performedByRole": zod.enum(['instructor', 'supervised']).optional(),
   "focusAreasNext": zod.string().nullish(),
   "totalHoursThisLesson": zod.number().nullish()
 })),
@@ -2219,6 +2217,26 @@ export const GetViewerStudentDashboardResponse = zod.object({
   "relationshipType": zod.string().nullish(),
   "linkedAt": zod.string().optional()
 }).optional()
+})
+
+
+/**
+ * Creates a session tagged as 'supervised' that accrues hours but does not influence the instructor lesson plan.
+ * @summary Log a supervised driving session (parent/guardian/mentor)
+ */
+export const CreateSupervisedSessionParams = zod.object({
+  "studentId": zod.coerce.number()
+})
+
+export const createSupervisedSessionBodyPedalOperatorDefault = `student`;
+
+export const CreateSupervisedSessionBody = zod.object({
+  "lessonDate": zod.string(),
+  "durationMinutes": zod.number(),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).default(createSupervisedSessionBodyPedalOperatorDefault),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish(),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish(),
+  "notes": zod.string().nullish()
 })
 
 

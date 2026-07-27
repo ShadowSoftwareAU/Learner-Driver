@@ -173,22 +173,34 @@ export default function StudentDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {dashboard.recentAssessments?.map(assessment => (
-                  <div key={assessment.id} className="p-4 rounded-lg border border-border bg-gray-50/50 flex flex-col gap-2">
+                {dashboard.recentAssessments?.map(assessment => {
+                  const isSupervised = (assessment as any).performedByRole === "supervised";
+                  return (
+                  <div key={assessment.id} className={`p-4 rounded-lg border flex flex-col gap-2 ${isSupervised ? "border-amber-200 bg-amber-50/40" : "border-border bg-gray-50/50"}`}>
                     <div className="flex justify-between items-start">
-                      <div className="font-semibold flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-muted-foreground" />
-                        {format(new Date(assessment.lessonDate), 'PPP')}
+                      <div className="font-semibold flex items-center gap-2 flex-wrap">
+                        <FileText className={`w-4 h-4 ${isSupervised ? "text-amber-600" : "text-muted-foreground"}`} />
+                        {assessment.lessonDate ? format(new Date(assessment.lessonDate), 'PPP') : "—"}
+                        {isSupervised ? (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                            Supervised
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                            Instructor
+                          </span>
+                        )}
                       </div>
                       <span className="text-sm font-medium px-2 py-1 bg-white border rounded">
                         {assessment.durationMinutes} mins
                       </span>
                     </div>
-                    {assessment.confidenceNote && (
+                    {!isSupervised && assessment.confidenceNote && (
                       <p className="text-sm text-muted-foreground mt-1">"{assessment.confidenceNote}"</p>
                     )}
                   </div>
-                ))}
+                  );
+                })}
                 {(!dashboard.recentAssessments || dashboard.recentAssessments.length === 0) && (
                   <div className="text-center py-8 text-muted-foreground">
                     No assessments recorded yet.

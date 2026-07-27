@@ -125,6 +125,8 @@ import type {
   SubmitVerificationBody,
   Subscription,
   SubscriptionInfo,
+  SupervisedSession,
+  SupervisedSessionInput,
   TermsStatus,
   ToiletRateInput,
   ToiletSubmitInput,
@@ -6424,6 +6426,79 @@ export function useGetViewerStudentDashboard<TData = Awaited<ReturnType<typeof g
 
 
 
+
+export const getCreateSupervisedSessionUrl = (studentId: number,) => {
+
+
+
+
+  return `/api/viewer/students/${studentId}/supervised-sessions`
+}
+
+/**
+ * Creates a session tagged as 'supervised' that accrues hours but does not influence the instructor lesson plan.
+ * @summary Log a supervised driving session (parent/guardian/mentor)
+ */
+export const createSupervisedSession = async (studentId: number,
+    supervisedSessionInput: SupervisedSessionInput, options?: RequestInit): Promise<SupervisedSession> => {
+
+  return customFetch<SupervisedSession>(getCreateSupervisedSessionUrl(studentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      supervisedSessionInput,)
+  }
+);}
+
+
+
+
+export const getCreateSupervisedSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupervisedSession>>, TError,{studentId: number;data: BodyType<SupervisedSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createSupervisedSession>>, TError,{studentId: number;data: BodyType<SupervisedSessionInput>}, TContext> => {
+
+const mutationKey = ['createSupervisedSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createSupervisedSession>>, {studentId: number;data: BodyType<SupervisedSessionInput>}> = (props) => {
+          const {studentId,data} = props ?? {};
+
+          return  createSupervisedSession(studentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateSupervisedSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createSupervisedSession>>>
+    export type CreateSupervisedSessionMutationBody = BodyType<SupervisedSessionInput>
+    export type CreateSupervisedSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Log a supervised driving session (parent/guardian/mentor)
+ */
+export const useCreateSupervisedSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createSupervisedSession>>, TError,{studentId: number;data: BodyType<SupervisedSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createSupervisedSession>>,
+        TError,
+        {studentId: number;data: BodyType<SupervisedSessionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateSupervisedSessionMutationOptions(options));
+    }
 
 export const getGetViewerAssessmentDetailUrl = (assessmentId: number,) => {
 

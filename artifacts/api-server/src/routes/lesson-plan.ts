@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, inArray, sql } from "drizzle-orm";
+import { eq, inArray, sql, and } from "drizzle-orm";
 import {
   db,
   maneuversTable,
@@ -25,15 +25,22 @@ router.get("/students/:id/lesson-plan", requireAuth, async (req: any, res): Prom
   const studentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   if (!studentId) { res.status(400).json({ error: "Invalid student id" }); return; }
 
-  // 1. Get all assessments for this student
+  // 1. Get instructor-performed assessments only — supervised sessions do not
+  //    count toward the lesson plan (they log hours but don't assess skills
+  //    to the QSAFE standard required by a licensed instructor).
   const assessments = await db
     .select({ id: assessmentsTable.id })
     .from(assessmentsTable)
-    .where(eq(assessmentsTable.studentId, studentId));
+    .where(
+      and(
+        eq(assessmentsTable.studentId, studentId),
+        eq(assessmentsTable.performedByRole, "instructor"),
+      )
+    );
 
   const assessmentIds = assessments.map((a) => a.id);
 
-  // 2. Get all maneuver results — take best level per maneuver across all assessments
+  // 2. Get all maneuver results — take best level per maneuver across instructor assessments
   const allResults: { maneuverId: number; competencyLevel: string }[] =
     assessmentIds.length > 0
       ? await db

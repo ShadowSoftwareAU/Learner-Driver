@@ -419,20 +419,29 @@ export default function InstructorStudentDetail() {
           
           <TabsContent value="history" className="pt-6">
             <div className="space-y-4">
-              {sortedAssessments.map(assessment => (
+              {sortedAssessments.map(assessment => {
+                const isSupervised = (assessment as any).performedByRole === "supervised";
+                return (
                 <Link key={assessment.id} href={`/instructor/assessments/${assessment.id}`}>
-                  <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+                  <Card className={`hover:border-primary/50 transition-colors cursor-pointer ${isSupervised ? "border-amber-200 bg-amber-50/30" : ""}`}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start gap-4">
                         <div className="min-w-0 flex-1">
-                          <p className="font-semibold text-foreground">{format(new Date(assessment.lessonDate), 'PPP')}</p>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="font-semibold text-foreground">{format(new Date(assessment.lessonDate), 'PPP')}</p>
+                            {isSupervised && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                Supervised
+                              </span>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">{assessment.durationMinutes} minutes</p>
                         </div>
                         <Badge variant={assessment.status === 'completed' ? 'default' : 'secondary'} className="capitalize flex-shrink-0">
                           {assessment.status.replace('_', ' ')}
                         </Badge>
                       </div>
-                      {(assessment.confidenceNote || assessment.focusAreasNext) && (
+                      {!isSupervised && (assessment.confidenceNote || assessment.focusAreasNext) && (
                         <div className="mt-3 space-y-2 border-t pt-3">
                           {assessment.confidenceNote && (
                             <div>
@@ -448,10 +457,17 @@ export default function InstructorStudentDetail() {
                           )}
                         </div>
                       )}
+                      {isSupervised && assessment.confidenceNote && (
+                        <div className="mt-3 border-t pt-3">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-0.5">Supervisor notes</p>
+                          <p className="text-sm text-foreground line-clamp-2">{assessment.confidenceNote}</p>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </Link>
-              ))}
+                );
+              })}
               {sortedAssessments.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground border border-dashed rounded-lg">
                   No assessments recorded yet.

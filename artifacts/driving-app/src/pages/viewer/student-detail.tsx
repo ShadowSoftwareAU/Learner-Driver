@@ -225,45 +225,54 @@ export default function ViewerStudentDetail() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Recent Lessons</CardTitle>
-              <CardDescription>The last few completed driving assessments.</CardDescription>
+              <CardDescription>The last few completed driving sessions.</CardDescription>
             </CardHeader>
             <CardContent>
               <ul className="divide-y">
-                {recentAssessments.map((a: {
-                  id: number;
-                  lessonDate: string;
-                  durationMinutes: number;
-                  pedalOperator: string;
-                  focusAreasNext?: string | null;
-                  totalHoursThisLesson?: number | null;
-                }) => (
+                {recentAssessments.map((a) => {
+                  const isSupervised = a.performedByRole === "supervised";
+                  return (
                   <li key={a.id} className="py-3">
                     <button
                       type="button"
-                      onClick={() => navigate(`/viewer/assessments/${a.id}`)}
-                      className="w-full text-left rounded-lg hover:bg-muted/50 transition-colors p-2 -mx-2 space-y-1"
+                      onClick={() => !isSupervised && navigate(`/viewer/assessments/${a.id}`)}
+                      className={`w-full text-left rounded-lg p-2 -mx-2 space-y-1 ${isSupervised ? "cursor-default" : "hover:bg-muted/50 transition-colors"}`}
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium">
-                          {format(new Date(a.lessonDate), "d MMM yyyy")}
-                        </span>
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-medium">
+                            {a.lessonDate ? format(new Date(a.lessonDate), "d MMM yyyy") : "—"}
+                          </span>
+                          {isSupervised ? (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                              Supervised
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                              Instructor
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground">
                           {a.durationMinutes} min
                           {a.totalHoursThisLesson != null && ` · +${Number(a.totalHoursThisLesson).toFixed(1)} hrs`}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator}
+                        {a.pedalOperator ? (PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator) : ""}
                       </p>
-                      {a.focusAreasNext && (
+                      {!isSupervised && a.focusAreasNext && (
                         <p className="text-xs text-muted-foreground italic">
                           Focus next: {a.focusAreasNext}
                         </p>
                       )}
-                      <p className="text-xs text-primary font-medium">View lesson details →</p>
+                      {!isSupervised && (
+                        <p className="text-xs text-primary font-medium">View lesson details →</p>
+                      )}
                     </button>
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             </CardContent>
           </Card>

@@ -83,7 +83,7 @@ router.get("/dashboard/student", requireAuth, async (req: any, res): Promise<voi
   const lastAssessment = assessments[0];
   const nextFocusAreas = lastAssessment?.focusAreasNext ?? null;
 
-  const recentAssessments = assessments.slice(0, 5).map(a => ({ id: a.id, studentId: a.studentId, instructorId: a.instructorId, studentName: student.fullName, instructorName: null, lessonDate: a.lessonDate, durationMinutes: a.durationMinutes, status: a.status, confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext, createdAt: a.createdAt }));
+  const recentAssessments = assessments.slice(0, 5).map(a => ({ id: a.id, studentId: a.studentId, instructorId: a.instructorId, studentName: student.fullName, instructorName: null, lessonDate: a.lessonDate, durationMinutes: a.durationMinutes, status: a.status, performedByRole: (a as any).performedByRole ?? "instructor", confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext, createdAt: a.createdAt }));
 
   res.json({ totalHours: student.totalHours, completedManeuvers, totalManeuvers: allManeuvers.length, progressPercent, nextFocusAreas, recentAssessments, skillBreakdown });
 });
