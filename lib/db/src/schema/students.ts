@@ -22,6 +22,8 @@ export const studentsTable = pgTable("students", {
   headshotPath: text("headshot_path"),
   notes: text("notes"),
   totalHours: real("total_hours").notNull().default(0),
+  instructorHours: real("instructor_hours").notNull().default(0),
+  supervisedHours: real("supervised_hours").notNull().default(0),
   region: text("region"),
   state: text("state"),
   country: text("country").default("AU"),

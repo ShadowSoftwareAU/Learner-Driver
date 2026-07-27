@@ -371,7 +371,10 @@ function formatStudent(s: any) {
     pcycSchoolEmail: s.pcycSchoolEmail, licenseNumber: s.licenseNumber,
     licenceFrontPath: s.licenceFrontPath, licenceBackPath: s.licenceBackPath, headshotPath: s.headshotPath,
     notes: s.notes, region: s.region, state: s.state ?? null, country: s.country,
-    totalHours: s.totalHours, status: s.status,
+    totalHours: s.totalHours,
+    instructorHours: s.instructorHours ?? 0,
+    supervisedHours: s.supervisedHours ?? 0,
+    status: s.status,
     // Attendance
     noShowCount: s.noShowCount ?? 0,
     attendanceReliabilityScore: s.attendanceReliabilityScore ?? null,

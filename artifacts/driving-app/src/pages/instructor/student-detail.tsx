@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, useGetHandover, useListBookings, getGetStudentQueryKey, getGetStudentProgressQueryKey, useUpdateStudent } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock, Pencil, Car, GraduationCap } from "lucide-react";
+import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock, Pencil, Car, GraduationCap, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
@@ -149,13 +149,39 @@ export default function InstructorStudentDetail() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
+          <Card className={(student as any).state === "QLD" ? "border-amber-200 bg-amber-50/30" : ""}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Hours</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Hours Logged</CardTitle>
               <Clock className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{student.totalHours || 0}</div>
+              {(student as any).state === "QLD" ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <GraduationCap className="w-3.5 h-3.5" /> Instructor
+                    </span>
+                    <span className="font-semibold">{(student as any).instructorHours ?? 0} hrs</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Users className="w-3.5 h-3.5" /> Supervised
+                    </span>
+                    <span className="font-semibold">{(student as any).supervisedHours ?? 0} hrs</span>
+                  </div>
+                  <div className="border-t pt-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-amber-800 font-medium">Effective (3x)</span>
+                      <span className="text-2xl font-bold text-amber-900">
+                        {Math.round((((student as any).instructorHours ?? 0) * 3 + ((student as any).supervisedHours ?? 0)) * 10) / 10}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-amber-700">QLD: 1 instructor hr = 3 effective hrs</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-3xl font-bold">{student.totalHours || 0}</div>
+              )}
             </CardContent>
           </Card>
           <Card>

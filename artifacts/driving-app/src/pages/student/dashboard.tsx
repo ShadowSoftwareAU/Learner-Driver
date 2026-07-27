@@ -4,7 +4,7 @@ import { useGetStudentDashboard, useListBookings } from "@workspace/api-client-r
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Clock, CheckCircle, Target, FileText, Award, Calendar } from "lucide-react";
+import { Loader2, Clock, CheckCircle, Target, FileText, Award, Calendar, Info, GraduationCap, Users } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { BookingStatus } from "@/lib/enums";
@@ -41,25 +41,58 @@ export default function StudentDashboard() {
     );
   }
 
+  const instructorHours = (dashboard as any).instructorHours ?? 0;
+  const supervisedHours = (dashboard as any).supervisedHours ?? 0;
+  const effectiveTotalHours = (dashboard as any).effectiveTotalHours ?? dashboard.totalHours;
+  const isQLD = (dashboard as any).isQLD ?? false;
+
   return (
     <SidebarLayout>
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Progress</h1>
-          <p className="text-muted-foreground">Track your learning journey towards getting your license.</p>
+          <p className="text-muted-foreground">Track your learning journey towards getting your licence.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
+          {/* Hours card — QLD shows breakdown + effective total; others show simple total */}
+          <Card className={isQLD ? "md:col-span-1 border-amber-200 bg-amber-50/30" : ""}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Hours Logged</CardTitle>
               <Clock className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">{dashboard.totalHours}</div>
-              <p className="text-xs text-muted-foreground mt-1">Total supervised driving hours</p>
+              {isQLD ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <GraduationCap className="w-3.5 h-3.5" /> With instructor
+                    </span>
+                    <span className="font-semibold">{instructorHours} hrs</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Users className="w-3.5 h-3.5" /> Supervised
+                    </span>
+                    <span className="font-semibold">{supervisedHours} hrs</span>
+                  </div>
+                  <div className="border-t pt-2 mt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-amber-800">Effective total</span>
+                      <span className="text-2xl font-bold text-amber-900">{effectiveTotalHours}</span>
+                    </div>
+                    <p className="text-[11px] text-amber-700 mt-0.5">1 instructor hr = 3 effective hrs (QLD rule)</p>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{dashboard.totalHours}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Total supervised driving hours</p>
+                </>
+              )}
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Competent Maneuvers</CardTitle>
@@ -70,6 +103,7 @@ export default function StudentDashboard() {
               <p className="text-xs text-muted-foreground mt-1">Skills you're competent in</p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Overall Progress</CardTitle>
@@ -81,6 +115,19 @@ export default function StudentDashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {/* QLD callout banner */}
+        {isQLD && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+            <Info className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">Queensland 3x multiplier applies to your logbook</p>
+              <p className="text-sm text-amber-800 mt-0.5">
+                Under Queensland road rules, every hour driven with a professional instructor counts as 3 hours toward your 100-hour requirement. Your effective total above already reflects this.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {dashboard.nextFocusAreas ? (

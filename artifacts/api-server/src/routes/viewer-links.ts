@@ -284,9 +284,9 @@ router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, asyn
     lightingCondition: lightingCondition ?? null,
   }).returning();
 
-  // Accrue hours to student
+  // Accrue hours to student — supervised sessions increment supervisedHours, not instructorHours
   const hours = durationMinutes / 60;
-  await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours} WHERE id = ${studentId}`);
+  await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours}, supervised_hours = supervised_hours + ${hours} WHERE id = ${studentId}`);
 
   await logAudit({
     actorId: user.id,

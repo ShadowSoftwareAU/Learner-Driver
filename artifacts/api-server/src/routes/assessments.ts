@@ -137,7 +137,9 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
   }).returning();
 
   const hours = durationMinutes / 60;
-  await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours} WHERE id = ${studentId}`);
+  // performedByRole is always "instructor" for assessments created by instructors.
+  // Supervised (parent/guardian) assessments set performedByRole="supervised" elsewhere.
+  await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours}, instructor_hours = instructor_hours + ${hours} WHERE id = ${studentId}`);
 
   await logAudit({
     actorId: user.id,

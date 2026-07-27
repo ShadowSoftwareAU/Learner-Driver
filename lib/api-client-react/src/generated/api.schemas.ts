@@ -113,6 +113,10 @@ export interface Student {
   /** @nullable */
   country?: string | null;
   totalHours?: number;
+  /** Hours logged with a professional instructor */
+  instructorHours?: number;
+  /** Hours logged under parent/guardian supervision */
+  supervisedHours?: number;
   status?: StudentStatus;
   /**
      * Decrypted medical conditions — only visible to authorised roles
@@ -951,6 +955,14 @@ export type StudentDashboardRecentAssessmentsItem = {
 
 export interface StudentDashboard {
   totalHours: number;
+  /** Hours logged with a professional instructor */
+  instructorHours?: number;
+  /** Hours logged under parent/guardian supervision */
+  supervisedHours?: number;
+  /** Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD) */
+  effectiveTotalHours?: number;
+  /** Whether the student is in QLD (3x multiplier applies) */
+  isQLD?: boolean;
   completedManeuvers: number;
   totalManeuvers: number;
   progressPercent: number;

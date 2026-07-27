@@ -2623,6 +2623,12 @@ components:
           type: ["string", "null"]
         totalHours:
           type: number
+        instructorHours:
+          type: number
+          description: "Hours logged with a professional instructor"
+        supervisedHours:
+          type: number
+          description: "Hours logged under parent/guardian supervision"
         status:
           type: string
           enum: [active, on_hold, completed]
@@ -3451,6 +3457,18 @@ components:
       properties:
         totalHours:
           type: number
+        instructorHours:
+          type: number
+          description: "Hours logged with a professional instructor"
+        supervisedHours:
+          type: number
+          description: "Hours logged under parent/guardian supervision"
+        effectiveTotalHours:
+          type: number
+          description: "Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)"
+        isQLD:
+          type: boolean
+          description: "Whether the student is in QLD (3x multiplier applies)"
         completedManeuvers:
           type: integer
         totalManeuvers:

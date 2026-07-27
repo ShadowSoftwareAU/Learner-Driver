@@ -85,7 +85,27 @@ router.get("/dashboard/student", requireAuth, async (req: any, res): Promise<voi
 
   const recentAssessments = assessments.slice(0, 5).map(a => ({ id: a.id, studentId: a.studentId, instructorId: a.instructorId, studentName: student.fullName, instructorName: null, lessonDate: a.lessonDate, durationMinutes: a.durationMinutes, status: a.status, performedByRole: (a as any).performedByRole ?? "instructor", confidenceNote: a.confidenceNote, focusAreasNext: a.focusAreasNext, createdAt: a.createdAt }));
 
-  res.json({ totalHours: student.totalHours, completedManeuvers, totalManeuvers: allManeuvers.length, progressPercent, nextFocusAreas, recentAssessments, skillBreakdown });
+  const instructorHours = Number(student.instructorHours ?? 0);
+  const supervisedHours = Number(student.supervisedHours ?? 0);
+  const isQLD = student.state === "QLD";
+  // QLD: 1 instructor hour = 3 effective hours toward the 100-hour requirement
+  const effectiveTotalHours = isQLD
+    ? Math.round((instructorHours * 3 + supervisedHours) * 10) / 10
+    : Math.round((instructorHours + supervisedHours) * 10) / 10;
+
+  res.json({
+    totalHours: student.totalHours,
+    instructorHours: Math.round(instructorHours * 10) / 10,
+    supervisedHours: Math.round(supervisedHours * 10) / 10,
+    effectiveTotalHours,
+    isQLD,
+    completedManeuvers,
+    totalManeuvers: allManeuvers.length,
+    progressPercent,
+    nextFocusAreas,
+    recentAssessments,
+    skillBreakdown,
+  });
 });
 
 router.get("/dashboard/admin", requireAuth, async (req: any, res): Promise<void> => {
