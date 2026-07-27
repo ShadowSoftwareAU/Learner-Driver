@@ -145,13 +145,30 @@ router.get("/viewer/me/students", requireAuth, async (req: any, res): Promise<vo
         headshotPath: studentsTable.headshotPath,
         noShowCount: studentsTable.noShowCount,
         attendanceReliabilityScore: studentsTable.attendanceReliabilityScore,
+        instructorHours: studentsTable.instructorHours,
+        supervisedHours: studentsTable.supervisedHours,
+        state: studentsTable.state,
       }).from(studentsTable).where(eq(studentsTable.id, id)).then(r => r[0])
     )
   );
 
   const result = allStudents.filter(Boolean).map(s => {
     const link = links.find(l => l.studentId === s.id);
-    return { ...s, relationshipType: link?.relationshipType, linkedAt: link?.linkedAt };
+    const instructorHours = Math.round(Number(s.instructorHours ?? 0) * 10) / 10;
+    const supervisedHours = Math.round(Number(s.supervisedHours ?? 0) * 10) / 10;
+    const isQLD = s.state === "QLD";
+    const effectiveTotalHours = isQLD
+      ? Math.round((instructorHours * 3 + supervisedHours) * 10) / 10
+      : Math.round((instructorHours + supervisedHours) * 10) / 10;
+    return {
+      ...s,
+      instructorHours,
+      supervisedHours,
+      effectiveTotalHours,
+      isQLD,
+      relationshipType: link?.relationshipType,
+      linkedAt: link?.linkedAt,
+    };
   });
 
   res.json(result);

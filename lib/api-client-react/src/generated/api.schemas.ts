@@ -1895,6 +1895,26 @@ export interface ViewerStudentSummary {
   /** @nullable */
   relationshipType?: string | null;
   linkedAt?: string;
+  /**
+     * Hours logged with a professional instructor
+     * @nullable
+     */
+  instructorHours?: number | null;
+  /**
+     * Hours logged under parent/guardian supervision
+     * @nullable
+     */
+  supervisedHours?: number | null;
+  /**
+     * Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)
+     * @nullable
+     */
+  effectiveTotalHours?: number | null;
+  /**
+     * Whether the student is in QLD (3x multiplier applies)
+     * @nullable
+     */
+  isQLD?: boolean | null;
 }
 
 export type ViewerAssessmentDetailAssessment = {

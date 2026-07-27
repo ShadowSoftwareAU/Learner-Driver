@@ -48,6 +48,10 @@ interface ViewerStudent {
   attendanceReliabilityScore?: number | null;
   relationshipType?: string | null;
   linkedAt: string;
+  instructorHours?: number | null;
+  supervisedHours?: number | null;
+  effectiveTotalHours?: number | null;
+  isQLD?: boolean | null;
 }
 
 export default function ViewerDashboard() {
@@ -242,8 +246,19 @@ export default function ViewerDashboard() {
                   <div className="flex gap-4 text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
                       <Clock className="w-3.5 h-3.5" />
-                      <span>{s.totalHours != null ? `${Number(s.totalHours).toFixed(1)} hrs` : "—"}</span>
+                      {s.isQLD && s.effectiveTotalHours != null ? (
+                        <span title={`${Number(s.instructorHours ?? 0).toFixed(1)} instructor + ${Number(s.supervisedHours ?? 0).toFixed(1)} supervised (3x multiplier applied)`}>
+                          {Number(s.effectiveTotalHours).toFixed(1)} effective hrs
+                        </span>
+                      ) : (
+                        <span>{s.totalHours != null ? `${Number(s.totalHours).toFixed(1)} hrs` : "—"}</span>
+                      )}
                     </div>
+                    {s.isQLD && s.effectiveTotalHours != null && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <span>{Number(s.instructorHours ?? 0).toFixed(1)}i + {Number(s.supervisedHours ?? 0).toFixed(1)}s</span>
+                      </div>
+                    )}
                     {s.noShowCount > 0 && (
                       <div className="flex items-center gap-1 text-yellow-700">
                         <AlertTriangle className="w-3.5 h-3.5" />

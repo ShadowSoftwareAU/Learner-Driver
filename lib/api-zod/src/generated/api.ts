@@ -2223,7 +2223,11 @@ export const GetViewerStudentsResponseItem = zod.object({
   "noShowCount": zod.number().optional(),
   "attendanceReliabilityScore": zod.number().nullish(),
   "relationshipType": zod.string().nullish(),
-  "linkedAt": zod.string().optional()
+  "linkedAt": zod.string().optional(),
+  "instructorHours": zod.number().nullish().describe('Hours logged with a professional instructor'),
+  "supervisedHours": zod.number().nullish().describe('Hours logged under parent\/guardian supervision'),
+  "effectiveTotalHours": zod.number().nullish().describe('Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)'),
+  "isQLD": zod.boolean().nullish().describe('Whether the student is in QLD (3x multiplier applies)')
 })
 export const GetViewerStudentsResponse = zod.array(GetViewerStudentsResponseItem)
 
@@ -2244,7 +2248,11 @@ export const GetViewerStudentDashboardResponse = zod.object({
   "noShowCount": zod.number().optional(),
   "attendanceReliabilityScore": zod.number().nullish(),
   "relationshipType": zod.string().nullish(),
-  "linkedAt": zod.string().optional()
+  "linkedAt": zod.string().optional(),
+  "instructorHours": zod.number().nullish().describe('Hours logged with a professional instructor'),
+  "supervisedHours": zod.number().nullish().describe('Hours logged under parent\/guardian supervision'),
+  "effectiveTotalHours": zod.number().nullish().describe('Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)'),
+  "isQLD": zod.boolean().nullish().describe('Whether the student is in QLD (3x multiplier applies)')
 }),
   "instructorHours": zod.number().optional().describe('Hours logged with a professional instructor'),
   "supervisedHours": zod.number().optional().describe('Hours logged under parent\/guardian supervision'),

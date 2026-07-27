@@ -4563,6 +4563,18 @@ components:
           type: ["string", "null"]
         linkedAt:
           type: string
+        instructorHours:
+          type: ["number", "null"]
+          description: "Hours logged with a professional instructor"
+        supervisedHours:
+          type: ["number", "null"]
+          description: "Hours logged under parent/guardian supervision"
+        effectiveTotalHours:
+          type: ["number", "null"]
+          description: "Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)"
+        isQLD:
+          type: ["boolean", "null"]
+          description: "Whether the student is in QLD (3x multiplier applies)"
 
     ViewerAssessmentDetail:
       type: object
