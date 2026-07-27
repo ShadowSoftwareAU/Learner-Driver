@@ -8,6 +8,7 @@
     "seed-demo": "tsx ./src/seed-demo.ts",
     "seed-compliance": "tsx ./src/seed-compliance-criteria.ts",
     "import-toilets": "tsx ./src/import-toilets.ts",
+    "backfill-hours-split": "tsx ./src/backfill-hours-split.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

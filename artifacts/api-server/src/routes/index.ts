@@ -30,6 +30,7 @@ import feedbackRouter from "./feedback";
 import handoverAuditRouter from "./handover-audit";
 import instructorVehiclesRouter from "./instructor-vehicles";
 import walletRouter from "./wallet";
+import adminBackfillRouter from "./admin-backfill";
 
 const router: IRouter = Router();
 
@@ -64,5 +65,6 @@ router.use(feedbackRouter);
 router.use(handoverAuditRouter);
 router.use(instructorVehiclesRouter);
 router.use(walletRouter);
+router.use(adminBackfillRouter);
 
 export default router;
