@@ -7,6 +7,7 @@ import { logAudit } from "./audit";
 import { scanContent } from "../lib/contentFiltering/scanContent";
 import { sendNotification } from "../lib/notifications/notificationService";
 import { sendExternalEmail } from "../lib/notifications/emailChannel";
+import { evaluateAndPersistMilestones } from "../lib/milestones/evaluate";
 
 const router = Router();
 
@@ -379,6 +380,16 @@ router.post("/assessments/:id/results", requireAuth, async (req: any, res): Prom
     }
   }
   await logAudit({ actorId: user.id, actorRole: user.role, action: "save_maneuver_results", resourceType: "assessment", resourceId: assessmentId }, req);
+
+  // Evaluate milestones after saving results (non-blocking — failure must not affect the response)
+  const [assessment] = await db.select({ studentId: assessmentsTable.studentId }).from(assessmentsTable).where(eq(assessmentsTable.id, assessmentId));
+  if (assessment) {
+    const [student] = await db.select({ totalHours: studentsTable.totalHours }).from(studentsTable).where(eq(studentsTable.id, assessment.studentId));
+    if (student) {
+      evaluateAndPersistMilestones(assessment.studentId, Number(student.totalHours)).catch(() => null);
+    }
+  }
+
   res.json(saved);
 });
 

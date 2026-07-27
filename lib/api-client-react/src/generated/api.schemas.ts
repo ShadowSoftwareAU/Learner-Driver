@@ -363,6 +363,44 @@ export interface StudentProgress {
   recentAssessments?: Assessment[];
 }
 
+export type StudentMilestoneCategory = typeof StudentMilestoneCategory[keyof typeof StudentMilestoneCategory];
+
+
+export const StudentMilestoneCategory = {
+  hours: 'hours',
+  maneuvers: 'maneuvers',
+  practice: 'practice',
+} as const;
+
+export interface StudentMilestone {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  category: StudentMilestoneCategory;
+  earned: boolean;
+  /** @nullable */
+  earnedAt?: string | null;
+}
+
+export type ManeuverStatBestCompetencyLevel = typeof ManeuverStatBestCompetencyLevel[keyof typeof ManeuverStatBestCompetencyLevel];
+
+
+export const ManeuverStatBestCompetencyLevel = {
+  not_attempted: 'not_attempted',
+  attempted: 'attempted',
+  practiced: 'practiced',
+  mastered: 'mastered',
+} as const;
+
+export interface ManeuverStat {
+  maneuverId: number;
+  name: string;
+  category: string;
+  attemptCount: number;
+  bestCompetencyLevel: ManeuverStatBestCompetencyLevel;
+}
+
 export type InstructorComplianceStatus = typeof InstructorComplianceStatus[keyof typeof InstructorComplianceStatus];
 
 
@@ -954,6 +992,8 @@ export type StudentDashboardRecentAssessmentsItem = {
 };
 
 export interface StudentDashboard {
+  /** The student's database ID — used to fetch milestones and maneuver stats */
+  studentId: number;
   totalHours: number;
   /** Hours logged with a professional instructor */
   instructorHours?: number;

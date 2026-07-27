@@ -87,6 +87,7 @@ import type {
   Maneuver,
   ManeuverResult,
   ManeuverResultsBatch,
+  ManeuverStat,
   MarkNoShowBody,
   ModerationCase,
   ModerationCaseDetail,
@@ -119,6 +120,7 @@ import type {
   StudentInput,
   StudentMedical,
   StudentMedicalInput,
+  StudentMilestone,
   StudentProgress,
   StudentUpdate,
   SubmitFeedbackInput,
@@ -1050,6 +1052,160 @@ export const useGenerateViewerCode = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getGenerateViewerCodeMutationOptions(options));
     }
+
+export const getGetStudentMilestonesUrl = (id: number,) => {
+
+
+
+
+  return `/api/students/${id}/milestones`
+}
+
+/**
+ * @summary Get milestone badges earned by a student (and locked ones)
+ */
+export const getStudentMilestones = async (id: number, options?: RequestInit): Promise<StudentMilestone[]> => {
+
+  return customFetch<StudentMilestone[]>(getGetStudentMilestonesUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStudentMilestonesQueryKey = (id: number,) => {
+    return [
+    `/api/students/${id}/milestones`
+    ] as const;
+    }
+
+
+export const getGetStudentMilestonesQueryOptions = <TData = Awaited<ReturnType<typeof getStudentMilestones>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudentMilestones>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStudentMilestonesQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStudentMilestones>>> = ({ signal }) => getStudentMilestones(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStudentMilestones>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStudentMilestonesQueryResult = NonNullable<Awaited<ReturnType<typeof getStudentMilestones>>>
+export type GetStudentMilestonesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get milestone badges earned by a student (and locked ones)
+ */
+
+export function useGetStudentMilestones<TData = Awaited<ReturnType<typeof getStudentMilestones>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudentMilestones>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStudentMilestonesQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetStudentManeuverStatsUrl = (id: number,) => {
+
+
+
+
+  return `/api/students/${id}/maneuver-stats`
+}
+
+/**
+ * @summary Per-maneuver attempt counts and best competency level for a student
+ */
+export const getStudentManeuverStats = async (id: number, options?: RequestInit): Promise<ManeuverStat[]> => {
+
+  return customFetch<ManeuverStat[]>(getGetStudentManeuverStatsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStudentManeuverStatsQueryKey = (id: number,) => {
+    return [
+    `/api/students/${id}/maneuver-stats`
+    ] as const;
+    }
+
+
+export const getGetStudentManeuverStatsQueryOptions = <TData = Awaited<ReturnType<typeof getStudentManeuverStats>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudentManeuverStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStudentManeuverStatsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStudentManeuverStats>>> = ({ signal }) => getStudentManeuverStats(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStudentManeuverStats>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStudentManeuverStatsQueryResult = NonNullable<Awaited<ReturnType<typeof getStudentManeuverStats>>>
+export type GetStudentManeuverStatsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Per-maneuver attempt counts and best competency level for a student
+ */
+
+export function useGetStudentManeuverStats<TData = Awaited<ReturnType<typeof getStudentManeuverStats>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStudentManeuverStats>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStudentManeuverStatsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getListInstructorsUrl = (params?: ListInstructorsParams,) => {
   const normalizedParams = new URLSearchParams();

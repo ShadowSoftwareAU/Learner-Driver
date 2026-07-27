@@ -360,6 +360,42 @@ export const GenerateViewerCodeResponse = zod.object({
 
 
 /**
+ * @summary Get milestone badges earned by a student (and locked ones)
+ */
+export const GetStudentMilestonesParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStudentMilestonesResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "icon": zod.string(),
+  "description": zod.string(),
+  "category": zod.enum(['hours', 'maneuvers', 'practice']),
+  "earned": zod.boolean(),
+  "earnedAt": zod.string().nullish()
+})
+export const GetStudentMilestonesResponse = zod.array(GetStudentMilestonesResponseItem)
+
+
+/**
+ * @summary Per-maneuver attempt counts and best competency level for a student
+ */
+export const GetStudentManeuverStatsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetStudentManeuverStatsResponseItem = zod.object({
+  "maneuverId": zod.number(),
+  "name": zod.string(),
+  "category": zod.string(),
+  "attemptCount": zod.number(),
+  "bestCompetencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered'])
+})
+export const GetStudentManeuverStatsResponse = zod.array(GetStudentManeuverStatsResponseItem)
+
+
+/**
  * @summary List all instructors (admin only)
  */
 export const ListInstructorsQueryParams = zod.object({
@@ -1256,6 +1292,7 @@ export const GetInstructorDashboardResponse = zod.object({
  * @summary Student dashboard — hours, skill completion, recent assessments
  */
 export const GetStudentDashboardResponse = zod.object({
+  "studentId": zod.number().describe('The student\'s database ID — used to fetch milestones and maneuver stats'),
   "totalHours": zod.number(),
   "instructorHours": zod.number().optional().describe('Hours logged with a professional instructor'),
   "supervisedHours": zod.number().optional().describe('Hours logged under parent\/guardian supervision'),

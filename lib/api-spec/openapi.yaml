@@ -281,6 +281,48 @@ paths:
                   viewerCodeIssuedAt:
                     type: string
 
+  /students/{id}/milestones:
+    get:
+      operationId: getStudentMilestones
+      tags: [students]
+      summary: Get milestone badges earned by a student (and locked ones)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of all milestone definitions with earned status
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StudentMilestone"
+
+  /students/{id}/maneuver-stats:
+    get:
+      operationId: getStudentManeuverStats
+      tags: [students]
+      summary: Per-maneuver attempt counts and best competency level for a student
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Maneuver stats sorted by attempt count descending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ManeuverStat"
+
   # ─── Instructors ─────────────────────────────────────────────────────────────
   /instructors:
     get:
@@ -2780,6 +2822,42 @@ components:
         notStarted:
           type: integer
 
+    StudentMilestone:
+      type: object
+      required: [id, name, icon, description, category, earned]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        icon:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          enum: [hours, maneuvers, practice]
+        earned:
+          type: boolean
+        earnedAt:
+          type: ["string", "null"]
+
+    ManeuverStat:
+      type: object
+      required: [maneuverId, name, category, attemptCount, bestCompetencyLevel]
+      properties:
+        maneuverId:
+          type: integer
+        name:
+          type: string
+        category:
+          type: string
+        attemptCount:
+          type: integer
+        bestCompetencyLevel:
+          type: string
+          enum: [not_attempted, attempted, practiced, mastered]
+
     # ─── Instructors ───────────────────────────────────────────────────────────
     Instructor:
       type: object
@@ -3453,8 +3531,11 @@ components:
 
     StudentDashboard:
       type: object
-      required: [totalHours, completedManeuvers, totalManeuvers, progressPercent, recentAssessments]
+      required: [studentId, totalHours, completedManeuvers, totalManeuvers, progressPercent, recentAssessments]
       properties:
+        studentId:
+          type: integer
+          description: "The student's database ID — used to fetch milestones and maneuver stats"
         totalHours:
           type: number
         instructorHours:

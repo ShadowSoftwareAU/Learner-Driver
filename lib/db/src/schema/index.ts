@@ -21,3 +21,4 @@ export * from "./public-toilets";
 export * from "./feedback";
 export * from "./instructor-vehicles";
 export * from "./wallet";
+export * from "./milestones";

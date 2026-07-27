@@ -94,6 +94,7 @@ router.get("/dashboard/student", requireAuth, async (req: any, res): Promise<voi
     : Math.round((instructorHours + supervisedHours) * 10) / 10;
 
   res.json({
+    studentId: student.id,
     totalHours: student.totalHours,
     instructorHours: Math.round(instructorHours * 10) / 10,
     supervisedHours: Math.round(supervisedHours * 10) / 10,

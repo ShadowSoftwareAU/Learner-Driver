@@ -1,12 +1,13 @@
 import { Router } from "express";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import { z } from "zod";
-import { db, studentsTable, usersTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, bookingsTable } from "@workspace/db";
+import { db, studentsTable, usersTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, bookingsTable, studentMilestonesTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
 import { encrypt, decrypt, derivePreview } from "../lib/crypto";
 import { canViewRestrictedMedicalData } from "../lib/authz";
 import { isSchoolAdmin, isSuperAdmin } from "../lib/config";
+import { MILESTONE_DEFINITIONS, MILESTONE_MAP } from "../lib/milestones/definitions";
 
 const router = Router();
 
@@ -358,6 +359,114 @@ router.get("/students/:id/progress", requireAuth, async (req: any, res): Promise
     noShowCount: student.noShowCount ?? 0,
     attendanceReliabilityScore: student.attendanceReliabilityScore ?? null,
   });
+});
+
+// ─── Milestones ────────────────────────────────────────────────────────────────
+
+router.get("/students/:id/milestones", requireAuth, async (req: any, res): Promise<void> => {
+  const studentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  if (isSchoolAdmin(user.role) || isSuperAdmin(user.role)) {
+    // admins pass through — no additional check needed
+  } else if (user.role === "instructor") {
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+    if (!(await instructorHasStudent(instructor.id, studentId))) { res.status(403).json({ error: "Access denied" }); return; }
+  } else if (user.role === "student") {
+    const [s] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, studentId));
+    if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
+  } else {
+    // viewer, unassigned, and any other roles are denied
+    res.status(403).json({ error: "Access denied" }); return;
+  }
+
+  const earned = await db
+    .select()
+    .from(studentMilestonesTable)
+    .where(eq(studentMilestonesTable.studentId, studentId))
+    .orderBy(desc(studentMilestonesTable.earnedAt));
+
+  const earnedMap = new Map(earned.map(r => [r.milestoneId, r.earnedAt]));
+
+  const milestones = MILESTONE_DEFINITIONS.map(def => ({
+    id: def.id,
+    name: def.name,
+    icon: def.icon,
+    description: def.description,
+    category: def.category,
+    earned: earnedMap.has(def.id),
+    earnedAt: earnedMap.get(def.id) ?? null,
+  }));
+
+  res.json(milestones);
+});
+
+// ─── Maneuver Stats ────────────────────────────────────────────────────────────
+
+router.get("/students/:id/maneuver-stats", requireAuth, async (req: any, res): Promise<void> => {
+  const studentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  if (isSchoolAdmin(user.role) || isSuperAdmin(user.role)) {
+    // admins pass through — no additional check needed
+  } else if (user.role === "instructor") {
+    const instructor = await getInstructor(user.id, res);
+    if (!instructor) return;
+    if (!(await instructorHasStudent(instructor.id, studentId))) { res.status(403).json({ error: "Access denied" }); return; }
+  } else if (user.role === "student") {
+    const [s] = await db.select({ userId: studentsTable.userId }).from(studentsTable).where(eq(studentsTable.id, studentId));
+    if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
+  } else {
+    // viewer, unassigned, and any other roles are denied
+    res.status(403).json({ error: "Access denied" }); return;
+  }
+
+  const allManeuvers = await db.select().from(maneuversTable).orderBy(maneuversTable.sortOrder);
+
+  const assessments = await db
+    .select({ id: assessmentsTable.id })
+    .from(assessmentsTable)
+    .where(eq(assessmentsTable.studentId, studentId));
+
+  const assessmentIds = assessments.map(a => a.id);
+
+  let allResults: { maneuverId: number; competencyLevel: string }[] = [];
+  if (assessmentIds.length > 0) {
+    allResults = await db
+      .select({ maneuverId: maneuverResultsTable.maneuverId, competencyLevel: maneuverResultsTable.competencyLevel })
+      .from(maneuverResultsTable)
+      .where(sql`${maneuverResultsTable.assessmentId} = ANY(${sql.raw(`ARRAY[${assessmentIds.join(",")}]::integer[]`)})`);
+  }
+
+  const levelOrder = ["not_attempted", "attempted", "practiced", "mastered"];
+
+  // Aggregate counts and best level per maneuver
+  const countByManeuver: Record<number, number> = {};
+  const bestLevelByManeuver: Record<number, string> = {};
+
+  for (const r of allResults) {
+    if (r.competencyLevel !== "not_attempted") {
+      countByManeuver[r.maneuverId] = (countByManeuver[r.maneuverId] ?? 0) + 1;
+    }
+    const cur = bestLevelByManeuver[r.maneuverId];
+    if (!cur || levelOrder.indexOf(r.competencyLevel) > levelOrder.indexOf(cur)) {
+      bestLevelByManeuver[r.maneuverId] = r.competencyLevel;
+    }
+  }
+
+  const stats = allManeuvers.map(m => ({
+    maneuverId: m.id,
+    name: m.name,
+    category: m.category,
+    attemptCount: countByManeuver[m.id] ?? 0,
+    bestCompetencyLevel: bestLevelByManeuver[m.id] ?? "not_attempted",
+  }));
+
+  // Sort by attempt count descending, then by maneuver name
+  stats.sort((a, b) => b.attemptCount - a.attemptCount || a.name.localeCompare(b.name));
+
+  res.json(stats);
 });
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
