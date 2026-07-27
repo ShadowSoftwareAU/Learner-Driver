@@ -2302,6 +2302,54 @@ export const CreateSupervisedSessionBody = zod.object({
 
 
 /**
+ * @summary Update a supervised session logged by this viewer
+ */
+export const UpdateSupervisedSessionParams = zod.object({
+  "studentId": zod.coerce.number(),
+  "sessionId": zod.coerce.number()
+})
+
+export const updateSupervisedSessionBodyPedalOperatorDefault = `student`;
+
+export const UpdateSupervisedSessionBody = zod.object({
+  "lessonDate": zod.string(),
+  "durationMinutes": zod.number(),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).default(updateSupervisedSessionBodyPedalOperatorDefault),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish(),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateSupervisedSessionResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "lessonDate": zod.string(),
+  "durationMinutes": zod.number(),
+  "pedalOperator": zod.string().optional(),
+  "performedByRole": zod.enum(['supervised']),
+  "status": zod.string(),
+  "supervisorName": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "weatherCondition": zod.string().nullish(),
+  "lightingCondition": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Delete a supervised session logged by this viewer
+ */
+export const DeleteSupervisedSessionParams = zod.object({
+  "studentId": zod.coerce.number(),
+  "sessionId": zod.coerce.number()
+})
+
+export const DeleteSupervisedSessionResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
+
+
+/**
  * @summary Get full assessment detail for a linked student (including maneuver guidance)
  */
 export const GetViewerAssessmentDetailParams = zod.object({

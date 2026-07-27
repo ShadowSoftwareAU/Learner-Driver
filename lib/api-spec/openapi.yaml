@@ -1905,6 +1905,69 @@ paths:
         "403":
           description: No active viewer link for this student
 
+  /viewer/students/{studentId}/supervised-sessions/{sessionId}:
+    patch:
+      operationId: updateSupervisedSession
+      tags: [viewer]
+      summary: Update a supervised session logged by this viewer
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupervisedSessionInput"
+      responses:
+        "200":
+          description: Updated supervised session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SupervisedSession"
+        "403":
+          description: No active viewer link or session not owned by this viewer
+        "404":
+          description: Session not found
+    delete:
+      operationId: deleteSupervisedSession
+      tags: [viewer]
+      summary: Delete a supervised session logged by this viewer
+      parameters:
+        - name: studentId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "403":
+          description: No active viewer link or session not owned by this viewer
+        "404":
+          description: Session not found
+
   /viewer/assessments/{assessmentId}:
     get:
       operationId: getViewerAssessmentDetail

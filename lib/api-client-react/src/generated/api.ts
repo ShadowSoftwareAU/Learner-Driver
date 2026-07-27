@@ -42,6 +42,7 @@ import type {
   CreateWalletCheckoutBody,
   CreateZone,
   DeleteInstructorVehicle200,
+  DeleteSupervisedSession200,
   DemoResetInput,
   DemoResetResult,
   DemoStatus,
@@ -6654,6 +6655,152 @@ export const useCreateSupervisedSession = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getCreateSupervisedSessionMutationOptions(options));
+    }
+
+export const getUpdateSupervisedSessionUrl = (studentId: number,
+    sessionId: number,) => {
+
+
+
+
+  return `/api/viewer/students/${studentId}/supervised-sessions/${sessionId}`
+}
+
+/**
+ * @summary Update a supervised session logged by this viewer
+ */
+export const updateSupervisedSession = async (studentId: number,
+    sessionId: number,
+    supervisedSessionInput: SupervisedSessionInput, options?: RequestInit): Promise<SupervisedSession> => {
+
+  return customFetch<SupervisedSession>(getUpdateSupervisedSessionUrl(studentId,sessionId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      supervisedSessionInput,)
+  }
+);}
+
+
+
+
+export const getUpdateSupervisedSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSupervisedSession>>, TError,{studentId: number;sessionId: number;data: BodyType<SupervisedSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateSupervisedSession>>, TError,{studentId: number;sessionId: number;data: BodyType<SupervisedSessionInput>}, TContext> => {
+
+const mutationKey = ['updateSupervisedSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateSupervisedSession>>, {studentId: number;sessionId: number;data: BodyType<SupervisedSessionInput>}> = (props) => {
+          const {studentId,sessionId,data} = props ?? {};
+
+          return  updateSupervisedSession(studentId,sessionId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateSupervisedSessionMutationResult = NonNullable<Awaited<ReturnType<typeof updateSupervisedSession>>>
+    export type UpdateSupervisedSessionMutationBody = BodyType<SupervisedSessionInput>
+    export type UpdateSupervisedSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Update a supervised session logged by this viewer
+ */
+export const useUpdateSupervisedSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateSupervisedSession>>, TError,{studentId: number;sessionId: number;data: BodyType<SupervisedSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateSupervisedSession>>,
+        TError,
+        {studentId: number;sessionId: number;data: BodyType<SupervisedSessionInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateSupervisedSessionMutationOptions(options));
+    }
+
+export const getDeleteSupervisedSessionUrl = (studentId: number,
+    sessionId: number,) => {
+
+
+
+
+  return `/api/viewer/students/${studentId}/supervised-sessions/${sessionId}`
+}
+
+/**
+ * @summary Delete a supervised session logged by this viewer
+ */
+export const deleteSupervisedSession = async (studentId: number,
+    sessionId: number, options?: RequestInit): Promise<DeleteSupervisedSession200> => {
+
+  return customFetch<DeleteSupervisedSession200>(getDeleteSupervisedSessionUrl(studentId,sessionId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteSupervisedSessionMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSupervisedSession>>, TError,{studentId: number;sessionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteSupervisedSession>>, TError,{studentId: number;sessionId: number}, TContext> => {
+
+const mutationKey = ['deleteSupervisedSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteSupervisedSession>>, {studentId: number;sessionId: number}> = (props) => {
+          const {studentId,sessionId} = props ?? {};
+
+          return  deleteSupervisedSession(studentId,sessionId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteSupervisedSessionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteSupervisedSession>>>
+
+    export type DeleteSupervisedSessionMutationError = ErrorType<void>
+
+    /**
+ * @summary Delete a supervised session logged by this viewer
+ */
+export const useDeleteSupervisedSession = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteSupervisedSession>>, TError,{studentId: number;sessionId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteSupervisedSession>>,
+        TError,
+        {studentId: number;sessionId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteSupervisedSessionMutationOptions(options));
     }
 
 export const getGetViewerAssessmentDetailUrl = (assessmentId: number,) => {

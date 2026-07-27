@@ -2610,6 +2610,10 @@ export type AssignSchoolAdminBody = {
   role?: AssignSchoolAdminBodyRole;
 };
 
+export type DeleteSupervisedSession200 = {
+  ok?: boolean;
+};
+
 export type GetModerationCasesParams = {
 status?: string;
 severity?: string;

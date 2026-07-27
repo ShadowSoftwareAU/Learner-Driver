@@ -3,6 +3,8 @@ import {
   useGetMyWallet,
   usePayBookingWithCredits,
   useCreateSupervisedSession,
+  useUpdateSupervisedSession,
+  useDeleteSupervisedSession,
   getGetViewerStudentDashboardQueryKey,
   getGetViewerStudentsQueryKey,
 } from "@workspace/api-client-react";
@@ -21,13 +23,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, CreditCard, CheckCircle2, GraduationCap, Users, Plus } from "lucide-react";
+import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, CreditCard, CheckCircle2, GraduationCap, Users, Plus, Pencil, Trash2 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +48,6 @@ import { useState } from "react";
 
 const WALLET_QK = "/api/wallet";
 
-// Custom query keys used when fetching viewer data — must match what the
-// viewer dashboard and this page use so invalidation hits the right cache entries.
 const VIEWER_STUDENTS_QK = getGetViewerStudentsQueryKey();
 
 const PEDAL_LABELS: Record<string, string> = {
@@ -45,6 +55,7 @@ const PEDAL_LABELS: Record<string, string> = {
   instructor: "Instructor pedals only",
   student: "Student pedals only",
   none: "No pedal control",
+  shared: "Shared controls",
 };
 
 const PEDAL_OPTIONS = [
@@ -88,6 +99,17 @@ const DEFAULT_FORM: LogSessionForm = {
   notes: "",
 };
 
+function sessionToForm(a: any): LogSessionForm {
+  return {
+    lessonDate: a.lessonDate ?? new Date().toISOString().slice(0, 10),
+    durationMinutes: String(a.durationMinutes ?? 60),
+    pedalOperator: a.pedalOperator ?? "student",
+    weatherCondition: a.weatherCondition ?? "clear",
+    lightingCondition: a.lightingCondition ?? "daylight",
+    notes: a.notes ?? "",
+  };
+}
+
 export default function ViewerStudentDetail() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -98,9 +120,15 @@ export default function ViewerStudentDetail() {
   const [showLogSession, setShowLogSession] = useState(false);
   const [form, setForm] = useState<LogSessionForm>(DEFAULT_FORM);
 
+  // Edit dialog state
+  const [editingSession, setEditingSession] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState<LogSessionForm>(DEFAULT_FORM);
+
+  // Delete confirmation state
+  const [deletingSession, setDeletingSession] = useState<any | null>(null);
+
   const studentId = Number(id);
 
-  // Custom query key so invalidation below hits this exact entry.
   const dashboardQK = ["/api/viewer/students", id];
 
   const { data, isLoading } = useGetViewerStudentDashboard(studentId, {
@@ -131,9 +159,7 @@ export default function ViewerStudentDetail() {
         toast({ title: "Session logged", description: "The supervised driving session has been recorded." });
         setShowLogSession(false);
         setForm(DEFAULT_FORM);
-        // Invalidate the student dashboard so the QLD hours breakdown refreshes immediately.
         qc.invalidateQueries({ queryKey: dashboardQK });
-        // Also refresh the viewer student list so the summary hours stay in sync.
         qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
       },
       onError: (err: any) => {
@@ -150,6 +176,36 @@ export default function ViewerStudentDetail() {
           const message = data?.error ?? "Could not log the session.";
           toast({ title: "Failed to log session", description: message, variant: "destructive" });
         }
+      },
+    },
+  });
+
+  const { mutate: updateSession, isPending: updatingSession } = useUpdateSupervisedSession({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Session updated", description: "The supervised session has been updated." });
+        setEditingSession(null);
+        qc.invalidateQueries({ queryKey: dashboardQK });
+        qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
+      },
+      onError: (err: any) => {
+        const message = err?.response?.data?.error ?? "Could not update the session.";
+        toast({ title: "Failed to update session", description: message, variant: "destructive" });
+      },
+    },
+  });
+
+  const { mutate: deleteSession, isPending: deletingSessionPending } = useDeleteSupervisedSession({
+    mutation: {
+      onSuccess: () => {
+        toast({ title: "Session deleted", description: "The supervised session has been removed." });
+        setDeletingSession(null);
+        qc.invalidateQueries({ queryKey: dashboardQK });
+        qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
+      },
+      onError: (err: any) => {
+        const message = err?.response?.data?.error ?? "Could not delete the session.";
+        toast({ title: "Failed to delete session", description: message, variant: "destructive" });
       },
     },
   });
@@ -171,6 +227,32 @@ export default function ViewerStudentDetail() {
         notes: form.notes || null,
       },
     });
+  }
+
+  function handleEditSession() {
+    if (!editingSession) return;
+    const duration = parseInt(editForm.durationMinutes, 10);
+    if (!editForm.lessonDate || isNaN(duration) || duration < 1) {
+      toast({ title: "Please fill in a valid date and duration.", variant: "destructive" });
+      return;
+    }
+    updateSession({
+      studentId,
+      sessionId: editingSession.id,
+      data: {
+        lessonDate: editForm.lessonDate,
+        durationMinutes: duration,
+        pedalOperator: editForm.pedalOperator as any,
+        weatherCondition: editForm.weatherCondition as any,
+        lightingCondition: editForm.lightingCondition as any,
+        notes: editForm.notes || null,
+      },
+    });
+  }
+
+  function handleDeleteSession() {
+    if (!deletingSession) return;
+    deleteSession({ studentId, sessionId: deletingSession.id });
   }
 
   function handlePay(bookingId: number) {
@@ -416,45 +498,74 @@ export default function ViewerStudentDetail() {
                 {recentAssessments.map((a: any) => {
                   const isSupervised = a.performedByRole === "supervised";
                   return (
-                  <li key={a.id} className="py-3">
-                    <button
-                      type="button"
-                      onClick={() => !isSupervised && navigate(`/viewer/assessments/${a.id}`)}
-                      className={`w-full text-left rounded-lg p-2 -mx-2 space-y-1 ${isSupervised ? "cursor-default" : "hover:bg-muted/50 transition-colors"}`}
-                    >
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium">
-                            {a.lessonDate ? format(new Date(a.lessonDate), "d MMM yyyy") : "—"}
-                          </span>
-                          {isSupervised ? (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                              Supervised
+                    <li key={a.id} className="py-3">
+                      <div className="flex items-start gap-2">
+                        <button
+                          type="button"
+                          onClick={() => !isSupervised && navigate(`/viewer/assessments/${a.id}`)}
+                          className={`flex-1 text-left rounded-lg p-2 -mx-2 space-y-1 ${isSupervised ? "cursor-default" : "hover:bg-muted/50 transition-colors"}`}
+                        >
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium">
+                                {a.lessonDate ? format(new Date(a.lessonDate), "d MMM yyyy") : "—"}
+                              </span>
+                              {isSupervised ? (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                  Supervised
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                                  Instructor
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-xs text-muted-foreground">
+                              {a.durationMinutes} min
+                              {a.totalHoursThisLesson != null && ` · +${Number(a.totalHoursThisLesson / 60).toFixed(1)} hrs`}
                             </span>
-                          ) : (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                              Instructor
-                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {a.pedalOperator ? (PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator) : ""}
+                          </p>
+                          {!isSupervised && a.focusAreasNext && (
+                            <p className="text-xs text-muted-foreground italic">
+                              Focus next: {a.focusAreasNext}
+                            </p>
                           )}
-                        </div>
-                        <span className="text-xs text-muted-foreground">
-                          {a.durationMinutes} min
-                          {a.totalHoursThisLesson != null && ` · +${Number(a.totalHoursThisLesson).toFixed(1)} hrs`}
-                        </span>
+                          {!isSupervised && (
+                            <p className="text-xs text-primary font-medium">View lesson details →</p>
+                          )}
+                        </button>
+
+                        {/* Edit / delete actions — only for supervised sessions logged by this viewer */}
+                        {isSupervised && (
+                          <div className="flex items-center gap-1 pt-2 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setEditingSession(a);
+                                setEditForm(sessionToForm(a));
+                              }}
+                              title="Edit session"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setDeletingSession(a)}
+                              title="Delete session"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {a.pedalOperator ? (PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator) : ""}
-                      </p>
-                      {!isSupervised && a.focusAreasNext && (
-                        <p className="text-xs text-muted-foreground italic">
-                          Focus next: {a.focusAreasNext}
-                        </p>
-                      )}
-                      {!isSupervised && (
-                        <p className="text-xs text-primary font-medium">View lesson details →</p>
-                      )}
-                    </button>
-                  </li>
+                    </li>
                   );
                 })}
               </ul>
@@ -483,85 +594,7 @@ export default function ViewerStudentDetail() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="lessonDate">Date</Label>
-                <Input
-                  id="lessonDate"
-                  type="date"
-                  value={form.lessonDate}
-                  max={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => setForm((f) => ({ ...f, lessonDate: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="durationMinutes">Duration (minutes)</Label>
-                <Input
-                  id="durationMinutes"
-                  type="number"
-                  min={1}
-                  max={480}
-                  value={form.durationMinutes}
-                  onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label>Pedal operator</Label>
-              <Select value={form.pedalOperator} onValueChange={(v) => setForm((f) => ({ ...f, pedalOperator: v }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PEDAL_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Weather</Label>
-                <Select value={form.weatherCondition} onValueChange={(v) => setForm((f) => ({ ...f, weatherCondition: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {WEATHER_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Lighting</Label>
-                <Select value={form.lightingCondition} onValueChange={(v) => setForm((f) => ({ ...f, lightingCondition: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LIGHTING_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="e.g. Practiced merging on the highway, handled well."
-                rows={3}
-                value={form.notes}
-                onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              />
-            </div>
-          </div>
+          <SessionFormFields form={form} setForm={setForm} />
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowLogSession(false)} disabled={loggingSession}>
@@ -574,6 +607,154 @@ export default function ViewerStudentDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit supervised session dialog */}
+      <Dialog open={!!editingSession} onOpenChange={(open) => { if (!open) setEditingSession(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit supervised session</DialogTitle>
+            <DialogDescription>
+              Update the details for this supervised session. The hours total will adjust automatically.
+            </DialogDescription>
+          </DialogHeader>
+
+          <SessionFormFields form={editForm} setForm={setEditForm} />
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingSession(null)} disabled={updatingSession}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditSession} disabled={updatingSession}>
+              {updatingSession && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deletingSession} onOpenChange={(open) => { if (!open) setDeletingSession(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this session?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deletingSession && (
+                <>
+                  The{" "}
+                  {deletingSession.durationMinutes}-minute session on{" "}
+                  {deletingSession.lessonDate
+                    ? format(new Date(deletingSession.lessonDate), "d MMM yyyy")
+                    : "this date"}{" "}
+                  will be permanently removed and the hours deducted from {student.fullName}'s logbook.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingSessionPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSession}
+              disabled={deletingSessionPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingSessionPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Delete session
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </SidebarLayout>
+  );
+}
+
+// ─── Shared form fields ───────────────────────────────────────────────────────
+
+function SessionFormFields({
+  form,
+  setForm,
+}: {
+  form: LogSessionForm;
+  setForm: React.Dispatch<React.SetStateAction<LogSessionForm>>;
+}) {
+  return (
+    <div className="space-y-4 py-2">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="lessonDate">Date</Label>
+          <Input
+            id="lessonDate"
+            type="date"
+            value={form.lessonDate}
+            max={new Date().toISOString().slice(0, 10)}
+            onChange={(e) => setForm((f) => ({ ...f, lessonDate: e.target.value }))}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="durationMinutes">Duration (minutes)</Label>
+          <Input
+            id="durationMinutes"
+            type="number"
+            min={1}
+            max={480}
+            value={form.durationMinutes}
+            onChange={(e) => setForm((f) => ({ ...f, durationMinutes: e.target.value }))}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Pedal operator</Label>
+        <Select value={form.pedalOperator} onValueChange={(v) => setForm((f) => ({ ...f, pedalOperator: v }))}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PEDAL_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Weather</Label>
+          <Select value={form.weatherCondition} onValueChange={(v) => setForm((f) => ({ ...f, weatherCondition: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {WEATHER_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>Lighting</Label>
+          <Select value={form.lightingCondition} onValueChange={(v) => setForm((f) => ({ ...f, lightingCondition: v }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LIGHTING_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="notes">Notes (optional)</Label>
+        <Textarea
+          id="notes"
+          placeholder="e.g. Practiced merging on the highway, handled well."
+          rows={3}
+          value={form.notes}
+          onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+        />
+      </div>
+    </div>
   );
 }

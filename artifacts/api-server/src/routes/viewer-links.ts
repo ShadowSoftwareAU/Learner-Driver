@@ -382,6 +382,130 @@ function formatSupervisedSession(a: any) {
   };
 }
 
+// ─── Update a supervised session ─────────────────────────────────────────────
+// Only the viewer who created the session can update it.
+
+router.patch("/viewer/students/:studentId/supervised-sessions/:sessionId", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const studentId = parseInt(req.params.studentId as string, 10);
+  const sessionId = parseInt(req.params.sessionId as string, 10);
+
+  // Verify viewer has an active link to this student
+  const [link] = await db.select().from(viewerLinksTable).where(
+    and(
+      eq(viewerLinksTable.viewerUserId, user.id),
+      eq(viewerLinksTable.studentId, studentId),
+      eq(viewerLinksTable.linkStatus, "active"),
+    )
+  );
+  if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
+
+  // Load the session and verify it belongs to this student and was created by this viewer's supervisor record
+  let supervisorRecord = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
+  if (!supervisorRecord) { res.status(403).json({ error: "You have not logged any sessions for this student" }); return; }
+
+  const [session] = await db.select().from(assessmentsTable).where(
+    and(
+      eq(assessmentsTable.id, sessionId),
+      eq(assessmentsTable.studentId, studentId),
+      eq(assessmentsTable.instructorId, supervisorRecord.id),
+      eq(assessmentsTable.performedByRole as any, "supervised"),
+    )
+  );
+  if (!session) { res.status(404).json({ error: "Session not found or not editable by you" }); return; }
+
+  const parsed = supervisedSessionBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
+    return;
+  }
+  const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes } = parsed.data;
+
+  // Recalculate the hours delta
+  const oldHours = session.durationMinutes / 60;
+  const newHours = durationMinutes / 60;
+  const delta = newHours - oldHours;
+
+  const [updated] = await db.update(assessmentsTable).set({
+    lessonDate,
+    durationMinutes,
+    pedalOperator,
+    weatherCondition: weatherCondition ?? null,
+    lightingCondition: lightingCondition ?? null,
+    confidenceNote: notes ?? null,
+  }).where(eq(assessmentsTable.id, sessionId)).returning();
+
+  // Adjust the student's hours totals by the delta
+  if (delta !== 0) {
+    await db.execute(
+      sql`UPDATE students SET total_hours = total_hours + ${delta}, supervised_hours = supervised_hours + ${delta} WHERE id = ${studentId}`
+    );
+  }
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "update_supervised_session",
+    resourceType: "assessment",
+    resourceId: sessionId,
+    studentId,
+  }, req);
+
+  res.json({ ...formatSupervisedSession(updated), supervisorName: user.name ?? "Supervisor" });
+});
+
+// ─── Delete a supervised session ─────────────────────────────────────────────
+// Only the viewer who created the session can delete it.
+
+router.delete("/viewer/students/:studentId/supervised-sessions/:sessionId", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const studentId = parseInt(req.params.studentId as string, 10);
+  const sessionId = parseInt(req.params.sessionId as string, 10);
+
+  // Verify viewer has an active link to this student
+  const [link] = await db.select().from(viewerLinksTable).where(
+    and(
+      eq(viewerLinksTable.viewerUserId, user.id),
+      eq(viewerLinksTable.studentId, studentId),
+      eq(viewerLinksTable.linkStatus, "active"),
+    )
+  );
+  if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
+
+  // Load the session and verify it belongs to this student and was created by this viewer's supervisor record
+  let supervisorRecord = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
+  if (!supervisorRecord) { res.status(404).json({ error: "Session not found" }); return; }
+
+  const [session] = await db.select().from(assessmentsTable).where(
+    and(
+      eq(assessmentsTable.id, sessionId),
+      eq(assessmentsTable.studentId, studentId),
+      eq(assessmentsTable.instructorId, supervisorRecord.id),
+      eq(assessmentsTable.performedByRole as any, "supervised"),
+    )
+  );
+  if (!session) { res.status(404).json({ error: "Session not found or not deletable by you" }); return; }
+
+  // Deduct the hours from the student's totals before deleting
+  const hours = session.durationMinutes / 60;
+  await db.execute(
+    sql`UPDATE students SET total_hours = total_hours - ${hours}, supervised_hours = supervised_hours - ${hours} WHERE id = ${studentId}`
+  );
+
+  await db.delete(assessmentsTable).where(eq(assessmentsTable.id, sessionId));
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "delete_supervised_session",
+    resourceType: "assessment",
+    resourceId: sessionId,
+    studentId,
+  }, req);
+
+  res.json({ ok: true });
+});
+
 // ─── Viewer assessment detail ─────────────────────────────────────────────────
 // Full assessment including maneuver guidance (for supervising during a lesson).
 
