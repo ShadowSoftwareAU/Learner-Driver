@@ -26,6 +26,9 @@ export const assessmentsTable = pgTable("assessments", {
   preDriveFitnessConfirmedByUserId: integer("pre_drive_fitness_confirmed_by_user_id"),
   // Assessment program type — determines which checklist/regulations apply
   assessmentType: text("assessment_type").notNull().default("qsafe"), // qsafe | qride | heavy_vehicle
+  // Lesson conditions — recorded at session start for regulatory and safety records
+  weatherCondition: text("weather_condition"), // clear | partly_cloudy | overcast | light_rain | heavy_rain | foggy | windy
+  lightingCondition: text("lighting_condition"), // daylight | dawn | dusk | night
   // Report finalization workflow
   finalizationStatus: text("finalization_status").notNull().default("draft"), // draft | pending_approval | approved | dispatched
   approvedAt: timestamp("approved_at", { withTimezone: true }),

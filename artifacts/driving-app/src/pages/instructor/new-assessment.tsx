@@ -1,7 +1,11 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle, Car, Bike, Truck, AlertTriangle, ShieldCheck } from "lucide-react";
+import {
+  Loader2, Check, Save, Info, ChevronDown, ChevronUp, PlayCircle,
+  Car, Bike, Truck, AlertTriangle, ShieldCheck, Sun, Cloud,
+  CloudRain, Wind, Eye, Moon, Sunrise, Sunset, Pencil,
+} from "lucide-react";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,11 +13,16 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
 import { useLocation, useSearch, Link } from "wouter";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { ManeuverResultItemCompetencyLevel, PedalOperator } from "@/lib/enums";
+import {
+  ManeuverResultItemCompetencyLevel, PedalOperator, PedalOperatorLabel, PedalOperatorDescription,
+  WeatherCondition, WeatherConditionLabel, LightingCondition, LightingConditionLabel,
+} from "@/lib/enums";
 import { useToast } from "@/hooks/use-toast";
 import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
@@ -23,27 +32,26 @@ import { PedalControlSelector } from "@/components/PedalControlSelector";
 type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
 
 const ASSESSMENT_TYPES: { value: AssessmentType; label: string; subtitle: string; reg: string; icon: React.ReactNode }[] = [
-  {
-    value: "qsafe",
-    label: "QSAFE",
-    subtitle: "Light Vehicle (Car, SUV, Van)",
-    reg: "Driver Licensing Reg 2021, Ch. 3",
-    icon: <Car className="w-6 h-6" />,
-  },
-  {
-    value: "qride",
-    label: "Q-Ride",
-    subtitle: "Motorcycle / E-Bike",
-    reg: "Accreditation Reg 2015, s. 33–41",
-    icon: <Bike className="w-6 h-6" />,
-  },
-  {
-    value: "heavy_vehicle",
-    label: "Heavy Vehicle",
-    subtitle: "MR / HR / HC / MC",
-    reg: "Driver Licensing Reg 2021, s. 57–60",
-    icon: <Truck className="w-6 h-6" />,
-  },
+  { value: "qsafe", label: "QSAFE", subtitle: "Light Vehicle (Car, SUV, Van)", reg: "Driver Licensing Reg 2021, Ch. 3", icon: <Car className="w-6 h-6" /> },
+  { value: "qride", label: "Q-Ride", subtitle: "Motorcycle / E-Bike", reg: "Accreditation Reg 2015, s. 33–41", icon: <Bike className="w-6 h-6" /> },
+  { value: "heavy_vehicle", label: "Heavy Vehicle", subtitle: "MR / HR / HC / MC", reg: "Driver Licensing Reg 2021, s. 57–60", icon: <Truck className="w-6 h-6" /> },
+];
+
+const WEATHER_OPTIONS: { value: WeatherCondition; label: string; icon: React.ReactNode }[] = [
+  { value: WeatherCondition.clear, label: WeatherConditionLabel.clear, icon: <Sun className="w-4 h-4" /> },
+  { value: WeatherCondition.partly_cloudy, label: WeatherConditionLabel.partly_cloudy, icon: <Cloud className="w-4 h-4" /> },
+  { value: WeatherCondition.overcast, label: WeatherConditionLabel.overcast, icon: <Cloud className="w-4 h-4" /> },
+  { value: WeatherCondition.light_rain, label: WeatherConditionLabel.light_rain, icon: <CloudRain className="w-4 h-4" /> },
+  { value: WeatherCondition.heavy_rain, label: WeatherConditionLabel.heavy_rain, icon: <CloudRain className="w-4 h-4" /> },
+  { value: WeatherCondition.foggy, label: WeatherConditionLabel.foggy, icon: <Eye className="w-4 h-4" /> },
+  { value: WeatherCondition.windy, label: WeatherConditionLabel.windy, icon: <Wind className="w-4 h-4" /> },
+];
+
+const LIGHTING_OPTIONS: { value: LightingCondition; label: string; icon: React.ReactNode }[] = [
+  { value: LightingCondition.daylight, label: LightingConditionLabel.daylight, icon: <Sun className="w-4 h-4" /> },
+  { value: LightingCondition.dawn, label: LightingConditionLabel.dawn, icon: <Sunrise className="w-4 h-4" /> },
+  { value: LightingCondition.dusk, label: LightingConditionLabel.dusk, icon: <Sunset className="w-4 h-4" /> },
+  { value: LightingCondition.night, label: LightingConditionLabel.night, icon: <Moon className="w-4 h-4" /> },
 ];
 
 export default function NewAssessment() {
@@ -55,31 +63,34 @@ export default function NewAssessment() {
   const createAssessment = useCreateAssessment();
   const saveResults = useSaveManeuverResults();
 
-  // Request geolocation permission immediately on page load so the OS dialog
-  // appears before the instructor fills in the form, not after submission.
-  // Web browsers only capture location while the tab is active — no background tracking.
   const currentPositionRef = useRef<GeolocationCoordinates | null>(null);
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition(
       (pos) => { currentPositionRef.current = pos.coords; },
-      () => { /* denied or unavailable — form submission still works without GPS */ },
+      () => {},
       { enableHighAccuracy: true, timeout: 10000 }
     );
   }, []);
 
-  // Pre-populate from URL params (e.g. from student profile or booking)
   const urlParams = new URLSearchParams(search);
   const urlStudentId = urlParams.get("studentId") ?? "";
   const urlDuration = urlParams.get("durationMinutes") ?? "60";
 
+  // ── Setup state (collected in the modal) ──────────────────────────────────
+  const [setupOpen, setSetupOpen] = useState(true);
+  const [setupDone, setSetupDone] = useState(false);
+
   const [assessmentType, setAssessmentType] = useState<AssessmentType>("qsafe");
   const [studentId, setStudentId] = useState<string>(urlStudentId);
   const [duration, setDuration] = useState(urlDuration);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
   const [fitnessConfirmed, setFitnessConfirmed] = useState(false);
+  const [weatherCondition, setWeatherCondition] = useState<WeatherCondition | "">("");
+  const [lightingCondition, setLightingCondition] = useState<LightingCondition | "">("");
+
+  // ── Assessment state ──────────────────────────────────────────────────────
   const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>({});
   const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>({});
   const [expandedManeuver, setExpandedManeuver] = useState<number | null>(null);
@@ -108,20 +119,31 @@ export default function NewAssessment() {
     setExpandedManeuver(prev => prev === maneuverId ? null : maneuverId);
   };
 
-  const handleSave = async () => {
-    if (!studentId) {
-      toast({ title: "Error", description: "Please select a student", variant: "destructive" });
-      return;
-    }
-    if (!pedalOperator) {
-      toast({ title: "Pedal control required", description: "Please select who controls the pedals for this lesson.", variant: "destructive" });
-      return;
-    }
-    if (!fitnessConfirmed) {
-      toast({ title: "Fitness check required", description: "Please confirm the pre-drive fitness check before saving.", variant: "destructive" });
-      return;
-    }
+  // Setup form validation
+  const setupErrors = useMemo(() => {
+    const errs: string[] = [];
+    if (!studentId) errs.push("Please select a student.");
+    if (!pedalOperator) errs.push("Please select who controls the pedals.");
+    if (!weatherCondition) errs.push("Please select the weather condition.");
+    if (!lightingCondition) errs.push("Please select the lighting condition.");
+    if (!fitnessConfirmed) errs.push("Please confirm the pre-drive safety check.");
+    return errs;
+  }, [studentId, pedalOperator, weatherCondition, lightingCondition, fitnessConfirmed]);
 
+  const handleSetupConfirm = () => {
+    if (setupErrors.length > 0) {
+      toast({ title: "Setup incomplete", description: setupErrors[0], variant: "destructive" });
+      return;
+    }
+    setSetupOpen(false);
+    setSetupDone(true);
+  };
+
+  const handleSave = async () => {
+    if (!studentId || !pedalOperator || !fitnessConfirmed) {
+      setSetupOpen(true);
+      return;
+    }
     setIsSubmitting(true);
     try {
       const assessment = await createAssessment.mutateAsync({
@@ -134,7 +156,9 @@ export default function NewAssessment() {
           confidenceNote,
           focusAreasNext: focusAreas,
           acknowledgeFitness: true,
-        } as any
+          weatherCondition: weatherCondition || undefined,
+          lightingCondition: lightingCondition || undefined,
+        } as any,
       });
 
       const maneuverResultsArray = Object.entries(results).map(([id, level]) => ({
@@ -144,15 +168,12 @@ export default function NewAssessment() {
       }));
 
       if (maneuverResultsArray.length > 0) {
-        await saveResults.mutateAsync({
-          id: assessment.id,
-          data: { results: maneuverResultsArray }
-        });
+        await saveResults.mutateAsync({ id: assessment.id, data: { results: maneuverResultsArray } });
       }
 
       toast({ title: "Success", description: "Assessment saved successfully." });
       setLocation(`/instructor/assessments/${assessment.id}`);
-    } catch (error) {
+    } catch {
       toast({ title: "Error", description: "Failed to save assessment.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
@@ -169,8 +190,225 @@ export default function NewAssessment() {
     );
   }
 
+  const selectedStudent = students?.find(s => s.id.toString() === studentId);
+
   return (
     <SidebarLayout>
+      {/* ── Setup Dialog ──────────────────────────────────────────────────────── */}
+      <Dialog open={setupOpen} onOpenChange={(open) => {
+        // Don't allow closing unless setup is already done
+        if (!open && !setupDone) return;
+        setSetupOpen(open);
+      }}>
+        <DialogContent className="max-w-xl w-full p-0" onInteractOutside={(e) => { if (!setupDone) e.preventDefault(); }}>
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle className="text-xl">New Assessment Setup</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Complete these details before starting the assessment.
+            </p>
+          </DialogHeader>
+
+          <ScrollArea className="max-h-[80vh]">
+            <div className="px-6 pb-6 space-y-6 pt-4">
+
+              {/* Assessment Program */}
+              <div className="space-y-3">
+                <div>
+                  <p className="font-semibold text-base">Assessment Program</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Each program is governed by separate Queensland transport legislation.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {ASSESSMENT_TYPES.map(type => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setAssessmentType(type.value)}
+                      className={`rounded-lg border-2 p-3 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        assessmentType === type.value
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/40 hover:bg-muted/40"
+                      }`}
+                    >
+                      <div className={`mb-1.5 ${assessmentType === type.value ? "text-primary" : "text-muted-foreground"}`}>
+                        {type.icon}
+                      </div>
+                      <p className="font-semibold text-sm">{type.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{type.subtitle}</p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5 italic">{type.reg}</p>
+                      {assessmentType === type.value && (
+                        <Badge className="mt-1.5 bg-primary/10 text-primary border-primary/20 text-xs" variant="outline">Selected</Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {assessmentType !== "qsafe" && (
+                  <div className="flex items-start gap-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-800">
+                      <span className="font-semibold">{assessmentType === "qride" ? "Q-Ride" : "Heavy Vehicle"} checklist coming soon.</span>{" "}
+                      Using the QSAFE checklist as a placeholder.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Lesson Details */}
+              <div className="space-y-3">
+                <p className="font-semibold text-base">Lesson Details</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <Label>Student</Label>
+                    <Select value={studentId} onValueChange={setStudentId}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Select student" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {students?.map(s => (
+                          <SelectItem key={s.id} value={s.id.toString()}>{s.fullName}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedStudent && (
+                      <div className="flex items-center gap-2 mt-1.5 p-2 rounded-md bg-muted/50 border border-border">
+                        <StudentAvatar fullName={selectedStudent.fullName} headshotPath={selectedStudent.headshotPath} className="w-8 h-8" textClassName="text-xs" />
+                        <div className="min-w-0">
+                          <p className="font-medium text-xs truncate">{selectedStudent.fullName}</p>
+                          {selectedStudent.totalHours != null && <p className="text-xs text-muted-foreground">{selectedStudent.totalHours}h logged</p>}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Date</Label>
+                    <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-12" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Duration (mins)</Label>
+                    <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} className="h-12" />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Pedal Control */}
+              <div className="space-y-3">
+                <p className="font-semibold text-base">Pedal Control</p>
+                <PedalControlSelector value={pedalOperator} onChange={setPedalOperator} />
+              </div>
+
+              <Separator />
+
+              {/* Weather Condition */}
+              <div className="space-y-3">
+                <div>
+                  <p className="font-semibold text-base">Weather Condition</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Select the weather at the time of this lesson.</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {WEATHER_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setWeatherCondition(opt.value)}
+                      className={`rounded-lg border-2 p-2.5 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring flex flex-col items-center gap-1.5 ${
+                        weatherCondition === opt.value
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/40 hover:bg-muted/40"
+                      }`}
+                    >
+                      <span className={weatherCondition === opt.value ? "text-primary" : "text-muted-foreground"}>
+                        {opt.icon}
+                      </span>
+                      <span className="text-xs font-medium text-center leading-tight">{opt.label}</span>
+                      {weatherCondition === opt.value && <Check className="w-3 h-3 text-primary" />}
+                    </button>
+                  ))}
+                </div>
+                {!weatherCondition && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Please select a weather condition.
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Lighting Condition */}
+              <div className="space-y-3">
+                <div>
+                  <p className="font-semibold text-base">Lighting Condition</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Select the light level at the time of this lesson.</p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {LIGHTING_OPTIONS.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setLightingCondition(opt.value)}
+                      className={`rounded-lg border-2 p-2.5 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring flex flex-col items-center gap-1.5 ${
+                        lightingCondition === opt.value
+                          ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                          : "border-border hover:border-primary/40 hover:bg-muted/40"
+                      }`}
+                    >
+                      <span className={lightingCondition === opt.value ? "text-primary" : "text-muted-foreground"}>
+                        {opt.icon}
+                      </span>
+                      <span className="text-xs font-medium text-center">{opt.label}</span>
+                      {lightingCondition === opt.value && <Check className="w-3 h-3 text-primary" />}
+                    </button>
+                  ))}
+                </div>
+                {!lightingCondition && (
+                  <p className="text-xs text-amber-600 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" /> Please select a lighting condition.
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
+              {/* Pre-drive Safety Check */}
+              <div className={`rounded-lg border p-4 ${fitnessConfirmed ? "border-green-300 bg-green-50/40" : "border-amber-200 bg-amber-50/40"}`}>
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className={`w-5 h-5 mt-0.5 shrink-0 ${fitnessConfirmed ? "text-green-600" : "text-amber-600"}`} />
+                  <div className="flex-1 space-y-2">
+                    <div>
+                      <p className="font-semibold text-sm">Pre-drive Safety Check</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Must be confirmed before the assessment can be saved.</p>
+                    </div>
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
+                      <Checkbox
+                        checked={fitnessConfirmed}
+                        onCheckedChange={(v) => setFitnessConfirmed(!!v)}
+                        className="mt-0.5 h-4 w-4"
+                      />
+                      <span className="text-sm leading-relaxed">
+                        Student confirms they are well-rested, not stressed, and not affected by any medication, alcohol, or drugs.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Confirm button */}
+              <Button
+                className="w-full h-12 text-base"
+                onClick={handleSetupConfirm}
+                disabled={setupErrors.length > 0}
+              >
+                <PlayCircle className="w-5 h-5 mr-2" />
+                Start Assessment
+              </Button>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Main page ─────────────────────────────────────────────────────────── */}
       <div className="space-y-6 max-w-4xl mx-auto pb-28">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -185,123 +423,48 @@ export default function NewAssessment() {
           </Link>
         </div>
 
-        {/* Assessment Program Type */}
-        <Card>
-          <CardHeader className="p-6 pb-4">
-            <CardTitle>Assessment Program</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">Select the program type before logging this assessment. Each program is governed by separate Queensland transport legislation.</p>
-          </CardHeader>
-          <CardContent className="p-6 pt-0">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {ASSESSMENT_TYPES.map(type => (
-                <button
-                  key={type.value}
-                  type="button"
-                  onClick={() => setAssessmentType(type.value)}
-                  className={`rounded-lg border-2 p-4 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                    assessmentType === type.value
-                      ? "border-primary bg-primary/5 ring-2 ring-primary/20"
-                      : "border-border hover:border-primary/40 hover:bg-muted/40"
-                  }`}
-                >
-                  <div className={`mb-2 ${assessmentType === type.value ? "text-primary" : "text-muted-foreground"}`}>
-                    {type.icon}
+        {/* Setup summary — shown once setup is done */}
+        {setupDone && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-2 text-sm flex-1">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Student</p>
+                    <p className="font-medium">{selectedStudent?.fullName ?? "—"}</p>
                   </div>
-                  <p className="font-semibold text-sm">{type.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{type.subtitle}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1 italic">{type.reg}</p>
-                  {assessmentType === type.value && (
-                    <Badge className="mt-2 bg-primary/10 text-primary border-primary/20 text-xs" variant="outline">Selected</Badge>
-                  )}
-                </button>
-              ))}
-            </div>
-            {assessmentType !== "qsafe" && (
-              <div className="mt-4 flex items-start gap-3 rounded-md bg-amber-50 border border-amber-200 px-4 py-3">
-                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                <p className="text-sm text-amber-800">
-                  <span className="font-semibold">{assessmentType === "qride" ? "Q-Ride" : "Heavy Vehicle"} checklist coming soon.</span>{" "}
-                  This assessment is using the QSAFE maneuver checklist as a placeholder until the dedicated checklist is available.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-6">
-            <CardTitle>Lesson Details</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 pt-0">
-            <div className="space-y-2">
-              <Label className="text-base">Student</Label>
-              <Select value={studentId} onValueChange={setStudentId}>
-                <SelectTrigger className="h-16 text-base">
-                  <SelectValue placeholder="Select student" />
-                </SelectTrigger>
-                <SelectContent>
-                  {students?.map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()} className="text-base py-3">{s.fullName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {studentId && (() => {
-                const s = students?.find(x => x.id.toString() === studentId);
-                return s ? (
-                  <div className="flex items-center gap-3 mt-3 p-3 rounded-lg bg-muted/50 border border-border">
-                    <StudentAvatar fullName={s.fullName} headshotPath={s.headshotPath} className="w-10 h-10" textClassName="text-sm" />
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{s.fullName}</p>
-                      {s.totalHours != null && <p className="text-xs text-muted-foreground">{s.totalHours}h logged</p>}
-                    </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="font-medium">{date}</p>
                   </div>
-                ) : null;
-              })()}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-base">Date</Label>
-              <Input type="date" value={date} onChange={e => setDate(e.target.value)} className="h-16 text-base" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-base">Duration (mins)</Label>
-              <Input type="number" value={duration} onChange={e => setDuration(e.target.value)} className="h-16 text-base" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="p-6 pb-4">
-            <CardTitle>Pedal Control</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6 pt-0">
-            <PedalControlSelector value={pedalOperator} onChange={setPedalOperator} />
-          </CardContent>
-        </Card>
-
-        {/* Pre-drive fitness & sobriety check — must be acknowledged before assessment can be saved */}
-        <Card className={fitnessConfirmed ? "border-green-300 bg-green-50/30" : "border-amber-200 bg-amber-50/30"}>
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <ShieldCheck className={`w-6 h-6 mt-0.5 shrink-0 ${fitnessConfirmed ? "text-green-600" : "text-amber-600"}`} />
-              <div className="flex-1 space-y-3">
-                <div>
-                  <p className="font-semibold text-base">Pre-drive Safety Check</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">Must be confirmed before the assessment can be saved.</p>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Duration</p>
+                    <p className="font-medium">{duration} mins</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Program</p>
+                    <p className="font-medium">{ASSESSMENT_TYPES.find(t => t.value === assessmentType)?.label ?? assessmentType}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Pedal Control</p>
+                    <p className="font-medium">{pedalOperator ? PedalOperatorLabel[pedalOperator as PedalOperator] : "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Conditions</p>
+                    <p className="font-medium">
+                      {weatherCondition ? WeatherConditionLabel[weatherCondition as WeatherCondition] : "—"}
+                      {lightingCondition ? ` · ${LightingConditionLabel[lightingCondition as LightingCondition]}` : ""}
+                    </p>
+                  </div>
                 </div>
-                <label className="flex items-start gap-3 cursor-pointer group">
-                  <Checkbox
-                    checked={fitnessConfirmed}
-                    onCheckedChange={(v) => setFitnessConfirmed(!!v)}
-                    className="mt-0.5 h-5 w-5"
-                  />
-                  <span className="text-sm leading-relaxed group-hover:text-foreground transition-colors">
-                    Student confirms they are well-rested, not stressed, and not affected by any medication, alcohol, or drugs.
-                  </span>
-                </label>
+                <Button variant="outline" size="sm" className="shrink-0 gap-1.5" onClick={() => setSetupOpen(true)}>
+                  <Pencil className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <PreviousLessonCard
           studentId={studentId ? parseInt(studentId) : null}
@@ -364,7 +527,7 @@ export default function NewAssessment() {
                         { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted", color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
                         { val: ManeuverResultItemCompetencyLevel.attempted, label: "Attempted", color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100", active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
                         { val: ManeuverResultItemCompetencyLevel.practiced, label: "Not yet Competent", color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
-                        { val: ManeuverResultItemCompetencyLevel.mastered, label: "Competent", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" }
+                        { val: ManeuverResultItemCompetencyLevel.mastered, label: "Competent", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
                       ].map(level => (
                         <button
                           key={level.val}
@@ -416,8 +579,8 @@ export default function NewAssessment() {
           <CardContent className="space-y-6 p-6 pt-0">
             <div className="space-y-2">
               <Label className="text-base">Overall Confidence & Notes</Label>
-              <Textarea 
-                placeholder="How did the student perform overall?" 
+              <Textarea
+                placeholder="How did the student perform overall?"
                 value={confidenceNote}
                 onChange={e => setConfidenceNote(e.target.value)}
                 rows={3}
@@ -426,8 +589,8 @@ export default function NewAssessment() {
             </div>
             <div className="space-y-2">
               <Label className="text-base">Focus Areas for Next Lesson</Label>
-              <Textarea 
-                placeholder="What should be the priority next time?" 
+              <Textarea
+                placeholder="What should be the priority next time?"
                 value={focusAreas}
                 onChange={e => setFocusAreas(e.target.value)}
                 rows={2}
@@ -449,7 +612,11 @@ export default function NewAssessment() {
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
           <Button variant="outline" onClick={() => setLocation("/instructor/students")} className="h-16 text-base px-6">Cancel</Button>
-          <Button onClick={handleSave} disabled={isSubmitting || !studentId || !pedalOperator || !fitnessConfirmed} className="h-16 text-base px-6">
+          <Button
+            onClick={handleSave}
+            disabled={isSubmitting || !setupDone}
+            className="h-16 text-base px-6"
+          >
             {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
             Save Assessment
           </Button>

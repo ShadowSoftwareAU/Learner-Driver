@@ -2,8 +2,9 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star, MapPin } from "lucide-react";
+import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star, MapPin, Cloud, Sun } from "lucide-react";
 import AssessmentRouteMap from "@/components/AssessmentRouteMap";
+import { WeatherConditionLabel, LightingConditionLabel } from "@/lib/enums";
 
 // ─── Competency helpers ───────────────────────────────────────────────────────
 
@@ -65,6 +66,8 @@ type ReportPreviewProps = {
     reportDispatchedTo?: string | null;
     maneuverResults?: ManeuverResult[];
     routePath?: Array<{ lat: number; lng: number; ts: number }> | null;
+    weatherCondition?: string | null;
+    lightingCondition?: string | null;
   };
   /** Compact mode for inline rendering inside a Sheet — omits outer padding */
   compact?: boolean;
@@ -180,11 +183,28 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
         )}
       </div>
 
-      {assessment.pedalOperator && (
-        <p className="text-xs text-muted-foreground bg-muted/50 rounded px-3 py-2 border border-border">
-          <strong>Pedal control:</strong> {PEDAL_LABEL[assessment.pedalOperator] ?? assessment.pedalOperator}
-        </p>
-      )}
+      {/* Conditions row — pedal control, weather, lighting */}
+      <div className="flex flex-wrap gap-2">
+        {assessment.pedalOperator && (
+          <span className="text-xs bg-muted/50 rounded px-3 py-1.5 border border-border flex items-center gap-1.5">
+            <strong>Pedal control:</strong> {PEDAL_LABEL[assessment.pedalOperator] ?? assessment.pedalOperator}
+          </span>
+        )}
+        {assessment.weatherCondition && (
+          <span className="text-xs bg-sky-50 text-sky-800 rounded px-3 py-1.5 border border-sky-200 flex items-center gap-1.5">
+            <Cloud className="w-3.5 h-3.5 shrink-0" />
+            <strong>Weather:</strong>{" "}
+            {WeatherConditionLabel[assessment.weatherCondition as keyof typeof WeatherConditionLabel] ?? assessment.weatherCondition}
+          </span>
+        )}
+        {assessment.lightingCondition && (
+          <span className="text-xs bg-amber-50 text-amber-800 rounded px-3 py-1.5 border border-amber-200 flex items-center gap-1.5">
+            <Sun className="w-3.5 h-3.5 shrink-0" />
+            <strong>Lighting:</strong>{" "}
+            {LightingConditionLabel[assessment.lightingCondition as keyof typeof LightingConditionLabel] ?? assessment.lightingCondition}
+          </span>
+        )}
+      </div>
 
       <Separator />
 

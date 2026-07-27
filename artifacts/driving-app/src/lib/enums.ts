@@ -72,6 +72,44 @@ export const AssessmentStatus = {
   cancelled: "cancelled",
 } as const;
 
+// ─── Weather conditions ───────────────────────────────────────────────────────
+export type WeatherCondition = typeof WeatherCondition[keyof typeof WeatherCondition];
+export const WeatherCondition = {
+  clear: "clear",
+  partly_cloudy: "partly_cloudy",
+  overcast: "overcast",
+  light_rain: "light_rain",
+  heavy_rain: "heavy_rain",
+  foggy: "foggy",
+  windy: "windy",
+} as const;
+
+export const WeatherConditionLabel: Record<WeatherCondition, string> = {
+  clear: "Clear / Sunny",
+  partly_cloudy: "Partly Cloudy",
+  overcast: "Overcast",
+  light_rain: "Light Rain",
+  heavy_rain: "Heavy Rain",
+  foggy: "Foggy / Misty",
+  windy: "Windy",
+};
+
+// ─── Lighting conditions ──────────────────────────────────────────────────────
+export type LightingCondition = typeof LightingCondition[keyof typeof LightingCondition];
+export const LightingCondition = {
+  daylight: "daylight",
+  dawn: "dawn",
+  dusk: "dusk",
+  night: "night",
+} as const;
+
+export const LightingConditionLabel: Record<LightingCondition, string> = {
+  daylight: "Daylight",
+  dawn: "Dawn",
+  dusk: "Dusk",
+  night: "Night",
+};
+
 // ─── Data classification ──────────────────────────────────────────────────────
 export type DataClassification = "restricted" | "confidential" | "internal" | "public";
 

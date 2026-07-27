@@ -261,6 +261,8 @@ export const GetStudentProgressResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })).optional()
 })
@@ -735,6 +737,8 @@ export const ListAssessmentsResponseItem = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })
 export const ListAssessmentsResponse = zod.array(ListAssessmentsResponseItem)
@@ -757,7 +761,10 @@ export const CreateAssessmentBody = zod.object({
   "lat": zod.number(),
   "lng": zod.number(),
   "ts": zod.number()
-})).nullish()
+})).nullish(),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).optional(),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).optional(),
+  "acknowledgeFitness": zod.boolean().optional()
 })
 
 
@@ -781,6 +788,8 @@ export const GetAssessmentResponse = zod.object({
   "confidenceNote": zod.string().nullish(),
   "focusAreasNext": zod.string().nullish(),
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish(),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish(),
   "maneuverResults": zod.array(zod.object({
   "id": zod.number(),
   "assessmentId": zod.number(),
@@ -845,6 +854,8 @@ export const UpdateAssessmentResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })
 
@@ -883,6 +894,8 @@ export const SubmitAssessmentResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })
 
@@ -926,6 +939,8 @@ export const ApproveAssessmentResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })
 
@@ -1066,6 +1081,8 @@ export const GetHandoverResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 }))
 })
@@ -1198,6 +1215,8 @@ export const GetInstructorDashboardResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })),
   "studentSummaries": zod.array(zod.object({
@@ -1247,6 +1266,8 @@ export const GetStudentDashboardResponse = zod.object({
   "approvedByUserId": zod.number().nullish(),
   "reportDispatchedAt": zod.string().nullish(),
   "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
   "createdAt": zod.string().optional()
 })),
   "skillBreakdown": zod.array(zod.object({

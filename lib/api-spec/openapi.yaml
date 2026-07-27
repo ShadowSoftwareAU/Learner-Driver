@@ -3022,6 +3022,15 @@ components:
         reportDispatchedTo:
           type: ["string", "null"]
           description: JSON array of email addresses the report was dispatched to
+        # Lesson conditions recorded at session start
+        weatherCondition:
+          type: ["string", "null"]
+          enum: [clear, partly_cloudy, overcast, light_rain, heavy_rain, foggy, windy]
+          description: "Weather at lesson start"
+        lightingCondition:
+          type: ["string", "null"]
+          enum: [daylight, dawn, dusk, night]
+          description: "Lighting condition at lesson start"
         createdAt:
           type: string
 
@@ -3073,6 +3082,14 @@ components:
                 type: number
               ts:
                 type: integer
+        weatherCondition:
+          type: string
+          enum: [clear, partly_cloudy, overcast, light_rain, heavy_rain, foggy, windy]
+        lightingCondition:
+          type: string
+          enum: [daylight, dawn, dusk, night]
+        acknowledgeFitness:
+          type: boolean
 
     AssessmentUpdate:
       type: object
@@ -3139,6 +3156,12 @@ components:
           type: ["string", "null"]
         preLessonBriefingAcknowledgedAt:
           type: ["string", "null"]
+        weatherCondition:
+          type: ["string", "null"]
+          enum: [clear, partly_cloudy, overcast, light_rain, heavy_rain, foggy, windy]
+        lightingCondition:
+          type: ["string", "null"]
+          enum: [daylight, dawn, dusk, night]
         maneuverResults:
           type: array
           items:

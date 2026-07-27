@@ -248,6 +248,37 @@ export const AssessmentFinalizationStatus = {
   dispatched: 'dispatched',
 } as const;
 
+/**
+ * Weather at lesson start
+ * @nullable
+ */
+export type AssessmentWeatherCondition = typeof AssessmentWeatherCondition[keyof typeof AssessmentWeatherCondition] | null;
+
+
+export const AssessmentWeatherCondition = {
+  clear: 'clear',
+  partly_cloudy: 'partly_cloudy',
+  overcast: 'overcast',
+  light_rain: 'light_rain',
+  heavy_rain: 'heavy_rain',
+  foggy: 'foggy',
+  windy: 'windy',
+} as const;
+
+/**
+ * Lighting condition at lesson start
+ * @nullable
+ */
+export type AssessmentLightingCondition = typeof AssessmentLightingCondition[keyof typeof AssessmentLightingCondition] | null;
+
+
+export const AssessmentLightingCondition = {
+  daylight: 'daylight',
+  dawn: 'dawn',
+  dusk: 'dusk',
+  night: 'night',
+} as const;
+
 export type AssessmentRoutePathItem = {
   lat: number;
   lng: number;
@@ -293,6 +324,16 @@ export interface Assessment {
      * @nullable
      */
   reportDispatchedTo?: string | null;
+  /**
+     * Weather at lesson start
+     * @nullable
+     */
+  weatherCondition?: AssessmentWeatherCondition;
+  /**
+     * Lighting condition at lesson start
+     * @nullable
+     */
+  lightingCondition?: AssessmentLightingCondition;
   createdAt?: string;
 }
 
@@ -547,6 +588,29 @@ export type AssessmentInputRoutePathItem = {
   ts: number;
 };
 
+export type AssessmentInputWeatherCondition = typeof AssessmentInputWeatherCondition[keyof typeof AssessmentInputWeatherCondition];
+
+
+export const AssessmentInputWeatherCondition = {
+  clear: 'clear',
+  partly_cloudy: 'partly_cloudy',
+  overcast: 'overcast',
+  light_rain: 'light_rain',
+  heavy_rain: 'heavy_rain',
+  foggy: 'foggy',
+  windy: 'windy',
+} as const;
+
+export type AssessmentInputLightingCondition = typeof AssessmentInputLightingCondition[keyof typeof AssessmentInputLightingCondition];
+
+
+export const AssessmentInputLightingCondition = {
+  daylight: 'daylight',
+  dawn: 'dawn',
+  dusk: 'dusk',
+  night: 'night',
+} as const;
+
 export interface AssessmentInput {
   studentId: number;
   lessonDate: string;
@@ -556,6 +620,9 @@ export interface AssessmentInput {
   confidenceNote?: string;
   focusAreasNext?: string;
   routePath?: AssessmentInputRoutePathItem[] | null;
+  weatherCondition?: AssessmentInputWeatherCondition;
+  lightingCondition?: AssessmentInputLightingCondition;
+  acknowledgeFitness?: boolean;
 }
 
 export type AssessmentUpdatePedalOperator = typeof AssessmentUpdatePedalOperator[keyof typeof AssessmentUpdatePedalOperator];
@@ -611,6 +678,35 @@ export const AssessmentDetailPedalOperator = {
   shared: 'shared',
 } as const;
 
+/**
+ * @nullable
+ */
+export type AssessmentDetailWeatherCondition = typeof AssessmentDetailWeatherCondition[keyof typeof AssessmentDetailWeatherCondition] | null;
+
+
+export const AssessmentDetailWeatherCondition = {
+  clear: 'clear',
+  partly_cloudy: 'partly_cloudy',
+  overcast: 'overcast',
+  light_rain: 'light_rain',
+  heavy_rain: 'heavy_rain',
+  foggy: 'foggy',
+  windy: 'windy',
+} as const;
+
+/**
+ * @nullable
+ */
+export type AssessmentDetailLightingCondition = typeof AssessmentDetailLightingCondition[keyof typeof AssessmentDetailLightingCondition] | null;
+
+
+export const AssessmentDetailLightingCondition = {
+  daylight: 'daylight',
+  dawn: 'dawn',
+  dusk: 'dusk',
+  night: 'night',
+} as const;
+
 export type ManeuverResultCompetencyLevel = typeof ManeuverResultCompetencyLevel[keyof typeof ManeuverResultCompetencyLevel];
 
 
@@ -656,6 +752,10 @@ export interface AssessmentDetail {
   focusAreasNext?: string | null;
   /** @nullable */
   preLessonBriefingAcknowledgedAt?: string | null;
+  /** @nullable */
+  weatherCondition?: AssessmentDetailWeatherCondition;
+  /** @nullable */
+  lightingCondition?: AssessmentDetailLightingCondition;
   maneuverResults: ManeuverResult[];
   createdAt?: string;
 }

@@ -24,6 +24,8 @@ const createAssessmentBody = z.object({
   focusAreasNext: z.string().max(2000).optional(),
   routePath: z.array(routePointSchema).optional().nullable(),
   acknowledgeFitness: z.boolean().optional(),
+  weatherCondition: z.enum(["clear", "partly_cloudy", "overcast", "light_rain", "heavy_rain", "foggy", "windy"]).optional().nullable(),
+  lightingCondition: z.enum(["daylight", "dawn", "dusk", "night"]).optional().nullable(),
 });
 
 const patchAssessmentBody = z.object({
@@ -95,7 +97,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, pedalOperator, acknowledgeFitness } = parsed.data;
+  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, pedalOperator, acknowledgeFitness, weatherCondition, lightingCondition } = parsed.data;
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
@@ -127,6 +129,8 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     confidenceNote: confidenceNote ?? null,
     focusAreasNext: focusAreasNext ?? null,
     routePath: routePath ?? null,
+    weatherCondition: weatherCondition ?? null,
+    lightingCondition: lightingCondition ?? null,
     status: "in_progress",
     ...(acknowledgeFitness === true ? { preDriveFitnessConfirmedAt: now, preDriveFitnessConfirmedByUserId: user.id } : {}),
   }).returning();
@@ -556,6 +560,8 @@ function formatAssessment(a: any) {
     approvedByUserId: a.approvedByUserId ?? null,
     reportDispatchedAt: a.reportDispatchedAt ?? null,
     reportDispatchedTo: a.reportDispatchedTo ?? null,
+    weatherCondition: a.weatherCondition ?? null,
+    lightingCondition: a.lightingCondition ?? null,
     createdAt: a.createdAt,
   };
 }
