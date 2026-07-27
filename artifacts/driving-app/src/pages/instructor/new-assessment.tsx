@@ -195,11 +195,7 @@ export default function NewAssessment() {
   return (
     <SidebarLayout>
       {/* ── Setup Dialog ──────────────────────────────────────────────────────── */}
-      <Dialog open={setupOpen} onOpenChange={(open) => {
-        // Don't allow closing unless setup is already done
-        if (!open && !setupDone) return;
-        setSetupOpen(open);
-      }}>
+      <Dialog open={setupOpen} onOpenChange={setSetupOpen}>
         <DialogContent className="max-w-xl w-full p-0">
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="text-xl">New Assessment Setup</DialogTitle>
@@ -259,17 +255,18 @@ export default function NewAssessment() {
                 <p className="font-semibold text-base">Lesson Details</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <Label>Student</Label>
-                    <Select value={studentId} onValueChange={setStudentId}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Select student" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {students?.map(s => (
-                          <SelectItem key={s.id} value={s.id.toString()}>{s.fullName}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="setup-student">Student</Label>
+                    <select
+                      id="setup-student"
+                      value={studentId}
+                      onChange={e => setStudentId(e.target.value)}
+                      className="w-full h-12 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                    >
+                      <option value="">Select student</option>
+                      {students?.map(s => (
+                        <option key={s.id} value={s.id.toString()}>{s.fullName}</option>
+                      ))}
+                    </select>
                     {selectedStudent && (
                       <div className="flex items-center gap-2 mt-1.5 p-2 rounded-md bg-muted/50 border border-border">
                         <StudentAvatar fullName={selectedStudent.fullName} headshotPath={selectedStudent.headshotPath} className="w-8 h-8" textClassName="text-xs" />
