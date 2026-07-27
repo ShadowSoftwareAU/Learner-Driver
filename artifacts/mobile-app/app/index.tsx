@@ -24,6 +24,8 @@ export default function Index() {
       router.replace("/(tabs)");
     } else if (role === "student") {
       router.replace("/(student)");
+    } else if (role === "viewer") {
+      router.replace("/(viewer)" as any);
     }
     // unassigned: stay on loading screen (user needs to be set up)
   }, [isLoaded, isSignedIn, isLoading, user]);

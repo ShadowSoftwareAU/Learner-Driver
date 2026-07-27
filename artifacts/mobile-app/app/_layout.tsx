@@ -59,6 +59,16 @@ function RootLayoutNav() {
       <Stack.Screen name="sign-in" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="(student)" options={{ headerShown: false }} />
+      <Stack.Screen name="(viewer)" options={{ headerShown: false }} />
+      <Stack.Screen
+        name="viewer/student/[id]"
+        options={{
+          title: "Student",
+          headerStyle: { backgroundColor: "#F8FAFC" },
+          headerTintColor: "#0F172A",
+          headerShadowVisible: false,
+        }}
+      />
       <Stack.Screen
         name="student/[id]"
         options={{
