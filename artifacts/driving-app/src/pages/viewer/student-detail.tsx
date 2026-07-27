@@ -137,8 +137,19 @@ export default function ViewerStudentDetail() {
         qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
       },
       onError: (err: any) => {
-        const message = err?.response?.data?.error ?? "Could not log the session.";
-        toast({ title: "Failed to log session", description: message, variant: "destructive" });
+        const status = err?.response?.status;
+        const data = err?.response?.data;
+        if (status === 409 && data?.error === "duplicate_session") {
+          toast({
+            title: "Possible duplicate session",
+            description: data?.message ?? "A session with the same date and duration was just logged. Check the recent sessions list before submitting again.",
+            variant: "destructive",
+            duration: 8000,
+          });
+        } else {
+          const message = data?.error ?? "Could not log the session.";
+          toast({ title: "Failed to log session", description: message, variant: "destructive" });
+        }
       },
     },
   });

@@ -9,7 +9,7 @@
  *   GET  /viewer/students/:id/dashboard — viewer only (must have active link)
  */
 import { Router } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, gte } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -294,6 +294,34 @@ router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, asyn
     return;
   }
   const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes } = parsed.data;
+
+  // Duplicate-submission guard: reject if the same viewer already logged a session
+  // with the same studentId + lessonDate + durationMinutes within the last 60 seconds.
+  const sixtySecondsAgo = new Date(Date.now() - 60_000);
+  const [recentDuplicate] = await db
+    .select({ id: assessmentsTable.id, createdAt: assessmentsTable.createdAt })
+    .from(assessmentsTable)
+    .innerJoin(instructorsTable, eq(assessmentsTable.instructorId, instructorsTable.id))
+    .where(
+      and(
+        eq(assessmentsTable.studentId, studentId),
+        eq(assessmentsTable.lessonDate, lessonDate),
+        eq(assessmentsTable.durationMinutes, durationMinutes),
+        eq(assessmentsTable.performedByRole, "supervised"),
+        eq(instructorsTable.userId, user.id),
+        gte(assessmentsTable.createdAt, sixtySecondsAgo),
+      )
+    )
+    .limit(1);
+
+  if (recentDuplicate) {
+    logger.warn({ event: "duplicate_supervised_session_rejected", viewerUserId: user.id, studentId, lessonDate, durationMinutes });
+    res.status(409).json({
+      error: "duplicate_session",
+      message: "A session with the same date and duration was just logged. Check the recent sessions list to confirm it was recorded before submitting again.",
+    });
+    return;
+  }
 
   // Get or create a supervisor record in the instructors table for this viewer user
   // so the FK constraint on assessments.instructor_id is satisfied.
