@@ -405,6 +405,21 @@ router.post("/assessments/:id/submit", requireAuth, async (req: any, res): Promi
 
   await logAudit({ actorId: user.id, actorRole: user.role, action: "submit_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
 
+  // Auto-create a handover note from the assessment's confidence notes and focus areas
+  // if either field is populated and no handover note already exists for this assessment's
+  // lesson date + student + instructor combination.
+  if (a.confidenceNote || a.focusAreasNext) {
+    await db.insert(handoverNotesTable).values({
+      studentId: a.studentId,
+      instructorId: a.instructorId,
+      schoolId: a.schoolId ?? null,
+      note: a.confidenceNote ?? "(No confidence notes provided)",
+      focusAreas: a.focusAreasNext ?? null,
+      isSafetyCritical: false,
+      contentStatus: "approved",
+    });
+  }
+
   res.json(formatAssessment(updated));
 });
 

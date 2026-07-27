@@ -222,19 +222,7 @@ export default function ViewAssessment() {
               </p>
             )}
           </div>
-          {finStatus === "draft" && (
-            <Button
-              size="sm"
-              className="shrink-0 gap-1.5"
-              disabled={submitAssessment.isPending}
-              onClick={() => submitAssessment.mutate({ id })}
-            >
-              {submitAssessment.isPending
-                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : <Send className="w-3.5 h-3.5" />}
-              Submit
-            </Button>
-          )}
+          
           {finStatus === "pending_approval" && (
             <Button size="sm" className="shrink-0 gap-1.5" onClick={() => setApproveOpen(true)}>
               <Send className="w-3.5 h-3.5" /> Approve
