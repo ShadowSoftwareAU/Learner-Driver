@@ -25,6 +25,7 @@ export default function Index() {
     } else if (role === "student") {
       router.replace("/(student)");
     } else if (role === "viewer") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace("/(viewer)" as any);
     }
     // unassigned: stay on loading screen (user needs to be set up)

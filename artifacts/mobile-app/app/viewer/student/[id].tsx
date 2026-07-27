@@ -3,9 +3,10 @@ import {
   getGetViewerStudentDashboardQueryKey,
 } from "@workspace/api-client-react";
 import { useLocalSearchParams } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import { LogSessionModal } from "@/components/LogSessionModal";
 
 function Avatar({ name, size = 56 }: { name: string; size?: number }) {
   const initials = name
@@ -94,8 +96,9 @@ export default function ViewerStudentDetailScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const studentId = parseInt(id, 10);
+  const [showLogModal, setShowLogModal] = useState(false);
 
-  const { data, isLoading, isError } = useGetViewerStudentDashboard(studentId, {
+  const { data, isLoading, isError, refetch } = useGetViewerStudentDashboard(studentId, {
     query: {
       enabled: !isNaN(studentId),
       queryKey: getGetViewerStudentDashboardQueryKey(studentId),
@@ -147,6 +150,13 @@ export default function ViewerStudentDetailScreen() {
               <Text style={styles.qldBadgeText}>QLD</Text>
             </View>
           ) : null}
+          <Pressable
+            style={[styles.logBtn, { backgroundColor: colors.primary }]}
+            onPress={() => setShowLogModal(true)}
+          >
+            <Feather name="plus-circle" size={14} color="#fff" />
+            <Text style={styles.logBtnText}>Log supervised session</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -210,6 +220,16 @@ export default function ViewerStudentDetailScreen() {
           ))}
         </>
       ) : null}
+
+      <LogSessionModal
+        visible={showLogModal}
+        studentId={studentId}
+        onClose={() => setShowLogModal(false)}
+        onSuccess={() => {
+          setShowLogModal(false);
+          refetch();
+        }}
+      />
     </ScrollView>
   );
 }
@@ -265,4 +285,15 @@ const styles = StyleSheet.create({
   },
   lessonDate: { flex: 1, fontSize: 14, fontFamily: "Inter_500Medium" },
   lessonDur: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  logBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 12,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    alignSelf: "flex-start",
+  },
+  logBtnText: { color: "#fff", fontSize: 13, fontFamily: "Inter_600SemiBold" },
 });
