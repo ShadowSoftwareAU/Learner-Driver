@@ -185,16 +185,22 @@ export default function ViewerAssessment() {
                   {items.map(r => {
                     const level = LEVEL_CONFIG[r.competencyLevel ?? "not_attempted"] ?? LEVEL_CONFIG.not_attempted;
                     const isOpen = openGuidance.has(r.maneuverId);
-                    const hasGuidance = !!(
-                      getManeuverImage(r.maneuverName ?? "", r.category ?? "") ||
-                      r.complianceCriteria ||
-                      r.masteryDefinition
-                    );
+                    const hasGuidance = !!(r.complianceCriteria || r.masteryDefinition);
 
                     return (
                       <div key={r.id} className="p-4 sm:p-5">
                         {/* Row: name + badge + guidance toggle */}
                         <div className="flex items-center gap-3">
+                          {(() => {
+                            const img = getManeuverImage(r.maneuverName ?? "", r.category ?? "");
+                            return img ? (
+                              <img
+                                src={img}
+                                alt={r.maneuverName ?? ""}
+                                className="w-10 h-10 shrink-0 rounded-lg object-cover border border-border"
+                              />
+                            ) : null;
+                          })()}
                           <p className="font-medium text-base flex-1 min-w-0 truncate">
                             {r.maneuverName ?? "Unknown maneuver"}
                           </p>
@@ -227,16 +233,7 @@ export default function ViewerAssessment() {
                         {/* Expandable guidance */}
                         {isOpen && (
                           <div className="mt-4 space-y-4 border-t pt-4">
-                            {(() => {
-                              const img = getManeuverImage(r.maneuverName ?? "", r.category ?? "");
-                              return img ? (
-                                <img
-                                  src={img}
-                                  alt={`${r.category} reference guide`}
-                                  className="w-full rounded-lg border border-border"
-                                />
-                              ) : null;
-                            })()}
+
                             {r.complianceCriteria && (
                               <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
                                 <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">

@@ -482,6 +482,16 @@ export default function NewAssessment() {
                 {items.map(m => (
                   <div key={m.id} className="p-4 sm:p-6">
                     <div className="flex items-center gap-2 mb-3">
+                      {(() => {
+                        const img = getManeuverImage(m.name, m.category);
+                        return img ? (
+                          <img
+                            src={img}
+                            alt={m.name}
+                            className="w-10 h-10 shrink-0 rounded-lg object-cover border border-border"
+                          />
+                        ) : null;
+                      })()}
                       <p className="font-medium text-base flex-1">{m.name}</p>
                       <Button
                         variant="ghost"
@@ -522,17 +532,7 @@ export default function NewAssessment() {
                     )}
                     {expandedManeuver === m.id && (
                       <div className="mt-4 space-y-4">
-                        {/* Reference image for this maneuver group */}
-                        {(() => {
-                          const img = getManeuverImage(m.name, m.category);
-                          return img ? (
-                            <img
-                              src={img}
-                              alt={`${m.category} reference guide`}
-                              className="w-full rounded-lg border border-border"
-                            />
-                          ) : null;
-                        })()}
+
                         {/* QSAFE Compliance Criteria */}
                         {m.complianceCriteria && (
                           <div className="rounded-md bg-blue-50 border border-blue-100 p-3">

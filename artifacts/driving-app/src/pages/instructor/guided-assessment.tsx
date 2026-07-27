@@ -678,6 +678,16 @@ export default function GuidedAssessment() {
           <Card className="flex-1 flex flex-col">
             <CardHeader className="p-4 sm:p-6 border-b">
               <div className="flex items-start gap-2">
+                {(() => {
+                  const img = getManeuverImage(currentManeuver.name, currentManeuver.category);
+                  return img ? (
+                    <img
+                      src={img}
+                      alt={currentManeuver.name}
+                      className="w-10 h-10 shrink-0 rounded-lg object-cover border border-border mt-0.5"
+                    />
+                  ) : null;
+                })()}
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-xl sm:text-2xl">{currentManeuver.name}</CardTitle>
                   <p className="text-muted-foreground text-sm sm:text-base mt-0.5">{currentManeuver.category}</p>
@@ -697,12 +707,7 @@ export default function GuidedAssessment() {
 
               {guidanceOpen && (
                 <div className="mt-4 space-y-4 border-t pt-4">
-                  {(() => {
-                    const img = getManeuverImage(currentManeuver.name, currentManeuver.category);
-                    return img ? (
-                      <img src={img} alt={`${currentManeuver.category} reference`} className="w-full rounded-lg border border-border" />
-                    ) : null;
-                  })()}
+
                   {currentManeuver.complianceCriteria && (
                     <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
                       <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">QSAFE Compliance Criteria</p>
