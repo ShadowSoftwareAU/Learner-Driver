@@ -684,7 +684,7 @@ export default function GuidedAssessment() {
                     <img
                       src={img}
                       alt={currentManeuver.name}
-                      className="w-16 h-16 shrink-0 rounded-xl object-cover border border-border mt-0.5"
+                      className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border mt-0.5"
                     />
                   ) : null;
                 })()}

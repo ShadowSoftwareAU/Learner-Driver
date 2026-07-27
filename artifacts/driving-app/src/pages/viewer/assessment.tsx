@@ -197,7 +197,7 @@ export default function ViewerAssessment() {
                               <img
                                 src={img}
                                 alt={r.maneuverName ?? ""}
-                                className="w-16 h-16 shrink-0 rounded-xl object-cover border border-border"
+                                className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border"
                               />
                             ) : null;
                           })()}
