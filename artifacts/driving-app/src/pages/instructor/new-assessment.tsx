@@ -200,7 +200,7 @@ export default function NewAssessment() {
         if (!open && !setupDone) return;
         setSetupOpen(open);
       }}>
-        <DialogContent className="max-w-xl w-full p-0" onInteractOutside={(e) => { if (!setupDone) e.preventDefault(); }}>
+        <DialogContent className="max-w-xl w-full p-0">
           <DialogHeader className="px-6 pt-6 pb-0">
             <DialogTitle className="text-xl">New Assessment Setup</DialogTitle>
             <p className="text-sm text-muted-foreground mt-1">
