@@ -154,7 +154,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 min-w-0 overflow-auto">
           <GeolocationBanner role={user?.role ?? undefined} />
-          <div className="p-4 md:p-8 max-w-7xl mx-auto w-full">
+          <div className="p-4 pb-12 md:p-8 max-w-7xl mx-auto w-full">
             {children}
           </div>
         </main>

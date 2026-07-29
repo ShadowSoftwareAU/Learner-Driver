@@ -9,12 +9,12 @@ export default function Landing() {
         <div className="flex items-center">
           <img src="/learnerlog-logo.png" alt="Learner Log" className="h-10 w-auto" />
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <Link href="/sign-in">
-            <Button variant="ghost" className="hidden sm:flex">Sign In</Button>
+            <Button>Sign In</Button>
           </Link>
           <Link href="/sign-up">
-            <Button>Get Started</Button>
+            <Button variant="ghost" className="hidden sm:flex text-muted-foreground">Sign Up</Button>
           </Link>
         </div>
       </header>
@@ -28,11 +28,11 @@ export default function Landing() {
             The digital replacement for the clipboard. Track student progress, log TMR and Q-SAFE maneuvers, and manage your driving school with uncompromised accuracy.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/sign-up">
-              <Button size="lg" className="h-12 px-8 text-base">Start Free Trial</Button>
-            </Link>
             <Link href="/sign-in">
-              <Button size="lg" variant="outline" className="h-12 px-8 text-base">Instructor Login</Button>
+              <Button size="lg" className="h-12 px-8 text-base">Sign In</Button>
+            </Link>
+            <Link href="/sign-up">
+              <Button size="lg" variant="outline" className="h-12 px-8 text-base">Create Account</Button>
             </Link>
           </div>
         </section>
