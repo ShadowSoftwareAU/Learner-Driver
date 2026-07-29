@@ -18,6 +18,7 @@ import {
   Menu,
   X,
   FileText,
+  FileCheck,
   MessageSquare,
   Settings,
   AlertTriangle,
@@ -45,15 +46,16 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
 
   const staticNavItems = {
     instructor: [
-      { label: "Dashboard", href: "/instructor/dashboard", icon: LayoutDashboard },
-      { label: "Students", href: "/instructor/students", icon: Users },
-      { label: "New Assessment", href: "/instructor/assessments/new", icon: ClipboardList },
-      { label: "Bookings", href: "/instructor/bookings", icon: CalendarCheck },
-      { label: "Availability", href: "/instructor/availability", icon: Calendar },
-      { label: "Teaching Zones", href: "/instructor/zones", icon: MapPin },
-      { label: "My Verification", href: "/instructor/verification", icon: ShieldCheck },
-      { label: "Heatmap", href: "/instructor/heatmap", icon: MapPin },
-      { label: "Settings", href: "/settings", icon: User },
+      { label: "Dashboard",       href: "/instructor/dashboard",        icon: LayoutDashboard },
+      { label: "Students",        href: "/instructor/students",          icon: Users },
+      { label: "My Assessments",  href: "/instructor/assessments",       icon: FileCheck, exact: true },
+      { label: "New Assessment",  href: "/instructor/assessments/new",   icon: ClipboardList },
+      { label: "Bookings",        href: "/instructor/bookings",          icon: CalendarCheck },
+      { label: "Availability",    href: "/instructor/availability",      icon: Calendar },
+      { label: "Teaching Zones",  href: "/instructor/zones",             icon: MapPin },
+      { label: "My Verification", href: "/instructor/verification",      icon: ShieldCheck },
+      { label: "Heatmap",         href: "/instructor/heatmap",           icon: MapPin },
+      { label: "Settings",        href: "/settings",                     icon: User },
     ],
     student: [
       { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
@@ -100,7 +102,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
         {items.map((item) => {
           const Icon = item.icon;
-          const isActive = location === item.href || location.startsWith(item.href + "/");
+          const isActive = (item as any).exact
+            ? location === item.href
+            : location === item.href || location.startsWith(item.href + "/");
           return (
             <Link key={item.href} href={item.href} onClick={onItemClick}>
               <div
