@@ -498,33 +498,17 @@ export default function NewAssessment() {
         {viewMode === "tile" ? (
           <AssessmentTileView
             grouped={groupedWithLevels}
+            getImage={(item: any) => getManeuverImage(item.name as string, item.category as string)}
             renderItem={(item: any) => {
               const m = item;
               return (
-                <div className="p-4 sm:p-6">
-                  <div className="flex items-center gap-2 mb-3">
-                    {(() => {
-                      const img = getManeuverImage(m.name, m.category);
-                      return img ? (
-                        <img src={img} alt={m.name} className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border" />
-                      ) : null;
-                    })()}
-                    <p className="font-medium text-base flex-1">{m.name}</p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-10 w-10 shrink-0"
-                      onClick={() => toggleExpanded(m.id)}
-                      aria-label={expandedManeuver === m.id ? "Collapse guidance and notes" : "Expand guidance and notes"}
-                    >
-                      {expandedManeuver === m.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
+                <div className="p-4 sm:p-5 space-y-4">
+                  {/* 2 × 2 rating buttons — wider touch targets in the panel */}
+                  <div className="grid grid-cols-2 gap-2">
                     {[
                       { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
-                      { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",        color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100",   active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
-                      { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",         color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
+                      { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",       color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100",   active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
+                      { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",        color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
                       { val: ManeuverResultItemCompetencyLevel.mastered,      label: "Consistent Skills", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
                     ].map(level => (
                       <button
@@ -538,39 +522,41 @@ export default function NewAssessment() {
                       </button>
                     ))}
                   </div>
+
+                  {/* Consistent Skills callout */}
                   {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
-                    <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
+                    <div className="rounded-md bg-green-50 border border-green-100 px-3 py-2">
                       <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
                       <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
                     </div>
                   )}
-                  {expandedManeuver === m.id && (
-                    <div className="mt-4 space-y-4">
-                      {m.complianceCriteria && (
-                        <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
-                          <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">QSAFE Compliance Criteria</p>
-                          <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">{m.complianceCriteria}</p>
-                        </div>
-                      )}
-                      {m.masteryDefinition && (
-                        <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
-                          <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">Competency Definition</p>
-                          <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">{m.masteryDefinition}</p>
-                        </div>
-                      )}
-                      <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
-                        <QuickNoteChips value={maneuverNotes[m.id] || ""} onChange={(next) => handleManeuverNoteChange(m.id, next)} />
-                        <Textarea
-                          placeholder="Add notes for this maneuver..."
-                          value={maneuverNotes[m.id] || ""}
-                          onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
-                          rows={2}
-                          className="text-base"
-                        />
-                      </div>
+
+                  {/* QSAFE criteria — always visible in the expanded panel */}
+                  {m.complianceCriteria && (
+                    <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                      <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">QSAFE Compliance Criteria</p>
+                      <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">{m.complianceCriteria}</p>
                     </div>
                   )}
+                  {m.masteryDefinition && (
+                    <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
+                      <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">Competency Definition</p>
+                      <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">{m.masteryDefinition}</p>
+                    </div>
+                  )}
+
+                  {/* Per-maneuver notes */}
+                  <div className="space-y-2">
+                    <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
+                    <QuickNoteChips value={maneuverNotes[m.id] || ""} onChange={(next) => handleManeuverNoteChange(m.id, next)} />
+                    <Textarea
+                      placeholder="Add notes for this maneuver..."
+                      value={maneuverNotes[m.id] || ""}
+                      onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
+                      rows={2}
+                      className="text-base"
+                    />
+                  </div>
                 </div>
               );
             }}

@@ -892,7 +892,25 @@ export default function GuidedAssessment() {
                 );
 
                 if (viewMode === "tile") {
-                  return <AssessmentTileView grouped={groupedSummary} renderItem={renderSummaryRow} />;
+                  return (
+                    <AssessmentTileView
+                      grouped={groupedSummary}
+                      getImage={(item: any) => getManeuverImage(item.name as string, item.category as string)}
+                      renderItem={(item: any) => (
+                        <div className="p-4 sm:p-5 space-y-2">
+                          <Badge
+                            variant="outline"
+                            className={`text-sm px-3 py-1 ${levelColor[results[item.id] || "not_attempted"]}`}
+                          >
+                            {levelLabel[results[item.id] || "not_attempted"]}
+                          </Badge>
+                          {maneuverNotes[item.id] && (
+                            <p className="text-sm text-muted-foreground">{maneuverNotes[item.id]}</p>
+                          )}
+                        </div>
+                      )}
+                    />
+                  );
                 }
 
                 return (
