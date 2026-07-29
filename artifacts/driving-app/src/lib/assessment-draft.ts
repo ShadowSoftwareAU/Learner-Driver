@@ -25,6 +25,7 @@ export type AssessmentDraft = {
   lightingCondition: string;
   results: Record<number, string>;
   maneuverNotes: Record<number, string>;
+  maneuverLocations: Record<number, { lat: number; lng: number }>;
   confidenceNote: string;
   focusAreas: string;
   setupDone: boolean;

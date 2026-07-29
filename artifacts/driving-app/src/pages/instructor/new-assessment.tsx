@@ -69,13 +69,22 @@ export default function NewAssessment() {
   const saveResults = useSaveManeuverResults();
 
   const currentPositionRef = useRef<GeolocationCoordinates | null>(null);
+  const geoWatchRef = useRef<number | null>(null);
   useEffect(() => {
     if (!navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(
+    // watchPosition keeps the ref current throughout the lesson.
+    // A single getCurrentPosition call goes stale in seconds at driving speed.
+    geoWatchRef.current = navigator.geolocation.watchPosition(
       (pos) => { currentPositionRef.current = pos.coords; },
       () => {},
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, maximumAge: 3000 }
     );
+    return () => {
+      if (geoWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(geoWatchRef.current);
+        geoWatchRef.current = null;
+      }
+    };
   }, []);
 
   const urlParams = new URLSearchParams(search);
@@ -125,6 +134,9 @@ export default function NewAssessment() {
   const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>(
     () => initialDraft?.maneuverNotes ?? {}
   );
+  const [maneuverLocations, setManeuverLocations] = useState<Record<number, { lat: number; lng: number }>>(
+    () => (initialDraft?.maneuverLocations as Record<number, { lat: number; lng: number }>) ?? {}
+  );
   const [expandedManeuver, setExpandedManeuver] = useState<number | null>(null);
   const [confidenceNote, setConfidenceNote] = useState(
     () => initialDraft?.confidenceNote ?? ""
@@ -153,7 +165,7 @@ export default function NewAssessment() {
       saveAssessmentDraft({
         assessmentType, studentId, date, duration, pedalOperator,
         fitnessConfirmed, weatherCondition, lightingCondition,
-        results, maneuverNotes, confidenceNote, focusAreas, setupDone,
+        results, maneuverNotes, maneuverLocations, confidenceNote, focusAreas, setupDone,
       });
     }, 400);
     return () => clearTimeout(timer);
@@ -184,6 +196,15 @@ export default function NewAssessment() {
 
   const handleLevelSelect = (maneuverId: number, level: ManeuverResultItemCompetencyLevel) => {
     setResults(prev => ({ ...prev, [maneuverId]: level }));
+    // Stamp current GPS position at the moment of rating selection.
+    // Stored per-maneuver for the compliance route map and sent to the API.
+    const pos = currentPositionRef.current;
+    if (pos) {
+      setManeuverLocations(prev => ({
+        ...prev,
+        [maneuverId]: { lat: pos.latitude, lng: pos.longitude },
+      }));
+    }
   };
 
   const handleManeuverNoteChange = (maneuverId: number, note: string) => {
@@ -240,6 +261,8 @@ export default function NewAssessment() {
         maneuverId: parseInt(id),
         competencyLevel: level,
         notes: maneuverNotes[parseInt(id)] || undefined,
+        lat: maneuverLocations[parseInt(id)]?.lat ?? undefined,
+        lng: maneuverLocations[parseInt(id)]?.lng ?? undefined,
       }));
 
       if (maneuverResultsArray.length > 0) {
