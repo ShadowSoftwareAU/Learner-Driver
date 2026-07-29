@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq, desc, and, sql, isNotNull } from "drizzle-orm";
+import { eq, desc, and, sql, isNotNull, or, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable, sessionFeedbackTable, usersTable, schoolInstructorsTable, handoverNotesTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
@@ -56,8 +56,35 @@ router.get("/assessments", requireAuth, async (req: any, res): Promise<void> => 
 
   let rows;
 
-  if (user.role === "admin" || user.role === "school_admin" || user.role === "super_admin") {
+  if (user.role === "super_admin") {
+    // Super admins see everything across all schools
     rows = await db.select().from(assessmentsTable).orderBy(desc(assessmentsTable.lessonDate));
+    if (studentId) rows = rows.filter(r => r.studentId === studentId);
+  } else if (user.role === "admin" || user.role === "school_admin") {
+    // School-scoped visibility:
+    // 1. All assessments originally conducted at this school (historical records — survives student transfer)
+    // 2. All assessments for students currently enrolled here (new school sees full training history)
+    if (!user.schoolId) { res.json([]); return; }
+
+    const schoolStudents = await db
+      .select({ id: studentsTable.id })
+      .from(studentsTable)
+      .where(eq(studentsTable.schoolId, user.schoolId));
+    const currentStudentIds = schoolStudents.map(s => s.id);
+
+    const scopeConditions: ReturnType<typeof eq>[] = [
+      eq(assessmentsTable.schoolId, user.schoolId),
+    ];
+    if (currentStudentIds.length > 0) {
+      scopeConditions.push(inArray(assessmentsTable.studentId, currentStudentIds) as any);
+    }
+
+    rows = await db
+      .select()
+      .from(assessmentsTable)
+      .where(or(...scopeConditions))
+      .orderBy(desc(assessmentsTable.lessonDate));
+
     if (studentId) rows = rows.filter(r => r.studentId === studentId);
   } else if (user.role === "instructor") {
     const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));

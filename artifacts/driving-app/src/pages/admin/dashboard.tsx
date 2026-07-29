@@ -3,6 +3,7 @@ import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Users, Car, FileCheck, Clock, Activity } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "wouter";
 
 export default function AdminDashboard() {
   const { data: dashboard, isLoading } = useGetAdminDashboard({ query: { queryKey: ["/api/dashboards/admin"] }});
@@ -26,43 +27,54 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
-              <Users className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{dashboard.totalStudents}</div>
-              <p className="text-xs text-muted-foreground mt-1">{dashboard.activeStudents} active</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Instructors</CardTitle>
-              <Car className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{dashboard.totalInstructors}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Assessments</CardTitle>
-              <FileCheck className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{dashboard.totalAssessments}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Hours This Month</CardTitle>
-              <Clock className="w-4 h-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">{dashboard.hoursLoggedThisMonth || 0}</div>
-            </CardContent>
-          </Card>
+          <Link href="/admin/students" asChild>
+            <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Total Students</CardTitle>
+                <Users className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{dashboard.totalStudents}</div>
+                <p className="text-xs text-muted-foreground mt-1">{dashboard.activeStudents} active</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/instructors" asChild>
+            <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Instructors</CardTitle>
+                <Car className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{dashboard.totalInstructors}</div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/assessments" asChild>
+            <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Assessments</CardTitle>
+                <FileCheck className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{dashboard.totalAssessments}</div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/admin/bookings" asChild>
+            <Card className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Hours This Month</CardTitle>
+                <Clock className="w-4 h-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">{dashboard.hoursLoggedThisMonth || 0}</div>
+              </CardContent>
+            </Card>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -99,16 +111,18 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="space-y-4">
                 {dashboard.instructorStats?.map(stat => (
-                  <div key={stat.id} className="flex justify-between items-center p-3 rounded-lg border border-border bg-gray-50">
-                    <div>
-                      <p className="font-medium">{stat.fullName}</p>
-                      <p className="text-xs text-muted-foreground">{stat.activeStudents} active students</p>
+                  <Link key={stat.id} href={`/admin/instructors/${stat.id}`} asChild>
+                    <div className="flex justify-between items-center p-3 rounded-lg border border-border bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                      <div>
+                        <p className="font-medium">{stat.fullName}</p>
+                        <p className="text-xs text-muted-foreground">{stat.activeStudents} active students</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-lg font-bold">{stat.hoursThisMonth}</span>
+                        <p className="text-xs text-muted-foreground">hrs / mo</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="text-lg font-bold">{stat.hoursThisMonth}</span>
-                      <p className="text-xs text-muted-foreground">hrs / mo</p>
-                    </div>
-                  </div>
+                  </Link>
                 ))}
                 {(!dashboard.instructorStats || dashboard.instructorStats.length === 0) && (
                   <div className="text-center py-8 text-muted-foreground">
