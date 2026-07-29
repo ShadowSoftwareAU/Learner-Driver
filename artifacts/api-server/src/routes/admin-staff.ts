@@ -43,6 +43,7 @@ router.get(
       return;
     }
 
+    // Owner/Manager subRole always has full access — no DB lookup needed.
     if (isMasterTier(user)) {
       res.json({
         isMasterTier: true,
@@ -55,18 +56,33 @@ router.get(
       return;
     }
 
+    // Check for an explicit permissions row (only present for invited staff).
     const [perms] = await db
       .select()
       .from(adminStaffPermissionsTable)
       .where(eq(adminStaffPermissionsTable.userId, user.id));
 
+    // No permissions row → primary admin account, unrestricted access.
+    if (!perms) {
+      res.json({
+        isMasterTier: true,
+        canViewBilling: true,
+        canManageInstructors: true,
+        canManageCompliance: true,
+        canViewAuditLog: true,
+        canManageBookings: true,
+      });
+      return;
+    }
+
+    // Explicit permissions row → invited staff member with scoped access.
     res.json({
       isMasterTier: false,
-      canViewBilling: perms?.canViewBilling ?? false,
-      canManageInstructors: perms?.canManageInstructors ?? false,
-      canManageCompliance: perms?.canManageCompliance ?? false,
-      canViewAuditLog: perms?.canViewAuditLog ?? false,
-      canManageBookings: perms?.canManageBookings ?? false,
+      canViewBilling: perms.canViewBilling,
+      canManageInstructors: perms.canManageInstructors,
+      canManageCompliance: perms.canManageCompliance,
+      canViewAuditLog: perms.canViewAuditLog,
+      canManageBookings: perms.canManageBookings,
     });
   }
 );

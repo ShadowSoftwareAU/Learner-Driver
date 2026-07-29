@@ -30,31 +30,35 @@ const NO_ACCESS: AdminPermissions = {
 /**
  * Returns the current user's admin permission profile.
  *
- * For Owner/Manager tier (adminSubRole: owner | manager), all permissions
- * are true by definition — no DB fetch needed beyond the user profile.
- * For regular admin staff, fetches their stored permission flags from the API.
- * For non-admin users, returns all-false (no-op).
+ * Access rules (evaluated server-side, reflected in isMasterTier):
+ *  1. Owner/Manager subRole → full access (fast path, no extra fetch needed
+ *     but we still fetch so the hook is uniform).
+ *  2. Admin with NO row in admin_staff_permissions → primary admin account,
+ *     full access.
+ *  3. Admin WITH a permissions row → invited staff, scoped access per that row.
+ *  4. Any other role → all-false (no-op for non-admin pages).
+ *
+ * While the query is loading the hook returns NO_ACCESS (conservative).
+ * The query resolves in one round-trip and is cached, so flicker is minimal.
  */
 export function useAdminPermissions(): AdminPermissions {
   const { data: user } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
-  // Derive master tier status optimistically from user profile.
-  // This avoids flicker for Owner/Manager users — they see full nav immediately.
-  const isMasterTier =
-    user?.role === "admin" &&
-    ["owner", "manager"].includes(user?.adminSubRole ?? "");
-
   const { data: perms } = useGetMyAdminPermissions({
     query: {
       queryKey: ["/api/admin/permissions/me"],
-      // Only fetch for non-master admin users; master tier is already determined above
-      enabled: user?.role === "admin" && !isMasterTier,
+      // Only fire for admin users — others never need this.
+      enabled: user?.role === "admin",
     },
   });
 
   if (!user || user.role !== "admin") return NO_ACCESS;
-  if (isMasterTier) return FULL_ACCESS;
-  if (!perms) return NO_ACCESS; // still loading — conservative default
+
+  // Still loading the permissions response — show nothing until we know.
+  if (!perms) return NO_ACCESS;
+
+  // Server already applied the full logic (owner/manager OR no perms row → full).
+  if (perms.isMasterTier) return FULL_ACCESS;
 
   return {
     isMasterTier: false,
