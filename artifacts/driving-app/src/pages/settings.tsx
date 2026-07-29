@@ -147,7 +147,7 @@ function AccountSection({ onSaved }: { onSaved: () => void }) {
             />
 
             <div className="space-y-1.5">
-              <FormLabel className="text-muted-foreground">Email</FormLabel>
+              <p className="text-sm font-medium leading-none text-muted-foreground">Email</p>
               <Input
                 value={user?.email ?? ""}
                 disabled
