@@ -334,6 +334,7 @@ export default function InstructorVerification() {
   });
   const [deliversQRide, setDeliversQRide] = useState(false);
   const [instructorState, setInstructorState] = useState("");
+  const [adtaNumber, setAdtaNumber] = useState("");
 
   const handleExpiryChange = (docType: DocType, expiresAt: string) => {
     setUploads((prev) => {
@@ -351,7 +352,7 @@ export default function InstructorVerification() {
   const handleSubmit = () => {
     const docs = Object.values(uploads).filter(Boolean) as UploadedDoc[];
     submitVerification.mutate(
-      { data: { documents: docs, state: instructorState || undefined } as any },
+      { data: { documents: docs, state: instructorState || undefined, adtaNumber: adtaNumber.trim() || undefined } as any },
       {
         onSuccess: () => {
           toast({ title: "Application submitted", description: "We'll review your documents and notify you." });
@@ -372,6 +373,14 @@ export default function InstructorVerification() {
         </div>
       </SidebarLayout>
     );
+  }
+
+  // Pre-fill ADTA from saved instructor profile once data loads
+  const [adtaInitialised, setAdtaInitialised] = useState(false);
+  if (data && !adtaInitialised) {
+    const saved = (data as any).adtaNumber ?? "";
+    if (saved) setAdtaNumber(saved);
+    setAdtaInitialised(true);
   }
 
   const status = (data?.status as keyof typeof STATUS_CONFIG) ?? "not_submitted";
@@ -440,6 +449,20 @@ export default function InstructorVerification() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>ADTA Membership Number <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <p className="text-xs text-muted-foreground">
+                  Australian Driver Trainers Association member number. Not required, but ADTA-verified instructors
+                  will be highlighted in search results once database integration is live.
+                </p>
+                <Input
+                  value={adtaNumber}
+                  onChange={(e) => setAdtaNumber(e.target.value)}
+                  placeholder="e.g. ADTA-12345"
+                  className="max-w-xs"
+                />
               </div>
 
               <UploadSlot

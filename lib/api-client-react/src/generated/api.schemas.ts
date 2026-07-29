@@ -564,6 +564,11 @@ export interface Instructor {
      * @nullable
      */
   state?: string | null;
+  /**
+     * Australian Driver Trainers Association membership number (optional, not enforced)
+     * @nullable
+     */
+  adtaNumber?: string | null;
   isIndependent?: boolean;
   activeStudents?: number;
   primaryVehicle?: InstructorVehicleSummary | null;
@@ -692,6 +697,8 @@ export interface InstructorUpdate {
   qualifications?: string;
   /** AU state/territory where this instructor primarily operates */
   state?: string;
+  /** Australian Driver Trainers Association membership number (optional) */
+  adtaNumber?: string;
 }
 
 export type ManeuverAssessmentType = typeof ManeuverAssessmentType[keyof typeof ManeuverAssessmentType];

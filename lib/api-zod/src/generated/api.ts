@@ -431,6 +431,7 @@ export const ListInstructorsResponseItem = zod.object({
   "qualifications": zod.string().nullish(),
   "trainingCategories": zod.array(zod.string()).optional(),
   "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
+  "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -471,6 +472,7 @@ export const GetInstructorResponse = zod.object({
   "qualifications": zod.string().nullish(),
   "trainingCategories": zod.array(zod.string()).optional(),
   "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
+  "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -536,7 +538,8 @@ export const UpdateInstructorBody = zod.object({
   "vehicleModel": zod.string().optional(),
   "vehicleYear": zod.number().optional(),
   "qualifications": zod.string().optional(),
-  "state": zod.string().optional().describe('AU state\/territory where this instructor primarily operates')
+  "state": zod.string().optional().describe('AU state\/territory where this instructor primarily operates'),
+  "adtaNumber": zod.string().optional().describe('Australian Driver Trainers Association membership number (optional)')
 })
 
 export const UpdateInstructorResponse = zod.object({
@@ -552,6 +555,7 @@ export const UpdateInstructorResponse = zod.object({
   "qualifications": zod.string().nullish(),
   "trainingCategories": zod.array(zod.string()).optional(),
   "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
+  "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({

@@ -2988,6 +2988,9 @@ components:
         state:
           type: ["string", "null"]
           description: "AU state/territory where this instructor primarily operates"
+        adtaNumber:
+          type: ["string", "null"]
+          description: "Australian Driver Trainers Association membership number (optional, not enforced)"
         isIndependent:
           type: boolean
         activeStudents:
@@ -3162,6 +3165,9 @@ components:
         state:
           type: string
           description: "AU state/territory where this instructor primarily operates"
+        adtaNumber:
+          type: string
+          description: "Australian Driver Trainers Association membership number (optional)"
 
     # ─── Maneuvers ─────────────────────────────────────────────────────────────
     Maneuver:

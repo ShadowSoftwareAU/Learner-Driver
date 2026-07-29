@@ -238,7 +238,7 @@ router.get("/instructors/:id/verifications", requireAuth, requireAdmin, async (r
 
 router.patch("/instructors/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const { fullName, phone, licenseNumber, vehicleMake, vehicleModel, vehicleYear, qualifications, state } = req.body;
+  const { fullName, phone, licenseNumber, vehicleMake, vehicleModel, vehicleYear, qualifications, state, adtaNumber } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
@@ -248,6 +248,7 @@ router.patch("/instructors/:id", requireAuth, async (req: any, res): Promise<voi
   if (vehicleYear !== undefined) updates.vehicleYear = vehicleYear;
   if (qualifications !== undefined) updates.qualifications = qualifications;
   if (state !== undefined) updates.state = state;
+  if (adtaNumber !== undefined) updates.adtaNumber = adtaNumber;
   const [updated] = await db.update(instructorsTable).set(updates).where(eq(instructorsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatInstructor(updated, 0, null));
@@ -267,6 +268,7 @@ function formatInstructor(i: any, activeStudents: number, primaryVehicle: any | 
     qualifications: i.qualifications ?? null,
     trainingCategories: i.trainingCategories ?? [],
     state: i.state ?? null,
+    adtaNumber: i.adtaNumber ?? null,
     isIndependent: i.isIndependent,
     activeStudents,
     primaryVehicle: primaryVehicle ? {

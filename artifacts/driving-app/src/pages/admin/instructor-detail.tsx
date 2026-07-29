@@ -138,8 +138,49 @@ type VerificationItem = {
   instructorId: number;
   instructorName: string;
   instructorEmail: string;
-  documents: Array<{ id: number; docType: string; fileName: string; objectPath: string; fileSize?: number | null; docStatus?: string | null; docReviewNotes?: string | null }>;
+  documents: Array<{
+    id: number;
+    docType: string;
+    fileName: string;
+    objectPath: string;
+    fileSize?: number | null;
+    expiresAt?: string | null;
+    docStatus?: string | null;
+    docReviewNotes?: string | null;
+  }>;
 };
+
+type ComputedCompliance = "compliant" | "at_risk" | "non_compliant" | "no_submission";
+
+function computeComplianceStatus(
+  latestStatus: string | undefined,
+  docs: Array<{ docType: string; docStatus?: string | null; expiresAt?: string | null }>,
+): ComputedCompliance {
+  if (!latestStatus) return "no_submission";
+  if (latestStatus === "rejected") return "non_compliant";
+
+  const uploadedTypes = new Set(docs.map((d) => d.docType));
+  const hasMissingRequired = REQUIRED_DOCS.some((dt) => !uploadedTypes.has(dt));
+  if (hasMissingRequired) return "non_compliant";
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  for (const doc of docs) {
+    if (doc.docStatus === "rejected") return "non_compliant";
+    if (doc.expiresAt && doc.expiresAt <= todayStr) return "non_compliant";
+  }
+
+  if (latestStatus === "needs_revision") return "at_risk";
+  if (latestStatus === "pending") return "at_risk";
+
+  const in30DaysStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  for (const doc of docs) {
+    if (doc.docStatus === "needs_revision") return "at_risk";
+    if (doc.expiresAt && doc.expiresAt > todayStr && doc.expiresAt <= in30DaysStr) return "at_risk";
+  }
+
+  if (latestStatus === "approved") return "compliant";
+  return "at_risk";
+}
 
 const DOC_STATUS_BADGE: Record<string, { label: string; icon: React.ElementType; className: string }> = {
   approved: { label: "Approved", icon: CheckCircle2, className: "text-green-700 bg-green-50 border-green-200" },
@@ -390,32 +431,25 @@ function ComplianceReviewDialog({
 
 const REQUIRED_DOCS = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
 
-function ComplianceBadge({ status }: { status?: string }) {
-  if (status === "approved") {
+function ComplianceBadge({ computed }: { computed: ComputedCompliance }) {
+  if (computed === "compliant") {
     return (
       <div className="flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-3 py-1">
         <ShieldCheck className="w-4 h-4" /> Compliant
       </div>
     );
   }
-  if (status === "pending") {
+  if (computed === "at_risk") {
     return (
       <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-3 py-1">
-        <Clock className="w-4 h-4" /> Under Review
+        <AlertTriangle className="w-4 h-4" /> At Risk
       </div>
     );
   }
-  if (status === "needs_revision") {
-    return (
-      <div className="flex items-center gap-1.5 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-full px-3 py-1">
-        <AlertTriangle className="w-4 h-4" /> Needs Revision
-      </div>
-    );
-  }
-  if (status === "rejected") {
+  if (computed === "non_compliant") {
     return (
       <div className="flex items-center gap-1.5 text-sm font-medium text-red-700 bg-red-50 border border-red-200 rounded-full px-3 py-1">
-        <XCircle className="w-4 h-4" /> Rejected
+        <XCircle className="w-4 h-4" /> Non-compliant
       </div>
     );
   }
@@ -445,6 +479,7 @@ function ComplianceCard({
   const latestDocs = latest?.documents ?? [];
   const uploadedDocTypes = new Set(latestDocs.map((d) => d.docType));
   const missingRequired = REQUIRED_DOCS.filter((dt) => !uploadedDocTypes.has(dt));
+  const computed = computeComplianceStatus(latestStatus, latestDocs);
 
   return (
     <Card>
@@ -454,7 +489,7 @@ function ComplianceCard({
             <CardTitle className="text-base">Compliance Documents</CardTitle>
             <CardDescription>Instructor credentials and regulatory requirements.</CardDescription>
           </div>
-          <ComplianceBadge status={latestStatus ?? undefined} />
+          <ComplianceBadge computed={computed} />
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -903,6 +938,13 @@ export default function InstructorDetail() {
               {detail.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {detail.phone}</span>}
               {detail.licenseNumber && <span className="flex items-center gap-1.5"><BadgeCheck className="w-3.5 h-3.5" /> Licence: {detail.licenseNumber}</span>}
             </div>
+            {detail.adtaNumber && (
+              <div className="mt-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">
+                  <Award className="w-3.5 h-3.5" /> ADTA Member — {detail.adtaNumber}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

@@ -23,6 +23,8 @@ export const instructorsTable = pgTable("instructors", {
   defaultSchoolId: integer("default_school_id"),
   // When false + school-managed: cannot create/cancel bookings unilaterally
   canSelfManageCalendar: boolean("can_self_manage_calendar").notNull().default(true),
+  // ADTA membership number — optional, not enforced; future integration with ADTA database
+  adtaNumber: text("adta_number"),
   // Safeguarding notes — classification: restricted
   safeguardingNotes: text("safeguarding_notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

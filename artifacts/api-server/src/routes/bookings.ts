@@ -3,7 +3,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import {
   db, bookingsTable, bookingBroadcastsTable, notificationsTable,
   instructorAvailabilityTable, instructorZonesTable, instructorsTable,
-  studentsTable, usersTable,
+  studentsTable, usersTable, instructorVerificationsTable, verificationDocumentsTable,
 } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
@@ -203,6 +203,39 @@ router.post("/bookings/:id/claim", requireAuth, async (req: any, res): Promise<v
 
   const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
   if (!instructor) { res.status(403).json({ error: "Only instructors can claim bookings" }); return; }
+
+  // Compliance check — instructor must have an approved verification with no expired required docs
+  const REQUIRED_DOC_TYPES = ["wwcc", "insurance", "license_front", "license_back", "driver_trainer_accreditation"];
+  const [latestVerification] = await db
+    .select()
+    .from(instructorVerificationsTable)
+    .where(eq(instructorVerificationsTable.instructorId, instructor.id))
+    .orderBy(desc(instructorVerificationsTable.createdAt))
+    .limit(1);
+
+  if (!latestVerification || latestVerification.status !== "approved") {
+    res.status(403).json({ error: "Your compliance application must be approved before you can accept bookings." });
+    return;
+  }
+
+  const verificationDocs = await db
+    .select()
+    .from(verificationDocumentsTable)
+    .where(eq(verificationDocumentsTable.verificationId, latestVerification.id));
+
+  const uploadedTypes = new Set(verificationDocs.map((d) => d.docType));
+  const missingRequired = REQUIRED_DOC_TYPES.filter((dt) => !uploadedTypes.has(dt));
+  if (missingRequired.length > 0) {
+    res.status(403).json({ error: "Required compliance documents are missing. Please update your verification before accepting bookings." });
+    return;
+  }
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const expiredDoc = verificationDocs.find((d) => d.expiresAt && d.expiresAt <= todayStr && d.docStatus !== "approved");
+  if (expiredDoc) {
+    res.status(403).json({ error: `Your ${expiredDoc.docType.replace(/_/g, " ")} has expired. Please resubmit updated documents before accepting bookings.` });
+    return;
+  }
 
   // Atomic claim — only succeeds if still pending
   const [claimed] = await db.update(bookingsTable)

@@ -63,13 +63,13 @@ router.get("/instructor/verification/status", requireAuth, async (req: any, res)
     .limit(1);
 
   if (rows.length === 0) {
-    res.json({ status: "not_submitted", verification: null, documents: [] });
+    res.json({ status: "not_submitted", verification: null, documents: [], adtaNumber: instructor.adtaNumber ?? null });
     return;
   }
 
   const verification = rows[0];
   const documents = await getVerificationWithDocs(verification.id);
-  res.json({ status: verification.status, verification, documents });
+  res.json({ status: verification.status, verification, documents, adtaNumber: instructor.adtaNumber ?? null });
 });
 
 /**
@@ -96,19 +96,23 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
     return;
   }
 
-  const { documents, state } = req.body as {
+  const { documents, state, adtaNumber } = req.body as {
     documents: Array<{ docType: string; fileName: string; fileSize?: number; objectPath: string; expiresAt?: string }>;
     state?: string;
+    adtaNumber?: string;
   };
   if (!Array.isArray(documents) || documents.length === 0) {
     res.status(400).json({ error: "At least one document is required" });
     return;
   }
 
-  // Persist instructor state if provided
-  if (state) {
+  // Persist instructor state and ADTA number if provided
+  const instructorUpdates: Record<string, string> = {};
+  if (state) instructorUpdates.state = state;
+  if (adtaNumber !== undefined) instructorUpdates.adtaNumber = adtaNumber;
+  if (Object.keys(instructorUpdates).length > 0) {
     await db.update(instructorsTable)
-      .set({ state })
+      .set(instructorUpdates)
       .where(eq(instructorsTable.id, instructor.id));
   }
 
