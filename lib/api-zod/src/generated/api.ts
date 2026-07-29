@@ -3259,6 +3259,131 @@ export const SetAdminSubRoleBody = zod.object({
 
 
 /**
+ * @summary Get the current admin user's permission profile
+ */
+export const GetMyAdminPermissionsResponse = zod.object({
+  "isMasterTier": zod.boolean(),
+  "canViewBilling": zod.boolean(),
+  "canManageInstructors": zod.boolean(),
+  "canManageCompliance": zod.boolean(),
+  "canViewAuditLog": zod.boolean(),
+  "canManageBookings": zod.boolean()
+})
+
+
+/**
+ * @summary List all admin staff members and pending invites (Owner/Manager only)
+ */
+export const ListAdminStaffResponse = zod.object({
+  "staff": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string().nullish(),
+  "email": zod.string(),
+  "adminSubRole": zod.string().nullish(),
+  "createdAt": zod.string().optional(),
+  "permissions": zod.object({
+  "isMasterTier": zod.boolean(),
+  "canViewBilling": zod.boolean(),
+  "canManageInstructors": zod.boolean(),
+  "canManageCompliance": zod.boolean(),
+  "canViewAuditLog": zod.boolean(),
+  "canManageBookings": zod.boolean()
+})
+})),
+  "pendingInvites": zod.array(zod.object({
+  "id": zod.number(),
+  "inviteeEmail": zod.string(),
+  "status": zod.string(),
+  "canViewBilling": zod.boolean().optional(),
+  "canManageInstructors": zod.boolean().optional(),
+  "canManageCompliance": zod.boolean().optional(),
+  "canViewAuditLog": zod.boolean().optional(),
+  "canManageBookings": zod.boolean().optional(),
+  "expiresAt": zod.string(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Invite a new staff member with specified permissions
+ */
+export const InviteAdminStaffBody = zod.object({
+  "email": zod.string().email(),
+  "canViewBilling": zod.boolean().optional(),
+  "canManageInstructors": zod.boolean().optional(),
+  "canManageCompliance": zod.boolean().optional(),
+  "canViewAuditLog": zod.boolean().optional(),
+  "canManageBookings": zod.boolean().optional(),
+  "joinBaseUrl": zod.string().optional()
+})
+
+
+/**
+ * @summary Public: preview an admin staff invite token
+ */
+export const GetAdminStaffInvitePreviewParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetAdminStaffInvitePreviewResponse = zod.object({
+  "valid": zod.boolean(),
+  "status": zod.string(),
+  "expired": zod.boolean().optional(),
+  "invitedByName": zod.string(),
+  "inviteeEmail": zod.string(),
+  "expiresAt": zod.string(),
+  "permissions": zod.object({
+  "canViewBilling": zod.boolean().optional(),
+  "canManageInstructors": zod.boolean().optional(),
+  "canManageCompliance": zod.boolean().optional(),
+  "canViewAuditLog": zod.boolean().optional(),
+  "canManageBookings": zod.boolean().optional()
+}).optional()
+})
+
+
+/**
+ * @summary Claim a staff invite — sets admin role and permissions on the authenticated user
+ */
+export const ClaimAdminStaffInviteParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+
+/**
+ * @summary Cancel a pending staff invite
+ */
+export const CancelAdminStaffInviteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Update a staff member's permission flags (Owner/Manager only)
+ */
+export const UpdateAdminStaffPermissionsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAdminStaffPermissionsBody = zod.object({
+  "canViewBilling": zod.boolean().optional(),
+  "canManageInstructors": zod.boolean().optional(),
+  "canManageCompliance": zod.boolean().optional(),
+  "canViewAuditLog": zod.boolean().optional(),
+  "canManageBookings": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Remove a staff member and revoke their admin role (Owner/Manager only)
+ */
+export const RemoveAdminStaffParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all links and pending invites for the authenticated school admin
  */
 export const GetInstructorLinksResponse = zod.object({

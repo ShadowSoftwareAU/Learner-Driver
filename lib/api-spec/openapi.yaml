@@ -2751,6 +2751,151 @@ paths:
           description: Updated user
         "403": { description: Access denied }
 
+  # ─── Admin staff management ──────────────────────────────────────────────────
+  /admin/permissions/me:
+    get:
+      operationId: getMyAdminPermissions
+      tags: [admin]
+      summary: Get the current admin user's permission profile
+      responses:
+        "200":
+          description: Admin permission profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPermissions"
+        "403":
+          description: Not an admin user
+
+  /admin/staff:
+    get:
+      operationId: listAdminStaff
+      tags: [admin]
+      summary: List all admin staff members and pending invites (Owner/Manager only)
+      responses:
+        "200":
+          description: Staff list and pending invites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStaffListResponse"
+        "403":
+          description: Owner or Manager access required
+
+  /admin/staff/invite:
+    post:
+      operationId: inviteAdminStaff
+      tags: [admin]
+      summary: Invite a new staff member with specified permissions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminStaffInviteRequest"
+      responses:
+        "201":
+          description: Invite created
+        "403":
+          description: Owner or Manager access required
+
+  /admin/staff/invite/{token}:
+    get:
+      operationId: getAdminStaffInvitePreview
+      tags: [admin]
+      summary: "Public: preview an admin staff invite token"
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStaffInvitePreview"
+        "404":
+          description: Not found
+
+  /admin/staff/invite/{token}/claim:
+    post:
+      operationId: claimAdminStaffInvite
+      tags: [admin]
+      summary: Claim a staff invite — sets admin role and permissions on the authenticated user
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Claimed
+        "404":
+          description: Not found
+        "409":
+          description: Already used or cancelled
+        "410":
+          description: Expired
+
+  /admin/staff/invite/{id}:
+    delete:
+      operationId: cancelAdminStaffInvite
+      tags: [admin]
+      summary: Cancel a pending staff invite
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled
+
+  /admin/staff/{id}/permissions:
+    patch:
+      operationId: updateAdminStaffPermissions
+      tags: [admin]
+      summary: Update a staff member's permission flags (Owner/Manager only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminPermissionsUpdate"
+      responses:
+        "200":
+          description: Updated
+        "403":
+          description: Owner or Manager access required
+
+  /admin/staff/{id}:
+    delete:
+      operationId: removeAdminStaff
+      tags: [admin]
+      summary: Remove a staff member and revoke their admin role (Owner/Manager only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Removed
+        "403":
+          description: Owner or Manager access required
+
   # ─── Instructor links (hybrid school/independent model) ─────────────────────
   /instructor-links:
     get:
@@ -3548,6 +3693,132 @@ components:
           type: string
         expiresAt:
           type: string
+
+    # ─── Admin staff ───────────────────────────────────────────────────────────
+    AdminPermissions:
+      type: object
+      required: [isMasterTier, canViewBilling, canManageInstructors, canManageCompliance, canViewAuditLog, canManageBookings]
+      properties:
+        isMasterTier:
+          type: boolean
+        canViewBilling:
+          type: boolean
+        canManageInstructors:
+          type: boolean
+        canManageCompliance:
+          type: boolean
+        canViewAuditLog:
+          type: boolean
+        canManageBookings:
+          type: boolean
+
+    AdminPermissionsUpdate:
+      type: object
+      properties:
+        canViewBilling:
+          type: boolean
+        canManageInstructors:
+          type: boolean
+        canManageCompliance:
+          type: boolean
+        canViewAuditLog:
+          type: boolean
+        canManageBookings:
+          type: boolean
+
+    AdminStaffMember:
+      type: object
+      required: [id, email, permissions]
+      properties:
+        id:
+          type: integer
+        name:
+          type: ["string", "null"]
+        email:
+          type: string
+        adminSubRole:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+        permissions:
+          $ref: "#/components/schemas/AdminPermissions"
+
+    AdminStaffInvite:
+      type: object
+      required: [id, inviteeEmail, status, expiresAt, createdAt]
+      properties:
+        id:
+          type: integer
+        inviteeEmail:
+          type: string
+        status:
+          type: string
+        canViewBilling:
+          type: boolean
+        canManageInstructors:
+          type: boolean
+        canManageCompliance:
+          type: boolean
+        canViewAuditLog:
+          type: boolean
+        canManageBookings:
+          type: boolean
+        expiresAt:
+          type: string
+        createdAt:
+          type: string
+
+    AdminStaffListResponse:
+      type: object
+      required: [staff, pendingInvites]
+      properties:
+        staff:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminStaffMember"
+        pendingInvites:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminStaffInvite"
+
+    AdminStaffInviteRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        canViewBilling:
+          type: boolean
+        canManageInstructors:
+          type: boolean
+        canManageCompliance:
+          type: boolean
+        canViewAuditLog:
+          type: boolean
+        canManageBookings:
+          type: boolean
+        joinBaseUrl:
+          type: string
+
+    AdminStaffInvitePreview:
+      type: object
+      required: [valid, status, invitedByName, inviteeEmail, expiresAt]
+      properties:
+        valid:
+          type: boolean
+        status:
+          type: string
+        expired:
+          type: boolean
+        invitedByName:
+          type: string
+        inviteeEmail:
+          type: string
+        expiresAt:
+          type: string
+        permissions:
+          $ref: "#/components/schemas/AdminPermissionsUpdate"
 
     # ─── Maneuvers ─────────────────────────────────────────────────────────────
     Maneuver:

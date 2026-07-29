@@ -805,6 +805,72 @@ export interface InvitePreview {
   expiresAt: string;
 }
 
+export interface AdminPermissions {
+  isMasterTier: boolean;
+  canViewBilling: boolean;
+  canManageInstructors: boolean;
+  canManageCompliance: boolean;
+  canViewAuditLog: boolean;
+  canManageBookings: boolean;
+}
+
+export interface AdminPermissionsUpdate {
+  canViewBilling?: boolean;
+  canManageInstructors?: boolean;
+  canManageCompliance?: boolean;
+  canViewAuditLog?: boolean;
+  canManageBookings?: boolean;
+}
+
+export interface AdminStaffMember {
+  id: number;
+  /** @nullable */
+  name?: string | null;
+  email: string;
+  /** @nullable */
+  adminSubRole?: string | null;
+  createdAt?: string;
+  permissions: AdminPermissions;
+}
+
+export interface AdminStaffInvite {
+  id: number;
+  inviteeEmail: string;
+  status: string;
+  canViewBilling?: boolean;
+  canManageInstructors?: boolean;
+  canManageCompliance?: boolean;
+  canViewAuditLog?: boolean;
+  canManageBookings?: boolean;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface AdminStaffListResponse {
+  staff: AdminStaffMember[];
+  pendingInvites: AdminStaffInvite[];
+}
+
+export interface AdminStaffInviteRequest {
+  email: string;
+  canViewBilling?: boolean;
+  canManageInstructors?: boolean;
+  canManageCompliance?: boolean;
+  canViewAuditLog?: boolean;
+  canManageBookings?: boolean;
+  joinBaseUrl?: string;
+}
+
+export interface AdminStaffInvitePreview {
+  valid: boolean;
+  status: string;
+  expired?: boolean;
+  invitedByName: string;
+  inviteeEmail: string;
+  expiresAt: string;
+  permissions?: AdminPermissionsUpdate;
+}
+
 export type ManeuverAssessmentType = typeof ManeuverAssessmentType[keyof typeof ManeuverAssessmentType];
 
 

@@ -1,3 +1,4 @@
+- [Admin staff permission model](admin-staff-permissions.md) — master tier (owner/manager) bypasses DB; staff gated by adminStaffPermissionsTable; sidebar + invite flow + claim flow all documented.
 - [Manual student profiles & instructor ownership](manual-student-profiles.md) — students.userId is nullable (account-less instructor-created learners); two instructorHasStudent() copies must stay in sync; /storage/objects now needs auth.
 - [GPS route & heatmap feature](gps-heatmap.md) — assessments.routePath (jsonb), maneuver_results.lat/lng; heatmap route must come BEFORE /:id in Express; Orval query options require queryKey alongside enabled.
 - [API server patterns](api-server-patterns.md) — getOrCreateUser signature, zod import, drizzle and() single-arg workaround, schoolInstructorsTable columns.

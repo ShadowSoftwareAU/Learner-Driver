@@ -43,6 +43,8 @@ import AdminHandoverNotes from "@/pages/admin/handover-notes";
 import AdminHandoverNoteDetail from "@/pages/admin/handover-note-detail";
 import AdminFeedback from "@/pages/admin/feedback";
 import AdminComplianceDashboard from "@/pages/admin/compliance";
+import AdminBillingPage from "@/pages/admin/billing";
+import AdminStaffPage from "@/pages/admin/staff";
 import StudentFeedback from "@/pages/student/feedback";
 import InstructorDetail from "@/pages/admin/instructor-detail";
 
@@ -65,6 +67,7 @@ import InstructorManagement from "@/pages/school-admin/instructor-management";
 import SettingsPage from "@/pages/settings";
 
 import JoinPage, { PENDING_JOIN_TOKEN_KEY } from "@/pages/join";
+import AdminJoinPage, { PENDING_ADMIN_JOIN_TOKEN_KEY } from "@/pages/admin-join";
 
 import ViewerDashboard from "@/pages/viewer/dashboard";
 import ViewerStudentDetail from "@/pages/viewer/student-detail";
@@ -296,6 +299,12 @@ function HomeRedirect() {
     if (pending) {
       sessionStorage.removeItem(PENDING_JOIN_TOKEN_KEY);
       navigate(`/join/${pending}`);
+      return;
+    }
+    const pendingAdmin = sessionStorage.getItem(PENDING_ADMIN_JOIN_TOKEN_KEY);
+    if (pendingAdmin) {
+      sessionStorage.removeItem(PENDING_ADMIN_JOIN_TOKEN_KEY);
+      navigate(`/admin-join/${pendingAdmin}`);
     }
   }, [isLoaded, isSignedIn, navigate]);
 
@@ -430,6 +439,8 @@ function ClerkProviderWithRoutes() {
 
           {/* Admin routes */}
           <Route path="/admin/dashboard" component={() => <ProtectedRoute component={AdminDashboard} />} />
+          <Route path="/admin/billing" component={() => <ProtectedRoute component={AdminBillingPage} />} />
+          <Route path="/admin/staff" component={() => <ProtectedRoute component={AdminStaffPage} />} />
           <Route path="/admin/students" component={() => <ProtectedRoute component={AdminStudents} />} />
           <Route path="/admin/instructors" component={() => <ProtectedRoute component={AdminInstructors} />} />
           <Route path="/admin/audit" component={() => <ProtectedRoute component={AdminAuditLog} />} />
@@ -459,6 +470,7 @@ function ClerkProviderWithRoutes() {
 
           {/* Public/semi-public: invite acceptance */}
           <Route path="/join/:token" component={JoinPage} />
+          <Route path="/admin-join/:token" component={AdminJoinPage} />
 
           {/* Viewer routes */}
           <Route path="/viewer/dashboard" component={() => <ProtectedRoute component={ViewerDashboard} />} />

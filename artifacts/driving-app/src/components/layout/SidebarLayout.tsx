@@ -23,7 +23,9 @@ import {
   AlertTriangle,
   UserCog,
   User,
+  CreditCard,
 } from "lucide-react";
+import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -39,7 +41,9 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     signOut({ redirectUrl: import.meta.env.BASE_URL.replace(/\/$/, "") || "/" });
   };
 
-  const navItems = {
+  const adminPerms = useAdminPermissions();
+
+  const staticNavItems = {
     instructor: [
       { label: "Dashboard", href: "/instructor/dashboard", icon: LayoutDashboard },
       { label: "Students", href: "/instructor/students", icon: Users },
@@ -57,18 +61,6 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "My Bookings", href: "/student/bookings", icon: BookOpen },
       { label: "Settings", href: "/settings", icon: User },
     ],
-    admin: [
-      { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-      { label: "Students", href: "/admin/students", icon: Users },
-      { label: "Instructors", href: "/admin/instructors", icon: Car },
-      { label: "Verifications", href: "/admin/verifications", icon: ShieldCheck },
-      { label: "Compliance", href: "/admin/compliance", icon: AlertTriangle },
-      { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck },
-      { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText },
-      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
-      { label: "Audit Log", href: "/admin/audit", icon: ShieldAlert },
-      { label: "Heatmap", href: "/instructor/heatmap", icon: MapPin },
-    ],
     school_admin: [
       { label: "Dashboard", href: "/school-admin/dashboard", icon: LayoutDashboard },
       { label: "Instructor Management", href: "/school-admin/instructor-management", icon: UserCog },
@@ -81,7 +73,27 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     unassigned: [],
   };
 
-  const items = user?.role ? navItems[user.role as keyof typeof navItems] ?? [] : [];
+  // Admin nav is permission-gated — built dynamically so staff only see
+  // sections they have access to.
+  const adminNavItems = [
+    { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard, show: true },
+    { label: "Billing & Finance", href: "/admin/billing", icon: CreditCard, show: adminPerms.canViewBilling },
+    { label: "Students", href: "/admin/students", icon: Users, show: adminPerms.canManageInstructors },
+    { label: "Instructors", href: "/admin/instructors", icon: Car, show: adminPerms.canManageInstructors },
+    { label: "Verifications", href: "/admin/verifications", icon: ShieldCheck, show: adminPerms.canManageCompliance },
+    { label: "Compliance", href: "/admin/compliance", icon: AlertTriangle, show: adminPerms.canManageCompliance },
+    { label: "Bookings", href: "/admin/bookings", icon: CalendarCheck, show: adminPerms.canManageBookings },
+    { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText, show: adminPerms.canManageInstructors },
+    { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, show: adminPerms.isMasterTier },
+    { label: "Audit Log", href: "/admin/audit", icon: ShieldAlert, show: adminPerms.canViewAuditLog },
+    { label: "Manage Staff", href: "/admin/staff", icon: UserCog, show: adminPerms.isMasterTier },
+    { label: "Settings", href: "/settings", icon: User, show: true },
+  ].filter((item) => item.show);
+
+  const items =
+    user?.role === "admin"
+      ? adminNavItems
+      : (user?.role ? staticNavItems[user.role as keyof typeof staticNavItems] ?? [] : []);
 
   const NavList = ({ onItemClick }: { onItemClick?: () => void }) => (
     <>

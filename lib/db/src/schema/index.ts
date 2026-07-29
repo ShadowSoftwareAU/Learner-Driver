@@ -22,3 +22,4 @@ export * from "./feedback";
 export * from "./instructor-vehicles";
 export * from "./wallet";
 export * from "./milestones";
+export * from "./admin-staff";

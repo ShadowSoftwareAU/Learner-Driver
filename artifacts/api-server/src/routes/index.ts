@@ -32,6 +32,7 @@ import instructorVehiclesRouter from "./instructor-vehicles";
 import walletRouter from "./wallet";
 import adminBackfillRouter from "./admin-backfill";
 import instructorLinksRouter from "./instructor-links";
+import adminStaffRouter from "./admin-staff";
 
 const router: IRouter = Router();
 
@@ -68,5 +69,6 @@ router.use(instructorVehiclesRouter);
 router.use(walletRouter);
 router.use(adminBackfillRouter);
 router.use(instructorLinksRouter);
+router.use(adminStaffRouter);
 
 export default router;
