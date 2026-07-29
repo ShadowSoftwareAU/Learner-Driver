@@ -69,8 +69,17 @@ router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
 
 router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { fullName, email, phone, dateOfBirth, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, region, state, country } = req.body;
+  const { fullName, email, phone, dateOfBirth, licenseStatus, transmissionPreference, medicalNotes, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, region, state, country } = req.body;
   if (!fullName || !email) { res.status(400).json({ error: "fullName and email required" }); return; }
+
+  const validLicenseStatuses = ["learner", "provisional", "open", "overseas"];
+  const validTransmissions = ["automatic", "manual"];
+  if (licenseStatus && !validLicenseStatuses.includes(licenseStatus)) {
+    res.status(400).json({ error: `licenseStatus must be one of: ${validLicenseStatuses.join(", ")}` }); return;
+  }
+  if (transmissionPreference && !validTransmissions.includes(transmissionPreference)) {
+    res.status(400).json({ error: `transmissionPreference must be one of: ${validTransmissions.join(", ")}` }); return;
+  }
 
   let userId: number | null = null;
   let createdByInstructorId: number | null = null;
@@ -87,6 +96,8 @@ router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
     schoolId: user.schoolId ?? null,
     fullName, email,
     phone: phone ?? null, dateOfBirth: dateOfBirth ?? null,
+    licenseStatus: licenseStatus ?? null, transmissionPreference: transmissionPreference ?? null,
+    medicalNotes: medicalNotes ?? null,
     guardianName: guardianName ?? null, guardianPhone: guardianPhone ?? null,
     guardianEmail: guardianEmail ?? null, pcycSchoolEmail: pcycSchoolEmail ?? null,
     licenseNumber: licenseNumber ?? null, licenceFrontPath: licenceFrontPath ?? null,
@@ -132,10 +143,24 @@ router.patch("/students/:id", requireAuth, async (req: any, res): Promise<void> 
     if (!s || s.userId !== user.id) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  const { fullName, phone, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, status, region, state, country } = req.body;
+  const { fullName, phone, dateOfBirth, licenseStatus, transmissionPreference, medicalNotes, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, status, region, state, country } = req.body;
+
+  const validLicenseStatuses = ["learner", "provisional", "open", "overseas"];
+  const validTransmissions = ["automatic", "manual"];
+  if (licenseStatus !== undefined && licenseStatus !== null && !validLicenseStatuses.includes(licenseStatus)) {
+    res.status(400).json({ error: `licenseStatus must be one of: ${validLicenseStatuses.join(", ")}` }); return;
+  }
+  if (transmissionPreference !== undefined && transmissionPreference !== null && !validTransmissions.includes(transmissionPreference)) {
+    res.status(400).json({ error: `transmissionPreference must be one of: ${validTransmissions.join(", ")}` }); return;
+  }
+
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
+  if (dateOfBirth !== undefined) updates.dateOfBirth = dateOfBirth;
+  if (licenseStatus !== undefined) updates.licenseStatus = licenseStatus;
+  if (transmissionPreference !== undefined) updates.transmissionPreference = transmissionPreference;
+  if (medicalNotes !== undefined) updates.medicalNotes = medicalNotes;
   if (guardianName !== undefined) updates.guardianName = guardianName;
   if (guardianPhone !== undefined) updates.guardianPhone = guardianPhone;
   if (guardianEmail !== undefined) updates.guardianEmail = guardianEmail;
@@ -476,6 +501,9 @@ function formatStudent(s: any) {
     id: s.id, userId: s.userId, createdByInstructorId: s.createdByInstructorId,
     schoolId: s.schoolId ?? null, fullName: s.fullName, email: s.email,
     phone: s.phone, dateOfBirth: s.dateOfBirth,
+    licenseStatus: s.licenseStatus ?? null,
+    transmissionPreference: s.transmissionPreference ?? null,
+    medicalNotes: s.medicalNotes ?? null,
     guardianName: s.guardianName, guardianPhone: s.guardianPhone, guardianEmail: s.guardianEmail,
     pcycSchoolEmail: s.pcycSchoolEmail, licenseNumber: s.licenseNumber,
     licenceFrontPath: s.licenceFrontPath, licenceBackPath: s.licenceBackPath, headshotPath: s.headshotPath,

@@ -14,11 +14,24 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhotoCaptureField } from "@/components/PhotoCaptureField";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { AttendanceReliabilityBadge } from "@/components/AttendanceReliabilityBadge";
 import { MedicalInfoCard } from "@/components/MedicalInfoCard";
+
+const LICENSE_STATUS_LABELS: Record<string, string> = {
+  learner: "Learner",
+  provisional: "Provisional",
+  open: "Open",
+  overseas: "Overseas",
+};
+
+const TRANSMISSION_LABELS: Record<string, string> = {
+  automatic: "Automatic",
+  manual: "Manual",
+};
 
 const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
 
@@ -44,7 +57,11 @@ export default function InstructorStudentDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [editFullName, setEditFullName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editDOB, setEditDOB] = useState("");
+  const [editLicenseStatus, setEditLicenseStatus] = useState("");
+  const [editTransmission, setEditTransmission] = useState("");
   const [editNotes, setEditNotes] = useState("");
+  const [editMedicalNotes, setEditMedicalNotes] = useState("");
   const [editHeadshotPath, setEditHeadshotPath] = useState<string | null>(null);
   const updateStudent = useUpdateStudent();
 
@@ -130,7 +147,11 @@ export default function InstructorStudentDetail() {
               onClick={() => {
                 setEditFullName(student.fullName);
                 setEditPhone(student.phone ?? "");
+                setEditDOB((student as any).dateOfBirth ?? "");
+                setEditLicenseStatus((student as any).licenseStatus ?? "");
+                setEditTransmission((student as any).transmissionPreference ?? "");
                 setEditNotes(student.notes ?? "");
+                setEditMedicalNotes((student as any).medicalNotes ?? "");
                 setEditHeadshotPath(student.headshotPath ?? null);
                 setEditOpen(true);
               }}
@@ -542,35 +563,67 @@ export default function InstructorStudentDetail() {
             <Card>
               <CardHeader>
                 <CardTitle>Learner Intake Data</CardTitle>
-                <CardDescription>Information provided by the student.</CardDescription>
+                <CardDescription>Information provided by the student at sign-up or edited by the instructor.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Key profile fields row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                   <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">License Number</h4>
-                    <p className="mt-1">{student.licenseNumber || 'Not provided'}</p>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Date of Birth</h4>
+                    <p className="mt-1">
+                      {(student as any).dateOfBirth
+                        ? format(new Date((student as any).dateOfBirth), 'PPP')
+                        : <span className="text-muted-foreground italic">Not provided</span>}
+                    </p>
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Date of Birth</h4>
-                    <p className="mt-1">{student.dateOfBirth ? format(new Date(student.dateOfBirth), 'PPP') : 'Not provided'}</p>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Licence Status</h4>
+                    <p className="mt-1">
+                      {(student as any).licenseStatus
+                        ? LICENSE_STATUS_LABELS[(student as any).licenseStatus] ?? (student as any).licenseStatus
+                        : <span className="text-muted-foreground italic">Not provided</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Transmission</h4>
+                    <p className="mt-1">
+                      {(student as any).transmissionPreference
+                        ? TRANSMISSION_LABELS[(student as any).transmissionPreference] ?? (student as any).transmissionPreference
+                        : <span className="text-muted-foreground italic">Not provided</span>}
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">License Number</h4>
+                    <p className="mt-1">{student.licenseNumber || <span className="text-muted-foreground italic">Not provided</span>}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Guardian Name</h4>
-                    <p className="mt-1">{student.guardianName || 'N/A'}</p>
+                    <p className="mt-1">{student.guardianName || <span className="text-muted-foreground italic">N/A</span>}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Guardian Phone</h4>
-                    <p className="mt-1">{student.guardianPhone || 'N/A'}</p>
+                    <p className="mt-1">{student.guardianPhone || <span className="text-muted-foreground italic">N/A</span>}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Guardian Email</h4>
-                    <p className="mt-1 break-words">{student.guardianEmail || 'N/A'}</p>
+                    <p className="mt-1 break-words">{student.guardianEmail || <span className="text-muted-foreground italic">N/A</span>}</p>
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">PCYC / School Email</h4>
-                    <p className="mt-1 break-words">{student.pcycSchoolEmail || 'N/A'}</p>
+                    <p className="mt-1 break-words">{student.pcycSchoolEmail || <span className="text-muted-foreground italic">N/A</span>}</p>
                   </div>
                 </div>
+
+                {/* Medical Conditions / Notes */}
+                {(student as any).medicalNotes ? (
+                  <div className="border-t pt-4">
+                    <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                      Medical Conditions / Notes
+                    </h4>
+                    <p className="mt-1 whitespace-pre-wrap">{(student as any).medicalNotes}</p>
+                  </div>
+                ) : null}
 
                 {student.notes && (
                   <div className="border-t pt-4">
@@ -620,7 +673,7 @@ export default function InstructorStudentDetail() {
           <DialogHeader>
             <DialogTitle>Edit Student Profile</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 max-h-[70vh] overflow-y-auto pr-1">
             <div className="flex justify-center">
               <div className="flex flex-col items-center gap-2">
                 <StudentAvatar fullName={editFullName || student.fullName} headshotPath={editHeadshotPath} className="w-20 h-20" textClassName="text-2xl" />
@@ -641,8 +694,57 @@ export default function InstructorStudentDetail() {
               <Input value={editPhone} onChange={e => setEditPhone(e.target.value)} placeholder="e.g. 0412 345 678" />
             </div>
             <div className="space-y-1.5">
+              <Label>Date of Birth</Label>
+              <Input
+                type="date"
+                value={editDOB}
+                onChange={e => setEditDOB(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Licence Status</Label>
+                <Select value={editLicenseStatus} onValueChange={setEditLicenseStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="learner">Learner</SelectItem>
+                    <SelectItem value="provisional">Provisional</SelectItem>
+                    <SelectItem value="open">Open</SelectItem>
+                    <SelectItem value="overseas">Overseas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Transmission</Label>
+                <Select value={editTransmission} onValueChange={setEditTransmission}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="automatic">Automatic</SelectItem>
+                    <SelectItem value="manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
               <Label>Notes</Label>
-              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={3} placeholder="Any notes about this student..." />
+              <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} placeholder="Any notes about this student..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                Medical Conditions / Notes
+              </Label>
+              <Textarea
+                value={editMedicalNotes}
+                onChange={e => setEditMedicalNotes(e.target.value)}
+                rows={2}
+                placeholder="e.g. wears glasses, bee sting allergy"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -656,7 +758,11 @@ export default function InstructorStudentDetail() {
                     data: {
                       fullName: editFullName,
                       phone: editPhone || undefined,
+                      dateOfBirth: editDOB || undefined,
+                      licenseStatus: (editLicenseStatus as any) || undefined,
+                      transmissionPreference: (editTransmission as any) || undefined,
                       notes: editNotes || undefined,
+                      medicalNotes: editMedicalNotes || undefined,
                       headshotPath: editHeadshotPath ?? undefined,
                     },
                   });

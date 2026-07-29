@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoCaptureField } from "@/components/PhotoCaptureField";
-import { Car, GraduationCap, Building2, Users, Loader2, ArrowLeft, Info } from "lucide-react";
+import { Car, GraduationCap, Building2, Users, Loader2, ArrowLeft, Info, AlertCircle } from "lucide-react";
 import { RoleUpdateRole } from "@/lib/enums";
 
 const AU_STATES = [
@@ -50,7 +50,11 @@ export default function Onboarding() {
     guardianEmail: "",
     pcycSchoolEmail: "",
     notes: "",
+    medicalNotes: "",
   });
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [licenseStatus, setLicenseStatus] = useState("");
+  const [transmissionPreference, setTransmissionPreference] = useState("");
   const [headshotPath, setHeadshotPath] = useState<string | null>(null);
   const [licenceFrontPath, setLicenceFrontPath] = useState<string | null>(null);
   const [licenceBackPath, setLicenceBackPath] = useState<string | null>(null);
@@ -103,12 +107,16 @@ export default function Onboarding() {
                   fullName: user.name || user.email,
                   email: user.email,
                   state: selectedRegion || undefined,
+                  dateOfBirth: dateOfBirth || undefined,
+                  licenseStatus: (licenseStatus as any) || undefined,
+                  transmissionPreference: (transmissionPreference as any) || undefined,
                   licenseNumber: details.licenseNumber.trim() || undefined,
                   phone: details.phone.trim() || undefined,
                   guardianPhone: details.guardianPhone.trim() || undefined,
                   guardianEmail: details.guardianEmail.trim() || undefined,
                   pcycSchoolEmail: details.pcycSchoolEmail.trim() || undefined,
                   notes: details.notes.trim() || undefined,
+                  medicalNotes: details.medicalNotes.trim() || undefined,
                   headshotPath: headshotPath || undefined,
                   licenceFrontPath: licenceFrontPath || undefined,
                   licenceBackPath: licenceBackPath || undefined,
@@ -183,6 +191,49 @@ export default function Onboarding() {
               </div>
 
               <div className="space-y-2">
+                <Label htmlFor="ob-dob">
+                  Date of Birth <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="ob-dob"
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={e => setDateOfBirth(e.target.value)}
+                  max={new Date().toISOString().split("T")[0]}
+                  className="h-12"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Licence Status</Label>
+                  <Select value={licenseStatus} onValueChange={setLicenseStatus}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="learner">Learner</SelectItem>
+                      <SelectItem value="provisional">Provisional</SelectItem>
+                      <SelectItem value="open">Open</SelectItem>
+                      <SelectItem value="overseas">Overseas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Transmission</Label>
+                  <Select value={transmissionPreference} onValueChange={setTransmissionPreference}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue placeholder="Select transmission" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="automatic">Automatic</SelectItem>
+                      <SelectItem value="manual">Manual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="ob-license">Learner Licence number</Label>
                 <Input id="ob-license" value={details.licenseNumber} onChange={setDetail("licenseNumber")} placeholder="e.g. 123 456 789" />
               </div>
@@ -230,7 +281,23 @@ export default function Onboarding() {
 
               <div className="space-y-2">
                 <Label htmlFor="ob-notes">Notes</Label>
-                <Textarea id="ob-notes" value={details.notes} onChange={setDetail("notes")} rows={3} placeholder="Anything your instructor should know." />
+                <Textarea id="ob-notes" value={details.notes} onChange={setDetail("notes")} rows={2} placeholder="Anything your instructor should know." />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ob-medical" className="flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500" />
+                  Medical Conditions / Notes
+                  <span className="text-muted-foreground text-xs font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="ob-medical"
+                  value={details.medicalNotes}
+                  onChange={setDetail("medicalNotes")}
+                  rows={2}
+                  placeholder="e.g. wears glasses, takes medication for anxiety, bee sting allergy"
+                />
+                <p className="text-xs text-muted-foreground">Only your instructor can see this. Keep it brief — add detailed medical records through your instructor.</p>
               </div>
 
               <Button

@@ -64,6 +64,32 @@ export interface RoleUpdate {
   role: RoleUpdateRole;
 }
 
+/**
+ * Current licence status of the student
+ * @nullable
+ */
+export type StudentLicenseStatus = typeof StudentLicenseStatus[keyof typeof StudentLicenseStatus] | null;
+
+
+export const StudentLicenseStatus = {
+  learner: 'learner',
+  provisional: 'provisional',
+  open: 'open',
+  overseas: 'overseas',
+} as const;
+
+/**
+ * Student's preferred vehicle transmission type
+ * @nullable
+ */
+export type StudentTransmissionPreference = typeof StudentTransmissionPreference[keyof typeof StudentTransmissionPreference] | null;
+
+
+export const StudentTransmissionPreference = {
+  automatic: 'automatic',
+  manual: 'manual',
+} as const;
+
 export type StudentStatus = typeof StudentStatus[keyof typeof StudentStatus];
 
 
@@ -95,6 +121,21 @@ export interface Student {
   pcycSchoolEmail?: string | null;
   /** @nullable */
   licenseNumber?: string | null;
+  /**
+     * Current licence status of the student
+     * @nullable
+     */
+  licenseStatus?: StudentLicenseStatus;
+  /**
+     * Student's preferred vehicle transmission type
+     * @nullable
+     */
+  transmissionPreference?: StudentTransmissionPreference;
+  /**
+     * Plain-text instructor-awareness notes (e.g. wears glasses, medication)
+     * @nullable
+     */
+  medicalNotes?: string | null;
   /** @nullable */
   licenceFrontPath?: string | null;
   /** @nullable */
@@ -148,6 +189,30 @@ export interface Student {
   createdAt?: string;
 }
 
+/**
+ * Current licence status of the student
+ */
+export type StudentInputLicenseStatus = typeof StudentInputLicenseStatus[keyof typeof StudentInputLicenseStatus];
+
+
+export const StudentInputLicenseStatus = {
+  learner: 'learner',
+  provisional: 'provisional',
+  open: 'open',
+  overseas: 'overseas',
+} as const;
+
+/**
+ * Student's preferred vehicle transmission type
+ */
+export type StudentInputTransmissionPreference = typeof StudentInputTransmissionPreference[keyof typeof StudentInputTransmissionPreference];
+
+
+export const StudentInputTransmissionPreference = {
+  automatic: 'automatic',
+  manual: 'manual',
+} as const;
+
 export interface StudentInput {
   fullName: string;
   email: string;
@@ -158,6 +223,12 @@ export interface StudentInput {
   guardianEmail?: string;
   pcycSchoolEmail?: string;
   licenseNumber?: string;
+  /** Current licence status of the student */
+  licenseStatus?: StudentInputLicenseStatus;
+  /** Student's preferred vehicle transmission type */
+  transmissionPreference?: StudentInputTransmissionPreference;
+  /** Plain-text instructor-awareness notes (e.g. wears glasses, medication) */
+  medicalNotes?: string;
   licenceFrontPath?: string;
   licenceBackPath?: string;
   headshotPath?: string;
@@ -167,6 +238,30 @@ export interface StudentInput {
   state?: string;
   country?: string;
 }
+
+/**
+ * Current licence status of the student
+ */
+export type StudentUpdateLicenseStatus = typeof StudentUpdateLicenseStatus[keyof typeof StudentUpdateLicenseStatus];
+
+
+export const StudentUpdateLicenseStatus = {
+  learner: 'learner',
+  provisional: 'provisional',
+  open: 'open',
+  overseas: 'overseas',
+} as const;
+
+/**
+ * Student's preferred vehicle transmission type
+ */
+export type StudentUpdateTransmissionPreference = typeof StudentUpdateTransmissionPreference[keyof typeof StudentUpdateTransmissionPreference];
+
+
+export const StudentUpdateTransmissionPreference = {
+  automatic: 'automatic',
+  manual: 'manual',
+} as const;
 
 export type StudentUpdateStatus = typeof StudentUpdateStatus[keyof typeof StudentUpdateStatus];
 
@@ -180,6 +275,14 @@ export const StudentUpdateStatus = {
 export interface StudentUpdate {
   fullName?: string;
   phone?: string;
+  /** ISO date string (YYYY-MM-DD) */
+  dateOfBirth?: string;
+  /** Current licence status of the student */
+  licenseStatus?: StudentUpdateLicenseStatus;
+  /** Student's preferred vehicle transmission type */
+  transmissionPreference?: StudentUpdateTransmissionPreference;
+  /** Plain-text instructor-awareness notes */
+  medicalNotes?: string;
   guardianName?: string;
   guardianPhone?: string;
   guardianEmail?: string;

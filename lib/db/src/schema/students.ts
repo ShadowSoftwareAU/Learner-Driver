@@ -17,10 +17,13 @@ export const studentsTable = pgTable("students", {
   guardianEmail: text("guardian_email"),
   pcycSchoolEmail: text("pcyc_school_email"),
   licenseNumber: text("license_number"),
+  licenseStatus: text("license_status"), // 'learner' | 'provisional' | 'open' | 'overseas'
+  transmissionPreference: text("transmission_preference"), // 'automatic' | 'manual'
   licenceFrontPath: text("licence_front_path"),
   licenceBackPath: text("licence_back_path"),
   headshotPath: text("headshot_path"),
   notes: text("notes"),
+  medicalNotes: text("medical_notes"), // Plain-text instructor-awareness note (not a clinical record)
   totalHours: real("total_hours").notNull().default(0),
   instructorHours: real("instructor_hours").notNull().default(0),
   supervisedHours: real("supervised_hours").notNull().default(0),

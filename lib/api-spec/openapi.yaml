@@ -2711,6 +2711,17 @@ components:
           type: ["string", "null"]
         licenseNumber:
           type: ["string", "null"]
+        licenseStatus:
+          type: ["string", "null"]
+          enum: ["learner", "provisional", "open", "overseas", null]
+          description: "Current licence status of the student"
+        transmissionPreference:
+          type: ["string", "null"]
+          enum: ["automatic", "manual", null]
+          description: "Student's preferred vehicle transmission type"
+        medicalNotes:
+          type: ["string", "null"]
+          description: "Plain-text instructor-awareness notes (e.g. wears glasses, medication)"
         licenceFrontPath:
           type: ["string", "null"]
         licenceBackPath:
@@ -2786,6 +2797,17 @@ components:
           type: string
         licenseNumber:
           type: string
+        licenseStatus:
+          type: string
+          enum: ["learner", "provisional", "open", "overseas"]
+          description: "Current licence status of the student"
+        transmissionPreference:
+          type: string
+          enum: ["automatic", "manual"]
+          description: "Student's preferred vehicle transmission type"
+        medicalNotes:
+          type: string
+          description: "Plain-text instructor-awareness notes (e.g. wears glasses, medication)"
         licenceFrontPath:
           type: string
         licenceBackPath:
@@ -2809,6 +2831,20 @@ components:
           type: string
         phone:
           type: string
+        dateOfBirth:
+          type: string
+          description: "ISO date string (YYYY-MM-DD)"
+        licenseStatus:
+          type: string
+          enum: ["learner", "provisional", "open", "overseas"]
+          description: "Current licence status of the student"
+        transmissionPreference:
+          type: string
+          enum: ["automatic", "manual"]
+          description: "Student's preferred vehicle transmission type"
+        medicalNotes:
+          type: string
+          description: "Plain-text instructor-awareness notes"
         guardianName:
           type: string
         guardianPhone:
