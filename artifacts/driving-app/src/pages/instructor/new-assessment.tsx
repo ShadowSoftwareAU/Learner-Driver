@@ -499,63 +499,63 @@ export default function NewAssessment() {
           <AssessmentTileView
             grouped={groupedWithLevels}
             getImage={(item: any) => getManeuverImage(item.name as string, item.category as string)}
-            renderItem={(item: any) => {
+            renderRating={(item: any, onRatingSelected) => {
               const m = item;
               return (
-                <div className="p-4 sm:p-5 space-y-4">
-                  {/* 2 × 2 rating buttons — wider touch targets in the panel */}
-                  <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     {[
                       { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
-                      { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",       color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100",   active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
+                      { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",       color: "bg-red-50  hover:bg-red-100  text-red-700  border-red-100",   active: "bg-red-100  border-red-400  text-red-900  ring-2 ring-red-400"  },
                       { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",        color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
                       { val: ManeuverResultItemCompetencyLevel.mastered,      label: "Consistent Skills", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
                     ].map(level => (
                       <button
                         key={level.val}
                         type="button"
-                        onClick={() => handleLevelSelect(m.id, level.val)}
-                        className={`h-16 rounded-md border flex flex-col items-center justify-center transition-all text-sm font-medium min-w-0 ${results[m.id] === level.val ? level.active : level.color}`}
+                        onClick={() => {
+                          handleLevelSelect(m.id, level.val);
+                          onRatingSelected();
+                        }}
+                        className={`h-20 rounded-xl border-2 flex flex-col items-center justify-center gap-1 transition-all text-sm font-semibold min-w-0 ${results[m.id] === level.val ? level.active : level.color}`}
                       >
-                        {results[m.id] === level.val && <Check className="w-4 h-4 mb-0.5" />}
+                        {results[m.id] === level.val && <Check className="w-5 h-5" />}
                         {level.label}
                       </button>
                     ))}
                   </div>
-
-                  {/* Consistent Skills callout */}
                   {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
                     <div className="rounded-md bg-green-50 border border-green-100 px-3 py-2">
                       <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
                       <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
                     </div>
                   )}
-
-                  {/* QSAFE criteria — always visible in the expanded panel */}
-                  {m.complianceCriteria && (
-                    <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
-                      <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">QSAFE Compliance Criteria</p>
-                      <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">{m.complianceCriteria}</p>
-                    </div>
-                  )}
-                  {m.masteryDefinition && (
-                    <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
-                      <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">Competency Definition</p>
-                      <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">{m.masteryDefinition}</p>
-                    </div>
-                  )}
-
-                  {/* Per-maneuver notes */}
-                  <div className="space-y-2">
-                    <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
-                    <QuickNoteChips value={maneuverNotes[m.id] || ""} onChange={(next) => handleManeuverNoteChange(m.id, next)} />
-                    <Textarea
-                      placeholder="Add notes for this maneuver..."
-                      value={maneuverNotes[m.id] || ""}
-                      onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
-                      rows={2}
-                      className="text-base"
-                    />
+                </div>
+              );
+            }}
+            renderNotes={(item: any, onSave, onSkip) => {
+              const m = item;
+              return (
+                <div className="space-y-3 pt-1">
+                  <QuickNoteChips
+                    value={maneuverNotes[m.id] || ""}
+                    onChange={(next) => handleManeuverNoteChange(m.id, next)}
+                  />
+                  <Textarea
+                    placeholder="Add instructor notes for this maneuver…"
+                    value={maneuverNotes[m.id] || ""}
+                    onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
+                    rows={4}
+                    className="text-base"
+                    autoFocus
+                  />
+                  <div className="flex gap-3 pt-1">
+                    <Button variant="outline" onClick={onSkip} className="flex-1 h-12 text-base">
+                      Skip
+                    </Button>
+                    <Button onClick={onSave} className="flex-1 h-12 text-base">
+                      Done
+                    </Button>
                   </div>
                 </div>
               );
