@@ -2570,7 +2570,17 @@ export const CreateSupervisedSessionBody = zod.object({
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).default(createSupervisedSessionBodyPedalOperatorDefault),
   "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish(),
   "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish(),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "startCoordinates": zod.object({
+  "lat": zod.number().describe('Latitude in decimal degrees'),
+  "lng": zod.number().describe('Longitude in decimal degrees'),
+  "ts": zod.number().describe('Unix timestamp (milliseconds) when the coordinate was captured')
+}).nullish().describe('GPS coordinates captured when the session begins (anti-fraud)'),
+  "endCoordinates": zod.object({
+  "lat": zod.number().describe('Latitude in decimal degrees'),
+  "lng": zod.number().describe('Longitude in decimal degrees'),
+  "ts": zod.number().describe('Unix timestamp (milliseconds) when the coordinate was captured')
+}).nullish().describe('GPS coordinates captured when the session ends (anti-fraud)')
 })
 
 
@@ -2590,7 +2600,17 @@ export const UpdateSupervisedSessionBody = zod.object({
   "pedalOperator": zod.enum(['student', 'instructor', 'shared']).default(updateSupervisedSessionBodyPedalOperatorDefault),
   "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish(),
   "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish(),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "startCoordinates": zod.object({
+  "lat": zod.number().describe('Latitude in decimal degrees'),
+  "lng": zod.number().describe('Longitude in decimal degrees'),
+  "ts": zod.number().describe('Unix timestamp (milliseconds) when the coordinate was captured')
+}).nullish().describe('GPS coordinates captured when the session begins (anti-fraud)'),
+  "endCoordinates": zod.object({
+  "lat": zod.number().describe('Latitude in decimal degrees'),
+  "lng": zod.number().describe('Longitude in decimal degrees'),
+  "ts": zod.number().describe('Unix timestamp (milliseconds) when the coordinate was captured')
+}).nullish().describe('GPS coordinates captured when the session ends (anti-fraud)')
 })
 
 export const UpdateSupervisedSessionResponse = zod.object({
@@ -2605,6 +2625,16 @@ export const UpdateSupervisedSessionResponse = zod.object({
   "notes": zod.string().nullish(),
   "weatherCondition": zod.string().nullish(),
   "lightingCondition": zod.string().nullish(),
+  "startCoordinates": zod.object({
+  "lat": zod.number().describe('Latitude in decimal degrees'),
+  "lng": zod.number().describe('Longitude in decimal degrees'),
+  "ts": zod.number().describe('Unix timestamp (milliseconds) when the coordinate was captured')
+}).nullish(),
+  "endCoordinates": zod.object({
+  "lat": zod.number().describe('Latitude in decimal degrees'),
+  "lng": zod.number().describe('Longitude in decimal degrees'),
+  "ts": zod.number().describe('Unix timestamp (milliseconds) when the coordinate was captured')
+}).nullish(),
   "createdAt": zod.string().optional()
 })
 

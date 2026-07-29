@@ -31,7 +31,14 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Steps2Drive needs your location to verify where supervised driving sessions take place.",
+          "locationWhenInUsePermission": "Steps2Drive needs your location to verify where supervised driving sessions take place."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

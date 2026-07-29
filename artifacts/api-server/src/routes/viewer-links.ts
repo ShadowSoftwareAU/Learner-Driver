@@ -265,6 +265,8 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
 // supervision. These sessions are tagged performedByRole='supervised' so they
 // never influence the instructor-only lesson plan.
 
+const gpsCoordinateSchema = z.object({ lat: z.number(), lng: z.number(), ts: z.number() });
+
 const supervisedSessionBody = z.object({
   lessonDate: z.string().min(1),
   durationMinutes: z.number().int().min(1).max(480),
@@ -272,6 +274,9 @@ const supervisedSessionBody = z.object({
   weatherCondition: z.enum(["clear", "partly_cloudy", "overcast", "light_rain", "heavy_rain", "foggy", "windy"]).optional().nullable(),
   lightingCondition: z.enum(["daylight", "dawn", "dusk", "night"]).optional().nullable(),
   notes: z.string().max(2000).optional().nullable(),
+  // Anti-fraud GPS evidence — captured by mobile app at session start and end
+  startCoordinates: gpsCoordinateSchema.optional().nullable(),
+  endCoordinates: gpsCoordinateSchema.optional().nullable(),
 });
 
 router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, async (req: any, res): Promise<void> => {
@@ -293,7 +298,7 @@ router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, asyn
     res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes } = parsed.data;
+  const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes, startCoordinates, endCoordinates } = parsed.data;
 
   // Duplicate-submission guard: reject if the same viewer already logged a session
   // with the same studentId + lessonDate + durationMinutes within the last 60 seconds.
@@ -348,6 +353,8 @@ router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, asyn
     focusAreasNext: null,
     weatherCondition: weatherCondition ?? null,
     lightingCondition: lightingCondition ?? null,
+    startCoordinates: startCoordinates ?? null,
+    endCoordinates: endCoordinates ?? null,
   }).returning();
 
   // Accrue hours to student — supervised sessions increment supervisedHours, not instructorHours
@@ -378,6 +385,8 @@ function formatSupervisedSession(a: any) {
     weatherCondition: a.weatherCondition ?? null,
     lightingCondition: a.lightingCondition ?? null,
     notes: a.confidenceNote ?? null,
+    startCoordinates: a.startCoordinates ?? null,
+    endCoordinates: a.endCoordinates ?? null,
     createdAt: a.createdAt,
   };
 }
@@ -419,7 +428,7 @@ router.patch("/viewer/students/:studentId/supervised-sessions/:sessionId", requi
     res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes } = parsed.data;
+  const { lessonDate, durationMinutes, pedalOperator, weatherCondition, lightingCondition, notes, startCoordinates, endCoordinates } = parsed.data;
 
   // Recalculate the hours delta
   const oldHours = session.durationMinutes / 60;
@@ -433,6 +442,8 @@ router.patch("/viewer/students/:studentId/supervised-sessions/:sessionId", requi
     weatherCondition: weatherCondition ?? null,
     lightingCondition: lightingCondition ?? null,
     confidenceNote: notes ?? null,
+    ...(startCoordinates !== undefined ? { startCoordinates: startCoordinates ?? null } : {}),
+    ...(endCoordinates !== undefined ? { endCoordinates: endCoordinates ?? null } : {}),
   }).where(eq(assessmentsTable.id, sessionId)).returning();
 
   // Adjust the student's hours totals by the delta

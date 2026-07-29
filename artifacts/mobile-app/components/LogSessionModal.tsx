@@ -4,7 +4,7 @@ import {
   SupervisedSessionInputLightingCondition,
   SupervisedSessionInputPedalOperator,
 } from "@workspace/api-client-react";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -19,6 +19,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
+import { useGpsLocation, GpsCoordinate } from "@/hooks/useGpsLocation";
 
 type Weather = SupervisedSessionInputWeatherCondition;
 type Lighting = SupervisedSessionInputLightingCondition;
@@ -53,12 +54,10 @@ function todayISO() {
 }
 
 function parseDateInput(raw: string): string | null {
-  // Accept yyyy-mm-dd
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
     const d = new Date(raw);
     if (!isNaN(d.getTime())) return raw;
   }
-  // Accept dd/mm/yyyy
   const parts = raw.split("/");
   if (parts.length === 3) {
     const [dd, mm, yyyy] = parts;
@@ -68,6 +67,114 @@ function parseDateInput(raw: string): string | null {
   }
   return null;
 }
+
+// ─── GPS Status Badge ─────────────────────────────────────────────────────────
+
+type GpsStatus = "idle" | "requesting" | "active" | "denied" | "error";
+
+function GpsBadge({ status }: { status: GpsStatus }) {
+  if (status === "idle") return null;
+
+  const configs: Record<
+    Exclude<GpsStatus, "idle">,
+    { bg: string; text: string; icon: string; label: string }
+  > = {
+    requesting: {
+      bg: "#F0F9FF",
+      text: "#0369A1",
+      icon: "loader",
+      label: "Acquiring GPS…",
+    },
+    active: {
+      bg: "#F0FDF4",
+      text: "#15803D",
+      icon: "check-circle",
+      label: "GPS Verified",
+    },
+    denied: {
+      bg: "#FEF2F2",
+      text: "#DC2626",
+      icon: "alert-triangle",
+      label: "GPS denied — required for compliance",
+    },
+    error: {
+      bg: "#FEF2F2",
+      text: "#DC2626",
+      icon: "alert-circle",
+      label: "GPS unavailable",
+    },
+  };
+
+  const cfg = configs[status as Exclude<GpsStatus, "idle">];
+  if (!cfg) return null;
+
+  return (
+    <View style={[gpsBadgeStyles.pill, { backgroundColor: cfg.bg }]}>
+      <Feather name={cfg.icon as any} size={13} color={cfg.text} />
+      <Text style={[gpsBadgeStyles.label, { color: cfg.text }]}>{cfg.label}</Text>
+    </View>
+  );
+}
+
+const gpsBadgeStyles = StyleSheet.create({
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: "flex-start",
+  },
+  label: { fontSize: 12, fontFamily: "Inter_500Medium" },
+});
+
+// ─── Denial Warning ────────────────────────────────────────────────────────────
+
+function GpsDenialWarning() {
+  return (
+    <View style={warningStyles.box}>
+      <Feather name="alert-triangle" size={16} color="#92400E" />
+      <View style={{ flex: 1 }}>
+        <Text style={warningStyles.title}>Location access required</Text>
+        <Text style={warningStyles.body}>
+          GPS coordinates are recorded at the start and end of each supervised
+          session for regulatory compliance. Without location permission, this
+          session cannot be verified as compliant.{"\n\n"}
+          To enable: go to your device Settings, find Steps2Drive, and allow
+          location access while using the app.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const warningStyles = StyleSheet.create({
+  box: {
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: "#FFFBEB",
+    borderWidth: 1,
+    borderColor: "#FDE68A",
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 4,
+  },
+  title: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#92400E",
+    marginBottom: 4,
+  },
+  body: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#92400E",
+    lineHeight: 18,
+  },
+});
+
+// ─── Modal ────────────────────────────────────────────────────────────────────
 
 interface Props {
   visible: boolean;
@@ -89,6 +196,19 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
   const [durationError, setDurationError] = useState("");
   const [submitError, setSubmitError] = useState("");
 
+  // GPS — capture start on open, end on submit
+  const { status: gpsStatus, requestAndCapture, captureNow } = useGpsLocation();
+  const startCoordsRef = useRef<GpsCoordinate | null>(null);
+
+  // Kick off location permission + start capture whenever the modal opens
+  useEffect(() => {
+    if (!visible) return;
+    startCoordsRef.current = null;
+    requestAndCapture().then((coord) => {
+      startCoordsRef.current = coord;
+    });
+  }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { mutate, isPending } = useCreateSupervisedSession();
 
   function resetForm() {
@@ -101,6 +221,7 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
     setDateError("");
     setDurationError("");
     setSubmitError("");
+    startCoordsRef.current = null;
   }
 
   function handleClose() {
@@ -108,7 +229,7 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
     onClose();
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     setDateError("");
     setDurationError("");
     setSubmitError("");
@@ -129,6 +250,9 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
 
     if (!valid) return;
 
+    // Capture end coordinates just before submitting (best-effort — no block on failure)
+    const endCoords = await captureNow();
+
     mutate(
       {
         studentId,
@@ -139,6 +263,8 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
           weatherCondition: weather ?? undefined,
           lightingCondition: lighting ?? undefined,
           notes: notes.trim() || null,
+          startCoordinates: startCoordsRef.current ?? undefined,
+          endCoordinates: endCoords ?? undefined,
         },
       },
       {
@@ -174,7 +300,11 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
           </Text>
           <Pressable
             onPress={handleSubmit}
-            style={[styles.saveBtn, { backgroundColor: colors.primary }, isPending && { opacity: 0.6 }]}
+            style={[
+              styles.saveBtn,
+              { backgroundColor: colors.primary },
+              isPending && { opacity: 0.6 },
+            ]}
             disabled={isPending}
           >
             {isPending ? (
@@ -190,44 +320,72 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {/* GPS status indicator */}
+          <View style={styles.fieldGroup}>
+            <GpsBadge status={gpsStatus} />
+            {(gpsStatus === "denied" || gpsStatus === "error") && <GpsDenialWarning />}
+          </View>
+
           {/* Date */}
           <View style={styles.fieldGroup}>
             <Text style={[styles.label, { color: colors.foreground }]}>Date</Text>
             <TextInput
               style={[
                 styles.input,
-                { color: colors.foreground, backgroundColor: colors.card, borderColor: dateError ? "#EF4444" : colors.border },
+                {
+                  color: colors.foreground,
+                  backgroundColor: colors.card,
+                  borderColor: dateError ? "#EF4444" : colors.border,
+                },
               ]}
               value={lessonDate}
-              onChangeText={(t) => { setLessonDate(t); setDateError(""); }}
+              onChangeText={(t) => {
+                setLessonDate(t);
+                setDateError("");
+              }}
               placeholder="dd/mm/yyyy"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="numbers-and-punctuation"
               autoCorrect={false}
             />
-            {dateError ? <Text style={styles.fieldError}>{dateError}</Text> : null}
+            {dateError ? (
+              <Text style={styles.fieldError}>{dateError}</Text>
+            ) : null}
           </View>
 
           {/* Duration */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Duration (minutes)</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Duration (minutes)
+            </Text>
             <TextInput
               style={[
                 styles.input,
-                { color: colors.foreground, backgroundColor: colors.card, borderColor: durationError ? "#EF4444" : colors.border },
+                {
+                  color: colors.foreground,
+                  backgroundColor: colors.card,
+                  borderColor: durationError ? "#EF4444" : colors.border,
+                },
               ]}
               value={durationText}
-              onChangeText={(t) => { setDurationText(t); setDurationError(""); }}
+              onChangeText={(t) => {
+                setDurationText(t);
+                setDurationError("");
+              }}
               placeholder="e.g. 60"
               placeholderTextColor={colors.mutedForeground}
               keyboardType="number-pad"
             />
-            {durationError ? <Text style={styles.fieldError}>{durationError}</Text> : null}
+            {durationError ? (
+              <Text style={styles.fieldError}>{durationError}</Text>
+            ) : null}
           </View>
 
           {/* Pedal operator */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Pedal operator</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Pedal operator
+            </Text>
             <View style={styles.chipRow}>
               {PEDAL_OPTIONS.map((opt) => {
                 const active = pedal === opt.value;
@@ -243,7 +401,12 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
                       },
                     ]}
                   >
-                    <Text style={[styles.chipText, { color: active ? "#fff" : colors.foreground }]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: active ? "#fff" : colors.foreground },
+                      ]}
+                    >
                       {opt.label}
                     </Text>
                   </Pressable>
@@ -254,7 +417,9 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
 
           {/* Weather */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Weather (optional)</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Weather (optional)
+            </Text>
             <View style={styles.chipRow}>
               {WEATHER_OPTIONS.map((opt) => {
                 const active = weather === opt.value;
@@ -270,7 +435,12 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
                       },
                     ]}
                   >
-                    <Text style={[styles.chipText, { color: active ? colors.primary : colors.foreground }]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: active ? colors.primary : colors.foreground },
+                      ]}
+                    >
                       {opt.label}
                     </Text>
                   </Pressable>
@@ -281,7 +451,9 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
 
           {/* Lighting */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Lighting (optional)</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Lighting (optional)
+            </Text>
             <View style={styles.chipRow}>
               {LIGHTING_OPTIONS.map((opt) => {
                 const active = lighting === opt.value;
@@ -297,7 +469,12 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
                       },
                     ]}
                   >
-                    <Text style={[styles.chipText, { color: active ? colors.primary : colors.foreground }]}>
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: active ? colors.primary : colors.foreground },
+                      ]}
+                    >
                       {opt.label}
                     </Text>
                   </Pressable>
@@ -308,12 +485,18 @@ export function LogSessionModal({ visible, studentId, onClose, onSuccess }: Prop
 
           {/* Notes */}
           <View style={styles.fieldGroup}>
-            <Text style={[styles.label, { color: colors.foreground }]}>Notes (optional)</Text>
+            <Text style={[styles.label, { color: colors.foreground }]}>
+              Notes (optional)
+            </Text>
             <TextInput
               style={[
                 styles.input,
                 styles.notesInput,
-                { color: colors.foreground, backgroundColor: colors.card, borderColor: colors.border },
+                {
+                  color: colors.foreground,
+                  backgroundColor: colors.card,
+                  borderColor: colors.border,
+                },
               ]}
               value={notes}
               onChangeText={setNotes}
@@ -348,7 +531,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   headerBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", flex: 1, textAlign: "center" },
+  headerTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    flex: 1,
+    textAlign: "center",
+  },
   saveBtn: {
     borderRadius: 8,
     paddingHorizontal: 16,
@@ -377,7 +565,12 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   chipText: { fontSize: 13, fontFamily: "Inter_500Medium" },
-  fieldError: { color: "#EF4444", fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 4 },
+  fieldError: {
+    color: "#EF4444",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginTop: 4,
+  },
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -387,5 +580,10 @@ const styles = StyleSheet.create({
     padding: 12,
     marginTop: 4,
   },
-  errorText: { color: "#EF4444", fontSize: 13, fontFamily: "Inter_400Regular", flex: 1 },
+  errorText: {
+    color: "#EF4444",
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    flex: 1,
+  },
 });

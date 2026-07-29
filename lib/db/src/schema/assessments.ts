@@ -16,6 +16,10 @@ export const assessmentsTable = pgTable("assessments", {
   confidenceNote: text("confidence_note"),
   focusAreasNext: text("focus_areas_next"),
   routePath: jsonb("route_path"),
+  // Anti-fraud GPS tracking (Wave 2 — three-point evidence)
+  startCoordinates: jsonb("start_coordinates"), // { lat, lng, ts } captured when session begins
+  endCoordinates: jsonb("end_coordinates"),     // { lat, lng, ts } captured when session ends
+  routeData: jsonb("route_data"),               // [{ lat, lng, ts }, ...] breadcrumb trail during session
   // Safety flags JSON for structured safety annotations
   safetyFlagsJson: jsonb("safety_flags_json"),
   // Pre-lesson briefing acknowledgement

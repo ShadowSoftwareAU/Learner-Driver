@@ -6014,6 +6014,20 @@ components:
         reviewedAt:
           type: string
 
+    GpsCoordinate:
+      type: object
+      required: [lat, lng, ts]
+      properties:
+        lat:
+          type: number
+          description: Latitude in decimal degrees
+        lng:
+          type: number
+          description: Longitude in decimal degrees
+        ts:
+          type: number
+          description: Unix timestamp (milliseconds) when the coordinate was captured
+
     SupervisedSessionInput:
       type: object
       required: [lessonDate, durationMinutes]
@@ -6034,6 +6048,16 @@ components:
           enum: [daylight, dawn, dusk, night]
         notes:
           type: ["string", "null"]
+        startCoordinates:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/GpsCoordinate"
+          description: GPS coordinates captured when the session begins (anti-fraud)
+        endCoordinates:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/GpsCoordinate"
+          description: GPS coordinates captured when the session ends (anti-fraud)
 
     SupervisedSession:
       type: object
@@ -6062,6 +6086,14 @@ components:
           type: ["string", "null"]
         lightingCondition:
           type: ["string", "null"]
+        startCoordinates:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/GpsCoordinate"
+        endCoordinates:
+          nullable: true
+          oneOf:
+            - $ref: "#/components/schemas/GpsCoordinate"
         createdAt:
           type: string
 

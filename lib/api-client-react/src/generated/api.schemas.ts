@@ -2756,6 +2756,15 @@ export interface HandoverNoteReviewInput {
   reviewComment?: string;
 }
 
+export interface GpsCoordinate {
+  /** Latitude in decimal degrees */
+  lat: number;
+  /** Longitude in decimal degrees */
+  lng: number;
+  /** Unix timestamp (milliseconds) when the coordinate was captured */
+  ts: number;
+}
+
 export type SupervisedSessionInputPedalOperator = typeof SupervisedSessionInputPedalOperator[keyof typeof SupervisedSessionInputPedalOperator];
 
 
@@ -2804,6 +2813,10 @@ export interface SupervisedSessionInput {
   lightingCondition?: SupervisedSessionInputLightingCondition;
   /** @nullable */
   notes?: string | null;
+  /** GPS coordinates captured when the session begins (anti-fraud) */
+  startCoordinates?: GpsCoordinate | null;
+  /** GPS coordinates captured when the session ends (anti-fraud) */
+  endCoordinates?: GpsCoordinate | null;
 }
 
 export type SupervisedSessionPerformedByRole = typeof SupervisedSessionPerformedByRole[keyof typeof SupervisedSessionPerformedByRole];
@@ -2829,6 +2842,8 @@ export interface SupervisedSession {
   weatherCondition?: string | null;
   /** @nullable */
   lightingCondition?: string | null;
+  startCoordinates?: GpsCoordinate | null;
+  endCoordinates?: GpsCoordinate | null;
   createdAt?: string;
 }
 
