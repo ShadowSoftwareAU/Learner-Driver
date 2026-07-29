@@ -30,35 +30,36 @@ const NO_ACCESS: AdminPermissions = {
 /**
  * Returns the current user's admin permission profile.
  *
- * Access rules (evaluated server-side, reflected in isMasterTier):
- *  1. Owner/Manager subRole → full access (fast path, no extra fetch needed
- *     but we still fetch so the hook is uniform).
- *  2. Admin with NO row in admin_staff_permissions → primary admin account,
- *     full access.
- *  3. Admin WITH a permissions row → invited staff, scoped access per that row.
- *  4. Any other role → all-false (no-op for non-admin pages).
- *
- * While the query is loading the hook returns NO_ACCESS (conservative).
- * The query resolves in one round-trip and is cached, so flicker is minimal.
+ * Access rules:
+ *  1. adminSubRole === 'owner'  → unconditional full access. Determined
+ *     purely from the user profile (no extra API call). This is the primary
+ *     tenant created via the onboarding screen.
+ *  2. Any other admin subRole   → permissions fetched from the API and bound
+ *     strictly to the admin_staff_permissions table row written at invite-claim
+ *     time. Invited staff always have adminSubRole = 'staff'.
+ *  3. Non-admin role            → all-false (no-op).
  */
 export function useAdminPermissions(): AdminPermissions {
   const { data: user } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
+  // Owner is determined directly from the profile — no round-trip needed.
+  const isOwner = user?.role === "admin" && user?.adminSubRole === "owner";
+
   const { data: perms } = useGetMyAdminPermissions({
     query: {
       queryKey: ["/api/admin/permissions/me"],
-      // Only fire for admin users — others never need this.
-      enabled: user?.role === "admin",
+      // Owners never need the permissions fetch; skip it entirely.
+      enabled: user?.role === "admin" && !isOwner,
     },
   });
 
   if (!user || user.role !== "admin") return NO_ACCESS;
 
-  // Still loading the permissions response — show nothing until we know.
-  if (!perms) return NO_ACCESS;
+  // Owners get immediate full access from profile data — no loading state.
+  if (isOwner) return FULL_ACCESS;
 
-  // Server already applied the full logic (owner/manager OR no perms row → full).
-  if (perms.isMasterTier) return FULL_ACCESS;
+  // Non-owner admin staff — wait for their permissions to load.
+  if (!perms) return NO_ACCESS;
 
   return {
     isMasterTier: false,

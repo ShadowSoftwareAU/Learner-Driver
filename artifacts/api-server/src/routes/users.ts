@@ -76,7 +76,13 @@ router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void>
     res.status(400).json({ error: "Invalid role" });
     return;
   }
-  const [updated] = await db.update(usersTable).set({ role }).where(eq(usersTable.id, user.id)).returning();
+  // Admins who self-select the admin role from the onboarding screen are the
+  // primary tenant — mark them 'owner' so isMasterTier() recognises them.
+  const [updated] = await db
+    .update(usersTable)
+    .set(role === "admin" ? { role, adminSubRole: "owner" } : { role })
+    .where(eq(usersTable.id, user.id))
+    .returning();
 
   const displayName = updated.name || updated.email || `User ${updated.id}`;
   const emailValue = updated.email || "";

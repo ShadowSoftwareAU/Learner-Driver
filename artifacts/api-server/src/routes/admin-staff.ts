@@ -24,11 +24,13 @@ const router = Router();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+/**
+ * Master tier = admin users with adminSubRole strictly equal to "owner".
+ * Managers and other sub-roles are treated as staff and governed by the
+ * admin_staff_permissions table. Only 'owner' gets unconditional access.
+ */
 function isMasterTier(user: any): boolean {
-  return (
-    user.role === "admin" &&
-    ["owner", "manager"].includes(user.adminSubRole ?? "")
-  );
+  return user.role === "admin" && user.adminSubRole === "owner";
 }
 
 // ─── GET /admin/permissions/me ────────────────────────────────────────────────
@@ -43,7 +45,7 @@ router.get(
       return;
     }
 
-    // Owner/Manager subRole always has full access — no DB lookup needed.
+    // Owner → unconditional full access, no DB lookup needed.
     if (isMasterTier(user)) {
       res.json({
         isMasterTier: true,
@@ -56,26 +58,29 @@ router.get(
       return;
     }
 
-    // Check for an explicit permissions row (only present for invited staff).
+    // Non-owner admin → look up explicit staff permissions row.
     const [perms] = await db
       .select()
       .from(adminStaffPermissionsTable)
       .where(eq(adminStaffPermissionsTable.userId, user.id));
 
-    // No permissions row → primary admin account, unrestricted access.
     if (!perms) {
+      // No permissions row for a non-owner admin.
+      // After the retroactive migration this only happens to manager/coordinator
+      // accounts set manually by super_admin. Return all-false so the UI shows
+      // the access-denied state rather than crashing.
       res.json({
-        isMasterTier: true,
-        canViewBilling: true,
-        canManageInstructors: true,
-        canManageCompliance: true,
-        canViewAuditLog: true,
-        canManageBookings: true,
+        isMasterTier: false,
+        canViewBilling: false,
+        canManageInstructors: false,
+        canManageCompliance: false,
+        canViewAuditLog: false,
+        canManageBookings: false,
       });
       return;
     }
 
-    // Explicit permissions row → invited staff member with scoped access.
+    // Invited staff member — scoped to their assigned permissions.
     res.json({
       isMasterTier: false,
       canViewBilling: perms.canViewBilling,
@@ -127,7 +132,7 @@ router.get(
       adminSubRole: row.adminSubRole,
       createdAt: row.createdAt,
       permissions: {
-        isMasterTier: ["owner", "manager"].includes(row.adminSubRole ?? ""),
+        isMasterTier: row.adminSubRole === "owner",
         canViewBilling: row.canViewBilling ?? false,
         canManageInstructors: row.canManageInstructors ?? false,
         canManageCompliance: row.canManageCompliance ?? false,
@@ -334,10 +339,11 @@ router.post(
       return;
     }
 
-    // Promote user to admin
+    // Promote user to admin staff — subRole 'staff' marks them as invite-based,
+    // ensuring they never get owner-level access through the isMasterTier check.
     await db
       .update(usersTable)
-      .set({ role: "admin" })
+      .set({ role: "admin", adminSubRole: "staff" })
       .where(eq(usersTable.id, user.id));
 
     // Upsert permissions record
@@ -400,8 +406,8 @@ router.patch(
       res.status(404).json({ error: "Admin user not found" });
       return;
     }
-    if (["owner", "manager"].includes(target.adminSubRole ?? "")) {
-      res.status(400).json({ error: "Cannot modify Owner or Manager permissions" });
+    if (target.adminSubRole === "owner") {
+      res.status(400).json({ error: "Cannot modify Owner permissions" });
       return;
     }
 
@@ -471,8 +477,8 @@ router.delete(
       res.status(404).json({ error: "Admin user not found" });
       return;
     }
-    if (["owner", "manager"].includes(target.adminSubRole ?? "")) {
-      res.status(400).json({ error: "Cannot remove Owner or Manager" });
+    if (target.adminSubRole === "owner") {
+      res.status(400).json({ error: "Cannot remove an Owner account" });
       return;
     }
 
