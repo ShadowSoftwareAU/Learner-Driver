@@ -39,6 +39,7 @@ import type {
   AvailableInstructor,
   BookingChangeRequest,
   BookingItem,
+  BookingWizardSummary,
   CreateAvailabilitySlot,
   CreateBooking,
   CreateBookingChangeRequestBody,
@@ -57,6 +58,7 @@ import type {
   EscalateModerationCaseBody,
   ExpiringDocument,
   GenerateViewerCode200,
+  GetBookingWizardSummaryParams,
   GetGovNearbyParams,
   GetInstructorCalendarParams,
   GetManeuverHeatmapParams,
@@ -4235,6 +4237,90 @@ export function useSearchInstructors<TData = Awaited<ReturnType<typeof searchIns
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getSearchInstructorsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetBookingWizardSummaryUrl = (params: GetBookingWizardSummaryParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/bookings/wizard-summary?${stringifiedParams}` : `/api/bookings/wizard-summary`
+}
+
+/**
+ * @summary Fetch lesson cost and wallet balance for the booking confirmation step
+ */
+export const getBookingWizardSummary = async (params: GetBookingWizardSummaryParams, options?: RequestInit): Promise<BookingWizardSummary> => {
+
+  return customFetch<BookingWizardSummary>(getGetBookingWizardSummaryUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBookingWizardSummaryQueryKey = (params?: GetBookingWizardSummaryParams,) => {
+    return [
+    `/api/bookings/wizard-summary`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetBookingWizardSummaryQueryOptions = <TData = Awaited<ReturnType<typeof getBookingWizardSummary>>, TError = ErrorType<unknown>>(params: GetBookingWizardSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBookingWizardSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBookingWizardSummaryQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBookingWizardSummary>>> = ({ signal }) => getBookingWizardSummary(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBookingWizardSummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBookingWizardSummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getBookingWizardSummary>>>
+export type GetBookingWizardSummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Fetch lesson cost and wallet balance for the booking confirmation step
+ */
+
+export function useGetBookingWizardSummary<TData = Awaited<ReturnType<typeof getBookingWizardSummary>>, TError = ErrorType<unknown>>(
+ params: GetBookingWizardSummaryParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBookingWizardSummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBookingWizardSummaryQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

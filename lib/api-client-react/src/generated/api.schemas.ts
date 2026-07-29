@@ -196,6 +196,10 @@ export interface Student {
   viewerCode?: string | null;
   /** @nullable */
   viewerCodeIssuedAt?: string | null;
+  /** Student is funded through the NDIS — lessons are invoiced to their plan manager */
+  isNdis?: boolean;
+  /** Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet */
+  postPayArrangement?: boolean;
   createdAt?: string;
 }
 
@@ -1494,6 +1498,18 @@ export const BookingItemTrainingCategory = {
   mc: 'mc',
 } as const;
 
+/**
+ * Payment state set at booking creation
+ */
+export type BookingItemPaymentStatus = typeof BookingItemPaymentStatus[keyof typeof BookingItemPaymentStatus];
+
+
+export const BookingItemPaymentStatus = {
+  not_applicable: 'not_applicable',
+  wallet_deducted: 'wallet_deducted',
+  pending_invoice: 'pending_invoice',
+} as const;
+
 export interface BookingItem {
   id: number;
   studentId: number;
@@ -1525,6 +1541,8 @@ export interface BookingItem {
   noShowMarkedAt?: string | null;
   /** @nullable */
   statusReason?: string | null;
+  /** Payment state set at booking creation */
+  paymentStatus?: BookingItemPaymentStatus;
   createdAt: string;
   /** @nullable */
   studentName?: string | null;
@@ -1532,6 +1550,20 @@ export interface BookingItem {
   instructorName?: string | null;
   /** @nullable */
   instructorPhone?: string | null;
+}
+
+export interface BookingWizardSummary {
+  /**
+     * Lesson cost in cents (null when instructor has no hourly rate set)
+     * @nullable
+     */
+  costCents?: number | null;
+  /** Student's current wallet balance in cents */
+  balanceCents: number;
+  isNdis: boolean;
+  postPayArrangement: boolean;
+  /** True when the student should skip wallet payment (NDIS or post-pay) */
+  isBypassWallet: boolean;
 }
 
 export type PatchBookingInputStatus = typeof PatchBookingInputStatus[keyof typeof PatchBookingInputStatus];
@@ -1603,6 +1635,17 @@ export const CreateBookingTrainingCategory = {
   mc: 'mc',
 } as const;
 
+/**
+ * wallet deducts student credit; invoice creates a pending_invoice record (NDIS/post-pay students only)
+ */
+export type CreateBookingPaymentMethod = typeof CreateBookingPaymentMethod[keyof typeof CreateBookingPaymentMethod];
+
+
+export const CreateBookingPaymentMethod = {
+  wallet: 'wallet',
+  invoice: 'invoice',
+} as const;
+
 export interface CreateBooking {
   /** When provided, creates a direct booking with this instructor (bypasses broadcast) */
   instructorId?: number;
@@ -1616,6 +1659,8 @@ export interface CreateBooking {
   /** The licence class category this lesson targets */
   trainingCategory?: CreateBookingTrainingCategory;
   studentNotes?: string;
+  /** wallet deducts student credit; invoice creates a pending_invoice record (NDIS/post-pay students only) */
+  paymentMethod?: CreateBookingPaymentMethod;
 }
 
 export type AvailableInstructorZonesItem = {
@@ -2865,6 +2910,11 @@ export const SearchInstructorsTransmissionType = {
   manual: 'manual',
   either: 'either',
 } as const;
+
+export type GetBookingWizardSummaryParams = {
+instructorId: number;
+durationMinutes: number;
+};
 
 export type ListBookingsParams = {
 status?: string;

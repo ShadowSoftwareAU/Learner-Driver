@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, real, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -44,6 +44,9 @@ export const studentsTable = pgTable("students", {
   // Viewer linking — unique code for parent/guardian/mentor access
   viewerCode: text("viewer_code").unique(),
   viewerCodeIssuedAt: timestamp("viewer_code_issued_at", { withTimezone: true }),
+  // NDIS and post-pay billing flags — controls payment flow in the booking wizard
+  isNdis: boolean("is_ndis").notNull().default(false),
+  postPayArrangement: boolean("post_pay_arrangement").notNull().default(false),
   // Data classification label — default restricted for student PII
   dataClassification: text("data_classification").notNull().default("restricted"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

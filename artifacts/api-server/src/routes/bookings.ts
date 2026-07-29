@@ -4,6 +4,7 @@ import {
   db, bookingsTable, bookingBroadcastsTable, notificationsTable,
   instructorAvailabilityTable, instructorZonesTable, instructorsTable,
   studentsTable, usersTable, instructorVerificationsTable, verificationDocumentsTable,
+  studentWalletsTable,
 } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
@@ -26,6 +27,64 @@ function slotCoversRequest(slot: { startTime: string; endTime: string; dayOfWeek
   const slotEnd = timeToMinutes(slot.endTime);
   return slotStart <= reqStart && reqEnd <= slotEnd;
 }
+
+// ─── Booking Wizard Summary ───────────────────────────────────────────────────
+// Returns lesson cost, wallet balance, and NDIS/post-pay flags for the
+// confirmation step of the booking wizard. Must be defined before /bookings/:id
+// so Express matches the literal path first.
+
+router.get("/bookings/wizard-summary", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  const instructorId = parseInt(req.query.instructorId as string, 10);
+  const durationMinutes = parseInt((req.query.durationMinutes as string) ?? "60", 10);
+
+  if (!instructorId || isNaN(instructorId)) {
+    res.status(400).json({ error: "instructorId query param is required" });
+    return;
+  }
+
+  const [instructor] = await db
+    .select()
+    .from(instructorsTable)
+    .where(eq(instructorsTable.id, instructorId));
+  if (!instructor) {
+    res.status(404).json({ error: "Instructor not found" });
+    return;
+  }
+
+  // Ensure student record exists (created lazily)
+  let [student] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+  if (!student) {
+    [student] = await db
+      .insert(studentsTable)
+      .values({ userId: user.id, fullName: user.name ?? "Student", email: user.email ?? "" })
+      .returning();
+  }
+
+  // Cost = pro-rata from hourly rate
+  const costCents = instructor.hourlyRateCents
+    ? Math.round((instructor.hourlyRateCents * durationMinutes) / 60)
+    : null;
+
+  // Student wallet balance (0 if no wallet exists yet)
+  const [wallet] = await db
+    .select()
+    .from(studentWalletsTable)
+    .where(eq(studentWalletsTable.studentId, student.id));
+  const balanceCents = wallet?.balanceCents ?? 0;
+
+  const isNdis = student.isNdis ?? false;
+  const postPayArrangement = student.postPayArrangement ?? false;
+
+  res.json({
+    costCents,
+    balanceCents,
+    isNdis,
+    postPayArrangement,
+    isBypassWallet: isNdis || postPayArrangement,
+  });
+});
 
 // ─── Student Search ───────────────────────────────────────────────────────────
 
@@ -102,7 +161,7 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
     [student] = await db.insert(studentsTable).values({ userId: user.id, fullName: user.name ?? "Student", email: user.email ?? "" }).returning();
   }
 
-  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory, instructorId: directInstructorId } = req.body;
+  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory, instructorId: directInstructorId, paymentMethod } = req.body;
   if (!requestedDate || !requestedTime || !suburb || !postcode) {
     res.status(400).json({ error: "requestedDate, requestedTime, suburb, postcode are required" }); return;
   }
@@ -111,6 +170,47 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
   if (directInstructorId) {
     const [directInstructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.id, directInstructorId));
     if (!directInstructor) { res.status(404).json({ error: "Instructor not found" }); return; }
+
+    // ── Payment resolution ────────────────────────────────────────────────────
+    const isBypassWallet = student.isNdis || student.postPayArrangement;
+    const effectiveMethod: string = paymentMethod ?? (isBypassWallet ? "invoice" : "wallet");
+
+    let bookingPaymentStatus = "not_applicable";
+
+    if (effectiveMethod === "invoice") {
+      // Security: only NDIS or post-pay students may bypass the wallet
+      if (!isBypassWallet) {
+        res.status(403).json({ error: "Invoice payment is only available for NDIS or post-pay students." });
+        return;
+      }
+      bookingPaymentStatus = "pending_invoice";
+    } else if (effectiveMethod === "wallet" && directInstructor.hourlyRateCents) {
+      const costCents = Math.round((directInstructor.hourlyRateCents * (durationMinutes ?? 60)) / 60);
+      const [wallet] = await db
+        .select()
+        .from(studentWalletsTable)
+        .where(eq(studentWalletsTable.studentId, student.id));
+      const balance = wallet?.balanceCents ?? 0;
+
+      if (balance < costCents) {
+        res.status(402).json({
+          error: "Insufficient wallet balance",
+          balanceCents: balance,
+          requiredCents: costCents,
+        });
+        return;
+      }
+
+      // Atomic deduction — record already exists or skip if no wallet (balance was 0, cost 0 edge case)
+      if (wallet) {
+        await db
+          .update(studentWalletsTable)
+          .set({ balanceCents: wallet.balanceCents - costCents })
+          .where(eq(studentWalletsTable.id, wallet.id));
+      }
+      bookingPaymentStatus = "wallet_deducted";
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     const [directBooking] = await db.insert(bookingsTable).values({
       studentId: student.id,
@@ -123,6 +223,7 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
       trainingCategory: trainingCategory ?? "car_learner",
       studentNotes: studentNotes ?? null,
       status: "pending",
+      paymentStatus: bookingPaymentStatus,
       broadcastCount: 1,
       claimedAt: null,
     }).returning();
@@ -504,6 +605,7 @@ function formatBooking(b: any) {
     requestedDate: b.requestedDate, requestedTime: b.requestedTime,
     durationMinutes: b.durationMinutes, transmissionType: b.transmissionType,
     suburb: b.suburb, postcode: b.postcode, status: b.status,
+    paymentStatus: b.paymentStatus ?? "not_applicable",
     carType: b.carType ?? "trainer_car",
     trainingCategory: b.trainingCategory ?? "car_learner",
     studentNotes: b.studentNotes, instructorNotes: b.instructorNotes,

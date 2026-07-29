@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 export default function Landing() {
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background">
-      <header className="h-16 flex items-center justify-between px-6 md:px-12 border-b border-border bg-white sticky top-0 z-10">
+      <header className="h-16 flex items-center justify-between px-6 md:px-12 border-b border-border bg-[#0a1628] sticky top-0 z-10">
         <div className="flex items-center">
-          <img src="/learnerlog-logo.png" alt="Learner Log" className="h-10 w-auto" />
+          <img src="/steps2drive-logo.png" alt="Steps2Drive" className="h-10 w-auto" />
         </div>
         <div className="flex items-center gap-3">
           <Link href="/sign-in">
             <Button>Sign In</Button>
           </Link>
           <Link href="/sign-up">
-            <Button variant="ghost" className="hidden sm:flex text-muted-foreground">Sign Up</Button>
+            <Button variant="ghost" className="hidden sm:flex text-white/80 hover:text-white hover:bg-white/10">Sign Up</Button>
           </Link>
         </div>
       </header>
@@ -22,10 +22,10 @@ export default function Landing() {
       <main className="flex-1">
         <section className="py-20 md:py-32 px-6 text-center max-w-4xl mx-auto">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6">
-            Precision assessment for <br className="hidden md:block"/> professional driving instructors.
+            Learn. Track. Drive Confident. <span className="text-red-600">Be Safe.</span>
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-            The digital replacement for the clipboard. Track student progress, log TMR and Q-SAFE maneuvers, and manage your driving school with uncompromised accuracy.
+            The digital platform for professional driving instructors and learner drivers. Log lessons, track progress, and manage your driving school with confidence.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/sign-in">
@@ -65,7 +65,7 @@ export default function Landing() {
       </main>
 
       <footer className="py-8 text-center text-muted-foreground text-sm border-t border-border">
-        <p>&copy; {new Date().getFullYear()} Learner Log. Professional Driving Assessment.</p>
+        <p>&copy; {new Date().getFullYear()} Steps2Drive. Learn. Track. Drive Confident. Be Safe.</p>
       </footer>
     </div>
   );

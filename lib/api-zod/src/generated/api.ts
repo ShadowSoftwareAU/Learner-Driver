@@ -111,6 +111,8 @@ export const GetMyStudentProfileResponse = zod.object({
   "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
   "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
   "viewerCodeIssuedAt": zod.string().nullish(),
+  "isNdis": zod.boolean().optional().describe('Student is funded through the NDIS — lessons are invoiced to their plan manager'),
+  "postPayArrangement": zod.boolean().optional().describe('Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet'),
   "createdAt": zod.string().optional()
 })
 
@@ -157,6 +159,8 @@ export const UpdateMyStudentProfileResponse = zod.object({
   "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
   "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
   "viewerCodeIssuedAt": zod.string().nullish(),
+  "isNdis": zod.boolean().optional().describe('Student is funded through the NDIS — lessons are invoiced to their plan manager'),
+  "postPayArrangement": zod.boolean().optional().describe('Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet'),
   "createdAt": zod.string().optional()
 })
 
@@ -199,6 +203,8 @@ export const ListStudentsResponseItem = zod.object({
   "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
   "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
   "viewerCodeIssuedAt": zod.string().nullish(),
+  "isNdis": zod.boolean().optional().describe('Student is funded through the NDIS — lessons are invoiced to their plan manager'),
+  "postPayArrangement": zod.boolean().optional().describe('Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet'),
   "createdAt": zod.string().optional()
 })
 export const ListStudentsResponse = zod.array(ListStudentsResponseItem)
@@ -272,6 +278,8 @@ export const GetStudentResponse = zod.object({
   "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
   "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
   "viewerCodeIssuedAt": zod.string().nullish(),
+  "isNdis": zod.boolean().optional().describe('Student is funded through the NDIS — lessons are invoiced to their plan manager'),
+  "postPayArrangement": zod.boolean().optional().describe('Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet'),
   "createdAt": zod.string().optional()
 })
 
@@ -344,6 +352,8 @@ export const UpdateStudentResponse = zod.object({
   "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
   "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
   "viewerCodeIssuedAt": zod.string().nullish(),
+  "isNdis": zod.boolean().optional().describe('Student is funded through the NDIS — lessons are invoiced to their plan manager'),
+  "postPayArrangement": zod.boolean().optional().describe('Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet'),
   "createdAt": zod.string().optional()
 })
 
@@ -1229,6 +1239,8 @@ export const GetHandoverResponse = zod.object({
   "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
   "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
   "viewerCodeIssuedAt": zod.string().nullish(),
+  "isNdis": zod.boolean().optional().describe('Student is funded through the NDIS — lessons are invoiced to their plan manager'),
+  "postPayArrangement": zod.boolean().optional().describe('Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet'),
   "createdAt": zod.string().optional()
 }),
   "totalHours": zod.number(),
@@ -1726,6 +1738,23 @@ export const SearchInstructorsResponse = zod.array(SearchInstructorsResponseItem
 
 
 /**
+ * @summary Fetch lesson cost and wallet balance for the booking confirmation step
+ */
+export const GetBookingWizardSummaryQueryParams = zod.object({
+  "instructorId": zod.coerce.number(),
+  "durationMinutes": zod.coerce.number()
+})
+
+export const GetBookingWizardSummaryResponse = zod.object({
+  "costCents": zod.number().nullish().describe('Lesson cost in cents (null when instructor has no hourly rate set)'),
+  "balanceCents": zod.number().describe('Student\'s current wallet balance in cents'),
+  "isNdis": zod.boolean(),
+  "postPayArrangement": zod.boolean(),
+  "isBypassWallet": zod.boolean().describe('True when the student should skip wallet payment (NDIS or post-pay)')
+})
+
+
+/**
  * @summary List bookings for current user
  */
 export const ListBookingsQueryParams = zod.object({
@@ -1753,6 +1782,7 @@ export const ListBookingsResponseItem = zod.object({
   "cancelledAt": zod.string().nullish(),
   "noShowMarkedAt": zod.string().nullish(),
   "statusReason": zod.string().nullish(),
+  "paymentStatus": zod.enum(['not_applicable', 'wallet_deducted', 'pending_invoice']).optional().describe('Payment state set at booking creation'),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -1774,7 +1804,8 @@ export const CreateBookingBody = zod.object({
   "postcode": zod.string(),
   "carType": zod.enum(['learner_car', 'trainer_car']).optional(),
   "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
-  "studentNotes": zod.string().optional()
+  "studentNotes": zod.string().optional(),
+  "paymentMethod": zod.enum(['wallet', 'invoice']).optional().describe('wallet deducts student credit; invoice creates a pending_invoice record (NDIS\/post-pay students only)')
 })
 
 
@@ -1806,6 +1837,7 @@ export const GetBookingResponse = zod.object({
   "cancelledAt": zod.string().nullish(),
   "noShowMarkedAt": zod.string().nullish(),
   "statusReason": zod.string().nullish(),
+  "paymentStatus": zod.enum(['not_applicable', 'wallet_deducted', 'pending_invoice']).optional().describe('Payment state set at booking creation'),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -1848,6 +1880,7 @@ export const UpdateBookingResponse = zod.object({
   "cancelledAt": zod.string().nullish(),
   "noShowMarkedAt": zod.string().nullish(),
   "statusReason": zod.string().nullish(),
+  "paymentStatus": zod.enum(['not_applicable', 'wallet_deducted', 'pending_invoice']).optional().describe('Payment state set at booking creation'),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -1883,6 +1916,7 @@ export const ClaimBookingResponse = zod.object({
   "cancelledAt": zod.string().nullish(),
   "noShowMarkedAt": zod.string().nullish(),
   "statusReason": zod.string().nullish(),
+  "paymentStatus": zod.enum(['not_applicable', 'wallet_deducted', 'pending_invoice']).optional().describe('Payment state set at booking creation'),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),
@@ -1930,6 +1964,7 @@ export const MarkNoShowResponse = zod.object({
   "cancelledAt": zod.string().nullish(),
   "noShowMarkedAt": zod.string().nullish(),
   "statusReason": zod.string().nullish(),
+  "paymentStatus": zod.enum(['not_applicable', 'wallet_deducted', 'pending_invoice']).optional().describe('Payment state set at booking creation'),
   "createdAt": zod.string(),
   "studentName": zod.string().nullish(),
   "instructorName": zod.string().nullish(),

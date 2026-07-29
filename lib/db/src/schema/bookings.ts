@@ -31,6 +31,9 @@ export const bookingsTable = pgTable("bookings", {
   noShowMarkedByUserId: integer("no_show_marked_by_user_id"),
   // Generic reason for status changes
   statusReason: text("status_reason"),
+  // Payment status — set at booking creation based on student billing type
+  paymentStatus: text("payment_status").notNull().default("not_applicable"),
+  // not_applicable (free/no rate) | wallet_deducted | pending_invoice (NDIS/post-pay)
   // Calendar approval workflow
   changeRequestedByUserId: integer("change_requested_by_user_id"),
   changeRequestStatus: text("change_request_status"), // pending | approved | denied | none

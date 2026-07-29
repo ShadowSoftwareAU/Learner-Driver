@@ -3,6 +3,7 @@ import { useRoute, useLocation } from "wouter";
 import {
   useGetInstructorCalendar,
   useCreateBooking,
+  useGetBookingWizardSummary,
 } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,16 +12,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, ChevronLeft, ChevronRight, ArrowLeft, Car, Bike, Truck,
   GraduationCap, Clock, DollarSign, CheckCircle2, User,
+  AlertCircle, Wallet, FileText, Info,
 } from "lucide-react";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getMonday(d: Date): Date {
-  const day = d.getDay(); // 0 = Sun
+  const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   const mon = new Date(d);
   mon.setDate(d.getDate() + diff);
@@ -56,7 +60,6 @@ function isPast(dateStr: string, timeStr: string): boolean {
   return slot <= now;
 }
 
-/** Generate 30-min start times within [startTime, endTime) */
 function generateSlots(startTime: string, endTime: string): string[] {
   const slots: string[] = [];
   const [sh, sm] = startTime.split(":").map(Number);
@@ -72,7 +75,6 @@ function generateSlots(startTime: string, endTime: string): string[] {
   return slots;
 }
 
-/** Returns true if the slot at [time, time+30min) overlaps any booked slot */
 function isBooked(
   time: string,
   bookedSlots: Array<{ startTime: string; durationMinutes: number | null }>,
@@ -91,6 +93,11 @@ function isBooked(
 function formatRate(cents: number | null | undefined): string {
   if (!cents) return "";
   return `$${Math.round(cents / 100)}/hr`;
+}
+
+function formatCents(cents: number | null | undefined): string {
+  if (cents == null) return "—";
+  return `$${(cents / 100).toFixed(2)}`;
 }
 
 function formatLongDate(dateStr: string, timeStr: string): string {
@@ -115,15 +122,19 @@ const TRAINING_CATEGORIES = [
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
-function StepIndicator({ step }: { step: "pick-time" | "details" }) {
-  const steps = [
+type WizardStep = "pick-time" | "details" | "summary";
+
+function StepIndicator({ step }: { step: WizardStep }) {
+  const steps: { key: WizardStep; label: string }[] = [
     { key: "pick-time", label: "Pick a time" },
     { key: "details", label: "Lesson details" },
+    { key: "summary", label: "Confirm & pay" },
   ];
+  const currentIdx = steps.findIndex((s) => s.key === step);
   return (
     <div className="flex items-center gap-0 mb-6">
       {steps.map((s, i) => {
-        const done = step === "details" && s.key === "pick-time";
+        const done = i < currentIdx;
         const active = s.key === step;
         return (
           <div key={s.key} className="flex items-center gap-0 flex-1 last:flex-none">
@@ -156,12 +167,7 @@ function StepIndicator({ step }: { step: "pick-time" | "details" }) {
 // ─── Day column for the calendar ──────────────────────────────────────────────
 
 function DayColumn({
-  date,
-  windows,
-  bookedSlots,
-  selectedDate,
-  selectedTime,
-  onSelect,
+  date, windows, bookedSlots, selectedDate, selectedTime, onSelect,
 }: {
   date: string;
   windows: Array<{ startTime: string; endTime: string }>;
@@ -175,30 +181,22 @@ function DayColumn({
   const now = new Date();
   const isPastDay = new Date(date + "T23:59:59") < now;
 
-  // Generate all slot start times across all windows
   const allSlots = windows.flatMap((w) => generateSlots(w.startTime, w.endTime));
   const uniqueSlots = [...new Set(allSlots)].sort();
 
   return (
     <div className="flex flex-col min-w-[88px]">
-      {/* Day header */}
       <div
         className={`text-center rounded-lg py-2 px-1 mb-2 ${
-          today
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-muted-foreground"
+          today ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
         }`}
       >
         <p className="text-xs font-semibold">{weekday}</p>
         <p className="text-[11px]">{dayMonth}</p>
       </div>
-
-      {/* Slots or unavailable */}
       {uniqueSlots.length === 0 || isPastDay ? (
         <div className="flex-1 flex items-start justify-center pt-3">
-          <span className="text-[11px] text-muted-foreground text-center leading-snug">
-            Not<br />available
-          </span>
+          <span className="text-[11px] text-muted-foreground text-center leading-snug">Not<br />available</span>
         </div>
       ) : (
         <div className="flex flex-col gap-1">
@@ -207,7 +205,6 @@ function DayColumn({
             const past = isPast(date, time);
             const selected = selectedDate === date && selectedTime === time;
             const disabled = booked || past;
-
             return (
               <button
                 key={time}
@@ -242,7 +239,7 @@ export default function StudentBookWizard() {
   const instructorId = parseInt(params?.instructorId ?? "0", 10);
 
   // Wizard state
-  const [step, setStep] = useState<"pick-time" | "details">("pick-time");
+  const [step, setStep] = useState<WizardStep>("pick-time");
   const [weekMonday, setWeekMonday] = useState<Date>(() => getMonday(new Date()));
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -265,6 +262,17 @@ export default function StudentBookWizard() {
     { query: { queryKey: ["/api/availability/instructor", instructorId, "calendar", fromDate, toDate] } },
   );
 
+  // Step 3: booking wizard summary — only fetched when we reach the summary step
+  const { data: wizardSummary, isLoading: summaryLoading } = useGetBookingWizardSummary(
+    { instructorId, durationMinutes: duration },
+    {
+      query: {
+        queryKey: ["/api/bookings/wizard-summary", instructorId, duration],
+        enabled: step === "summary" && !!instructorId,
+      },
+    },
+  );
+
   const createBooking = useCreateBooking();
 
   const instructor = (calendarData as any)?.instructor;
@@ -284,17 +292,29 @@ export default function StudentBookWizard() {
     return `${startLabel} – ${endLabel}`;
   })();
 
+  // Derived payment state (Step 3)
+  const isBypassWallet = wizardSummary?.isBypassWallet ?? false;
+  const costCents = wizardSummary?.costCents ?? null;
+  const balanceCents = wizardSummary?.balanceCents ?? 0;
+  const walletInsufficient =
+    !isBypassWallet && costCents !== null && balanceCents < costCents;
+
   const handleSlotSelect = (date: string, time: string) => {
     setSelectedDate(date);
     setSelectedTime(time);
   };
 
-  const handleConfirm = async () => {
-    if (!selectedDate || !selectedTime) return;
+  const handleToSummary = () => {
     if (!suburb.trim() || !postcode.trim()) {
       toast({ title: "Pickup suburb and postcode are required", variant: "destructive" });
       return;
     }
+    setStep("summary");
+  };
+
+  const handleConfirm = async () => {
+    if (!selectedDate || !selectedTime) return;
+    const paymentMethod = isBypassWallet ? "invoice" : "wallet";
     try {
       await createBooking.mutateAsync({
         data: {
@@ -308,17 +328,21 @@ export default function StudentBookWizard() {
           suburb: suburb.trim(),
           postcode: postcode.trim(),
           studentNotes: notes.trim() || undefined,
+          paymentMethod: paymentMethod as any,
         } as any,
       });
       toast({
-        title: "Booking request sent!",
-        description: instructor
-          ? `Your lesson with ${instructor.fullName} on ${formatLongDate(selectedDate, selectedTime)} has been requested.`
-          : "Your lesson request has been sent.",
+        title: isBypassWallet ? "Booking request sent!" : "Booking confirmed!",
+        description: isBypassWallet
+          ? `Your lesson on ${formatLongDate(selectedDate, selectedTime)} has been requested. It will be invoiced to your plan manager.`
+          : instructor
+          ? `Your lesson with ${instructor.fullName} on ${formatLongDate(selectedDate, selectedTime)} has been booked.`
+          : "Your lesson has been booked.",
       });
       setLocation("/student/bookings");
-    } catch {
-      toast({ title: "Failed to send booking request", variant: "destructive" });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error ?? "Failed to confirm booking";
+      toast({ title: msg, variant: "destructive" });
     }
   };
 
@@ -359,8 +383,7 @@ export default function StudentBookWizard() {
             {/* Week navigation */}
             <div className="flex items-center justify-between gap-3">
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 onClick={() => setWeekMonday((d) => addDays(d, -7))}
                 disabled={!canGoPrev}
                 className="gap-1.5"
@@ -369,8 +392,7 @@ export default function StudentBookWizard() {
               </Button>
               <span className="text-sm font-medium text-center">{weekLabel}</span>
               <Button
-                variant="outline"
-                size="sm"
+                variant="outline" size="sm"
                 onClick={() => setWeekMonday((d) => addDays(d, 7))}
                 className="gap-1.5"
               >
@@ -405,8 +427,6 @@ export default function StudentBookWizard() {
                     </div>
                   </div>
                 )}
-
-                {/* Legend */}
                 {!isLoading && (
                   <div className="flex items-center gap-4 mt-4 pt-4 border-t flex-wrap text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5">
@@ -426,7 +446,6 @@ export default function StudentBookWizard() {
               </CardContent>
             </Card>
 
-            {/* Selected slot summary + next button */}
             {selectedDate && selectedTime ? (
               <div className="flex items-center justify-between gap-3 rounded-lg border bg-primary/5 border-primary/20 px-4 py-3">
                 <div>
@@ -464,8 +483,7 @@ export default function StudentBookWizard() {
                 </div>
               </div>
               <Button
-                variant="ghost"
-                size="sm"
+                variant="ghost" size="sm"
                 onClick={() => setStep("pick-time")}
                 className="text-muted-foreground gap-1 shrink-0"
               >
@@ -497,7 +515,7 @@ export default function StudentBookWizard() {
                     {label}
                     {instructor?.hourlyRateCents && (
                       <span className="ml-1.5 text-xs opacity-70">
-                        {formatRate((instructor.hourlyRateCents * value) / 60)}
+                        {formatCents(Math.round((instructor.hourlyRateCents * value) / 60))}
                       </span>
                     )}
                   </button>
@@ -613,23 +631,171 @@ export default function StudentBookWizard() {
               />
             </div>
 
-            {/* Confirm */}
+            {/* Next → summary */}
             <div className="pt-1">
               <Button
                 className="w-full"
                 size="lg"
-                onClick={handleConfirm}
-                disabled={createBooking.isPending || !suburb.trim() || !postcode.trim()}
+                onClick={handleToSummary}
+                disabled={!suburb.trim() || !postcode.trim()}
               >
-                {createBooking.isPending ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending request…</>
-                ) : (
-                  "Confirm Booking Request"
-                )}
+                Review &amp; Pay <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
               {(!suburb.trim() || !postcode.trim()) && (
                 <p className="text-xs text-muted-foreground text-center mt-2">
-                  Enter a pickup suburb and postcode to confirm.
+                  Enter a pickup suburb and postcode to continue.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Step 3: Booking Summary ─────────────────────────────────────── */}
+        {step === "summary" && selectedDate && selectedTime && (
+          <div className="space-y-5">
+            {/* Recap banner */}
+            <div className="flex items-center justify-between gap-3 rounded-lg border bg-green-50 border-green-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-medium text-green-800">
+                    {formatLongDate(selectedDate, selectedTime)}
+                  </p>
+                  {instructor && (
+                    <p className="text-xs text-green-700">
+                      with {instructor.fullName} · {duration === 60 ? "1 hr" : duration === 90 ? "1.5 hrs" : "2 hrs"}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => setStep("details")}
+                className="text-muted-foreground gap-1 shrink-0"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Change
+              </Button>
+            </div>
+
+            {/* Payment summary card */}
+            {summaryLoading ? (
+              <Card>
+                <CardContent className="pt-6 pb-6 flex items-center justify-center gap-3">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="text-sm text-muted-foreground">Checking your account…</span>
+                </CardContent>
+              </Card>
+            ) : isBypassWallet ? (
+              /* ── Scenario B: NDIS / Post-pay ── */
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CardContent className="pt-5 pb-5 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center shrink-0">
+                      <FileText className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-blue-900">Invoiced to your plan manager / provider</p>
+                      <p className="text-sm text-blue-700 mt-0.5">
+                        This lesson will be invoiced to your NDIS plan manager or post-pay provider.
+                        No funds will be deducted from a wallet.
+                      </p>
+                    </div>
+                  </div>
+
+                  {costCents !== null && (
+                    <>
+                      <Separator className="bg-blue-200" />
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-blue-800 font-medium">Lesson cost</span>
+                        <span className="font-bold text-blue-900">{formatCents(costCents)}</span>
+                      </div>
+                      <p className="text-xs text-blue-600 flex items-center gap-1.5">
+                        <Info className="w-3.5 h-3.5 shrink-0" />
+                        An invoice will be issued after your lesson is confirmed.
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              /* ── Scenario A: Standard wallet payment ── */
+              <Card className={walletInsufficient ? "border-destructive/40" : "border-border"}>
+                <CardContent className="pt-5 pb-5 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0">
+                      <Wallet className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Lesson payment</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        Funds will be deducted from your wallet when you confirm.
+                      </p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Lesson cost</span>
+                      <span className="font-semibold">
+                        {costCents !== null ? formatCents(costCents) : "No rate set"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Your wallet balance</span>
+                      <span className={`font-semibold ${walletInsufficient ? "text-destructive" : "text-foreground"}`}>
+                        {formatCents(balanceCents)}
+                      </span>
+                    </div>
+                    {costCents !== null && (
+                      <div className="flex items-center justify-between text-sm border-t pt-2">
+                        <span className="text-muted-foreground">Balance after booking</span>
+                        <span className={`font-bold ${walletInsufficient ? "text-destructive" : "text-green-700"}`}>
+                          {walletInsufficient ? "—" : formatCents(balanceCents - costCents)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {walletInsufficient && (
+                    <Alert variant="destructive" className="py-3">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle className="text-sm font-semibold">Insufficient Funds — Please Top Up</AlertTitle>
+                      <AlertDescription className="text-xs mt-0.5">
+                        You need {formatCents(costCents)} but only have {formatCents(balanceCents)}.
+                        Top up your wallet to continue.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Confirm button */}
+            <div className="pt-1 space-y-2">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleConfirm}
+                disabled={
+                  createBooking.isPending ||
+                  summaryLoading ||
+                  walletInsufficient
+                }
+              >
+                {createBooking.isPending ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Confirming…</>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    {isBypassWallet ? "Confirm Booking Request" : "Confirm Booking"}
+                  </>
+                )}
+              </Button>
+              {walletInsufficient && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Top up your wallet before confirming this lesson.
                 </p>
               )}
             </div>

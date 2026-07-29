@@ -1171,6 +1171,30 @@ paths:
                 items:
                   $ref: "#/components/schemas/AvailableInstructor"
 
+  /bookings/wizard-summary:
+    get:
+      operationId: getBookingWizardSummary
+      tags: [scheduling]
+      summary: Fetch lesson cost and wallet balance for the booking confirmation step
+      parameters:
+        - in: query
+          name: instructorId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: durationMinutes
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Wizard summary for the confirmation step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookingWizardSummary"
+
   /bookings:
     get:
       operationId: listBookings
@@ -3177,6 +3201,12 @@ components:
           description: "Unique code for parent/guardian linking (DRV-XXXXXXX)"
         viewerCodeIssuedAt:
           type: ["string", "null"]
+        isNdis:
+          type: boolean
+          description: "Student is funded through the NDIS — lessons are invoiced to their plan manager"
+        postPayArrangement:
+          type: boolean
+          description: "Student has a post-pay arrangement — lessons are invoiced rather than deducted from wallet"
         createdAt:
           type: string
 
@@ -4617,6 +4647,10 @@ components:
           type: ["string", "null"]
         statusReason:
           type: ["string", "null"]
+        paymentStatus:
+          type: string
+          enum: [not_applicable, wallet_deducted, pending_invoice]
+          description: "Payment state set at booking creation"
         createdAt:
           type: string
         studentName:
@@ -4625,6 +4659,24 @@ components:
           type: ["string", "null"]
         instructorPhone:
           type: ["string", "null"]
+
+    BookingWizardSummary:
+      type: object
+      required: [balanceCents, isNdis, postPayArrangement, isBypassWallet]
+      properties:
+        costCents:
+          type: ["integer", "null"]
+          description: "Lesson cost in cents (null when instructor has no hourly rate set)"
+        balanceCents:
+          type: integer
+          description: "Student's current wallet balance in cents"
+        isNdis:
+          type: boolean
+        postPayArrangement:
+          type: boolean
+        isBypassWallet:
+          type: boolean
+          description: "True when the student should skip wallet payment (NDIS or post-pay)"
 
     PatchBookingInput:
       type: object
@@ -4669,6 +4721,10 @@ components:
           description: "The licence class category this lesson targets"
         studentNotes:
           type: string
+        paymentMethod:
+          type: string
+          enum: [wallet, invoice]
+          description: "wallet deducts student credit; invoice creates a pending_invoice record (NDIS/post-pay students only)"
 
     AvailableInstructor:
       type: object

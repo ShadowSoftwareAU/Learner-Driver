@@ -31,3 +31,17 @@ export type GuardianWallet = typeof guardianWalletsTable.$inferSelect;
 export const insertWalletTransactionSchema = createInsertSchema(walletTransactionsTable).omit({ id: true, createdAt: true });
 export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
 export type WalletTransaction = typeof walletTransactionsTable.$inferSelect;
+
+// One wallet per student — holds prepaid credit balance for direct lesson payments.
+// Separate from guardianWalletsTable which is for parent/guardian top-ups.
+export const studentWalletsTable = pgTable("student_wallets", {
+  id: serial("id").primaryKey(),
+  studentId: integer("student_id").notNull().unique(),
+  balanceCents: integer("balance_cents").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+});
+
+export const insertStudentWalletSchema = createInsertSchema(studentWalletsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertStudentWallet = z.infer<typeof insertStudentWalletSchema>;
+export type StudentWallet = typeof studentWalletsTable.$inferSelect;
