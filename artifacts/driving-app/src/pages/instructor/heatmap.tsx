@@ -29,9 +29,9 @@ const LEVEL_COLOR: Record<string, string> = {
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  mastered: "Competent",
-  practiced: "Not yet Competent",
-  attempted: "Attempted",
+  mastered:      "Consistent Skills",
+  practiced:     "Competent",
+  attempted:     "Developing",
   not_attempted: "Not Attempted",
 };
 
@@ -410,9 +410,9 @@ export default function HeatmapPage() {
                   </SelectTrigger>
                   <SelectContent className="z-[9999]">
                     <SelectItem value="all">All levels</SelectItem>
-                    <SelectItem value="mastered">Competent</SelectItem>
-                    <SelectItem value="practiced">Practiced</SelectItem>
-                    <SelectItem value="attempted">Attempted</SelectItem>
+                    <SelectItem value="mastered">Consistent Skills</SelectItem>
+                    <SelectItem value="practiced">Competent</SelectItem>
+                    <SelectItem value="attempted">Developing</SelectItem>
                     <SelectItem value="not_attempted">Not Attempted</SelectItem>
                   </SelectContent>
                 </Select>

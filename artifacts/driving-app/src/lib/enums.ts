@@ -17,6 +17,14 @@ export const ManeuverResultItemCompetencyLevel = {
   mastered: "mastered",
 } as const;
 
+/** Canonical display labels for competency levels — use this as the single source of truth. */
+export const CompetencyLevelLabel: Record<string, string> = {
+  not_attempted: "Not Attempted",
+  attempted:     "Developing",
+  practiced:     "Competent",
+  mastered:      "Consistent Skills",
+};
+
 // ─── Bookings ─────────────────────────────────────────────────────────────────
 export type BookingStatus = typeof BookingStatus[keyof typeof BookingStatus];
 export const BookingStatus = {

@@ -9,10 +9,10 @@ import { WeatherConditionLabel, LightingConditionLabel } from "@/lib/enums";
 // ─── Competency helpers ───────────────────────────────────────────────────────
 
 const COMPETENCY_CONFIG: Record<string, { label: string; className: string; rank: number }> = {
-  mastered:      { label: "Competent",         className: "bg-green-100 text-green-800 border-green-200",  rank: 3 },
-  practiced:     { label: "Not yet Competent", className: "bg-yellow-100 text-yellow-800 border-yellow-200", rank: 2 },
-  attempted:     { label: "Attempted",     className: "bg-red-100 text-red-800 border-red-200",     rank: 1 },
-  not_attempted: { label: "Not Attempted", className: "bg-gray-100 text-gray-600 border-gray-200",  rank: 0 },
+  mastered:      { label: "Consistent Skills", className: "bg-green-100 text-green-800 border-green-200",  rank: 3 },
+  practiced:     { label: "Competent",         className: "bg-yellow-100 text-yellow-800 border-yellow-200", rank: 2 },
+  attempted:     { label: "Developing",        className: "bg-red-100 text-red-800 border-red-200",     rank: 1 },
+  not_attempted: { label: "Not Attempted",     className: "bg-gray-100 text-gray-600 border-gray-200",  rank: 0 },
 };
 
 const FINALIZATION_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
@@ -217,19 +217,19 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-green-700">{masteredCount}</p>
-            <p className="text-xs text-muted-foreground">Competent</p>
+            <p className="text-xs text-muted-foreground">Consistent Skills</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-yellow-700">
               {(assessment.maneuverResults ?? []).filter(r => r.competencyLevel === "practiced").length}
             </p>
-            <p className="text-xs text-muted-foreground">Practiced</p>
+            <p className="text-xs text-muted-foreground">Competent</p>
           </div>
           <div className="text-center">
             <p className="text-2xl font-bold text-red-700">
               {(assessment.maneuverResults ?? []).filter(r => r.competencyLevel === "attempted").length}
             </p>
-            <p className="text-xs text-muted-foreground">Attempted</p>
+            <p className="text-xs text-muted-foreground">Developing</p>
           </div>
         </div>
       )}

@@ -505,10 +505,10 @@ export default function NewAssessment() {
                     </div>
                     <div className="grid grid-cols-4 gap-2">
                       {[
-                        { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted", color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
-                        { val: ManeuverResultItemCompetencyLevel.attempted, label: "Attempted", color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100", active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
-                        { val: ManeuverResultItemCompetencyLevel.practiced, label: "Not yet Competent", color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
-                        { val: ManeuverResultItemCompetencyLevel.mastered, label: "Competent", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
+                        { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
+                        { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",        color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100", active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
+                        { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",         color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
+                        { val: ManeuverResultItemCompetencyLevel.mastered,      label: "Consistent Skills", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
                       ].map(level => (
                         <button
                           key={level.val}
@@ -526,7 +526,7 @@ export default function NewAssessment() {
                     </div>
                     {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
                       <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
-                        <p className="text-xs font-medium text-green-800 mb-0.5">Competent means:</p>
+                        <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
                         <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
                       </div>
                     )}

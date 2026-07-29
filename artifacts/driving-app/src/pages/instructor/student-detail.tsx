@@ -23,10 +23,10 @@ import { MedicalInfoCard } from "@/components/MedicalInfoCard";
 const LessonRouteMap = lazy(() => import("@/components/LessonRouteMap"));
 
 const LEVEL_CONFIG: Record<string, { label: string; color: string }> = {
-  not_attempted: { label: "Not Started", color: "bg-gray-100 text-gray-600" },
-  attempted: { label: "Attempted", color: "bg-red-100 text-red-700" },
-  practiced: { label: "Not yet Competent", color: "bg-amber-100 text-amber-700" },
-  mastered: { label: "Competent", color: "bg-green-100 text-green-700" },
+  not_attempted: { label: "Not Attempted",    color: "bg-gray-100 text-gray-600" },
+  attempted:     { label: "Developing",        color: "bg-red-100 text-red-700" },
+  practiced:     { label: "Competent",         color: "bg-amber-100 text-amber-700" },
+  mastered:      { label: "Consistent Skills", color: "bg-green-100 text-green-700" },
 };
 
 const PRIORITY_CONFIG: Record<string, { label: string; variant: "destructive" | "default" | "secondary" }> = {
@@ -186,7 +186,7 @@ export default function InstructorStudentDetail() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Maneuvers Competent</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Consistent Skills</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -308,9 +308,9 @@ export default function InstructorStudentDetail() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex justify-between text-sm">
-                      <span className="text-green-600 font-medium">{skill.mastered} Competent</span>
-                      <span className="text-yellow-600 font-medium">{skill.practicing} Practicing</span>
-                      <span className="text-gray-400">{skill.notStarted} Not Started</span>
+                      <span className="text-green-600 font-medium">{skill.mastered} Consistent Skills</span>
+                      <span className="text-yellow-600 font-medium">{skill.practicing} Developing</span>
+                      <span className="text-gray-400">{skill.notStarted} Not Attempted</span>
                     </div>
                   </CardContent>
                 </Card>

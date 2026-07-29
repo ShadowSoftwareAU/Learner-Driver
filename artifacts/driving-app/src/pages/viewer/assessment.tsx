@@ -20,10 +20,10 @@ const PEDAL_LABELS: Record<string, string> = {
 };
 
 const LEVEL_CONFIG: Record<string, { label: string; className: string }> = {
-  not_attempted: { label: "Not Attempted",       className: "bg-gray-100 text-gray-800 border-gray-200" },
-  attempted:     { label: "Attempted",            className: "bg-red-100 text-red-800 border-red-200" },
-  practiced:     { label: "Not yet Competent",   className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
-  mastered:      { label: "Competent",            className: "bg-green-100 text-green-800 border-green-200" },
+  not_attempted: { label: "Not Attempted",     className: "bg-gray-100 text-gray-800 border-gray-200" },
+  attempted:     { label: "Developing",         className: "bg-red-100 text-red-800 border-red-200" },
+  practiced:     { label: "Competent",          className: "bg-yellow-100 text-yellow-800 border-yellow-200" },
+  mastered:      { label: "Consistent Skills",  className: "bg-green-100 text-green-800 border-green-200" },
 };
 
 const WEATHER_ICONS: Record<string, React.ReactNode> = {

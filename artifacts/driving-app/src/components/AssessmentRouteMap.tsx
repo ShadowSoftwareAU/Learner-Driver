@@ -20,9 +20,9 @@ const LEVEL_COLOR: Record<string, string> = {
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  mastered: "Competent",
-  practiced: "Not yet Competent",
-  attempted: "Attempted",
+  mastered:      "Consistent Skills",
+  practiced:     "Competent",
+  attempted:     "Developing",
   not_attempted: "Not Attempted",
 };
 

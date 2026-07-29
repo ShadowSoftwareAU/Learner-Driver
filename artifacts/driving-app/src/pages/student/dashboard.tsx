@@ -33,10 +33,10 @@ const LEVEL_COLOUR: Record<string, string> = {
 };
 
 const LEVEL_LABEL: Record<string, string> = {
-  mastered: "Mastered",
-  practiced: "Practiced",
-  attempted: "Attempted",
-  not_attempted: "Not started",
+  mastered:      "Consistent Skills",
+  practiced:     "Competent",
+  attempted:     "Developing",
+  not_attempted: "Not Attempted",
 };
 
 // ─── Share sheet dialog ───────────────────────────────────────────────────────
@@ -211,7 +211,7 @@ export default function StudentDashboard() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Competent Maneuvers</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Consistent Skills</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>

@@ -276,7 +276,7 @@ export default function ViewAssessment() {
                           variant="outline"
                           className={COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}
                         >
-                          {result.competencyLevel.replace("_", " ")}
+                          {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
                         </Badge>
                       </div>
                       {result.notes && (

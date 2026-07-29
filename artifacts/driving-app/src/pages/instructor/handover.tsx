@@ -91,7 +91,7 @@ export default function HandoverView() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Maneuvers Competent</CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Consistent Skills</CardTitle>
               <Award className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
