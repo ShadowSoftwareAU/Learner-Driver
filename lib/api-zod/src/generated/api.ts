@@ -3147,3 +3147,91 @@ export const SetAdminSubRoleBody = zod.object({
 })
 
 
+/**
+ * @summary List all links and pending invites for the authenticated school admin
+ */
+export const GetInstructorLinksResponse = zod.object({
+  "links": zod.array(zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "instructorName": zod.string(),
+  "instructorEmail": zod.string(),
+  "instructorLinkCode": zod.string().nullish(),
+  "status": zod.enum(['pending', 'active', 'declined', 'revoked']),
+  "invitedAt": zod.string(),
+  "activatedAt": zod.string().nullish(),
+  "revokedAt": zod.string().nullish()
+})),
+  "pendingInvites": zod.array(zod.object({
+  "id": zod.number(),
+  "inviteeEmail": zod.string(),
+  "status": zod.string(),
+  "expiresAt": zod.string(),
+  "createdAt": zod.string()
+}))
+})
+
+
+/**
+ * @summary Immediately create an active link using an instructor's 6-character unique link code
+ */
+export const linkInstructorByCodeBodyLinkCodeMin = 6;
+export const linkInstructorByCodeBodyLinkCodeMax = 6;
+
+
+
+export const LinkInstructorByCodeBody = zod.object({
+  "linkCode": zod.string().min(linkInstructorByCodeBodyLinkCodeMin).max(linkInstructorByCodeBodyLinkCodeMax)
+})
+
+
+/**
+ * @summary Send an invite email and create a pending invite token
+ */
+export const InviteInstructorByEmailBody = zod.object({
+  "email": zod.string().email(),
+  "joinBaseUrl": zod.string().optional().describe('Frontend base URL used to construct the invite link')
+})
+
+
+/**
+ * @summary Public preview of an invite token — no auth required
+ */
+export const GetInstructorInvitePreviewParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+export const GetInstructorInvitePreviewResponse = zod.object({
+  "valid": zod.boolean(),
+  "status": zod.string(),
+  "expired": zod.boolean().optional(),
+  "invitedBy": zod.string().describe('School admin\'s name or email'),
+  "inviteeEmail": zod.string(),
+  "expiresAt": zod.string()
+})
+
+
+/**
+ * @summary Authenticated user claims an invite token, creating the school-instructor link
+ */
+export const ClaimInstructorInviteParams = zod.object({
+  "token": zod.coerce.string()
+})
+
+
+/**
+ * @summary Cancel a pending invite
+ */
+export const CancelInstructorInviteParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Revoke an active instructor link
+ */
+export const RevokeInstructorLinkParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+

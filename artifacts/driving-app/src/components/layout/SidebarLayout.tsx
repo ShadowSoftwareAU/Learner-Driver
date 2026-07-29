@@ -21,6 +21,7 @@ import {
   MessageSquare,
   Settings,
   AlertTriangle,
+  UserCog,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -67,6 +68,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     ],
     school_admin: [
       { label: "Dashboard", href: "/school-admin/dashboard", icon: LayoutDashboard },
+      { label: "Instructor Management", href: "/school-admin/instructor-management", icon: UserCog },
       { label: "Booking Approvals", href: "/school-admin/booking-approvals", icon: CalendarCheck },
       { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText },
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },

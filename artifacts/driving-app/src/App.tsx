@@ -61,6 +61,9 @@ import DemoManagement from "@/pages/super-admin/demo";
 import SchoolAdminDashboard from "@/pages/school-admin/dashboard";
 import SchoolSettings from "@/pages/school-admin/settings";
 import BookingApprovals from "@/pages/school-admin/booking-approvals";
+import InstructorManagement from "@/pages/school-admin/instructor-management";
+
+import JoinPage, { PENDING_JOIN_TOKEN_KEY } from "@/pages/join";
 
 import ViewerDashboard from "@/pages/viewer/dashboard";
 import ViewerStudentDetail from "@/pages/viewer/student-detail";
@@ -282,6 +285,19 @@ function DashboardRedirect() {
 }
 
 function HomeRedirect() {
+  const [, navigate] = useLocation();
+  const { isSignedIn, isLoaded } = useAuth();
+
+  // After sign-in, check for a pending invite token and redirect to claim it
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    const pending = sessionStorage.getItem(PENDING_JOIN_TOKEN_KEY);
+    if (pending) {
+      sessionStorage.removeItem(PENDING_JOIN_TOKEN_KEY);
+      navigate(`/join/${pending}`);
+    }
+  }, [isLoaded, isSignedIn, navigate]);
+
   return (
     <>
       <SignedIn>
@@ -435,8 +451,12 @@ function ClerkProviderWithRoutes() {
 
           {/* School-admin routes */}
           <Route path="/school-admin/dashboard" component={() => <ProtectedRoute component={SchoolAdminDashboard} />} />
+          <Route path="/school-admin/instructor-management" component={() => <ProtectedRoute component={InstructorManagement} />} />
           <Route path="/school-admin/settings" component={() => <ProtectedRoute component={SchoolSettings} />} />
           <Route path="/school-admin/booking-approvals" component={() => <ProtectedRoute component={BookingApprovals} />} />
+
+          {/* Public/semi-public: invite acceptance */}
+          <Route path="/join/:token" component={JoinPage} />
 
           {/* Viewer routes */}
           <Route path="/viewer/dashboard" component={() => <ProtectedRoute component={ViewerDashboard} />} />

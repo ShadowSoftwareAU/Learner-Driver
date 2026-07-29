@@ -25,7 +25,7 @@ export const instructorsTable = pgTable("instructors", {
   // true = sole trader/independent; false = managed by a driving school
   isIndependent: boolean("is_independent").notNull().default(true),
   // Unique invite/link code used for hybrid school-to-instructor invitations (6-char alphanumeric, auto-generated).
-  // Column + unique index applied via SQL migration; $defaultFn generates codes for new rows at the ORM layer.
+  // Column + unique constraint applied via SQL migration; $defaultFn generates codes for new rows at the ORM layer.
   uniqueLinkCode: text("unique_link_code").unique().$defaultFn(genLinkCode),
   // Primary school affiliation (when not independent)
   defaultSchoolId: integer("default_school_id"),

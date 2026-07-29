@@ -70,6 +70,7 @@ import type {
   InstructorDashboard,
   InstructorDetail,
   InstructorFeedbackSummary,
+  InstructorLinksResponse,
   InstructorUpdate,
   InstructorVehicle,
   InstructorVehicleInput,
@@ -77,7 +78,11 @@ import type {
   InstructorZone,
   Intake,
   IntakeInput,
+  InviteCreatedResponse,
+  InviteInstructorByEmailBody,
+  InvitePreview,
   LessonPlan,
+  LinkInstructorByCodeBody,
   ListAdminFeedback200,
   ListAdminFeedbackParams,
   ListAdminHandoverNotes200,
@@ -9301,5 +9306,511 @@ export const useSetAdminSubRole = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getSetAdminSubRoleMutationOptions(options));
+    }
+
+export const getGetInstructorLinksUrl = () => {
+
+
+
+
+  return `/api/instructor-links`
+}
+
+/**
+ * @summary List all links and pending invites for the authenticated school admin
+ */
+export const getInstructorLinks = async ( options?: RequestInit): Promise<InstructorLinksResponse> => {
+
+  return customFetch<InstructorLinksResponse>(getGetInstructorLinksUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInstructorLinksQueryKey = () => {
+    return [
+    `/api/instructor-links`
+    ] as const;
+    }
+
+
+export const getGetInstructorLinksQueryOptions = <TData = Awaited<ReturnType<typeof getInstructorLinks>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorLinks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInstructorLinksQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInstructorLinks>>> = ({ signal }) => getInstructorLinks({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInstructorLinks>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInstructorLinksQueryResult = NonNullable<Awaited<ReturnType<typeof getInstructorLinks>>>
+export type GetInstructorLinksQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all links and pending invites for the authenticated school admin
+ */
+
+export function useGetInstructorLinks<TData = Awaited<ReturnType<typeof getInstructorLinks>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorLinks>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInstructorLinksQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getLinkInstructorByCodeUrl = () => {
+
+
+
+
+  return `/api/instructor-links/link-by-code`
+}
+
+/**
+ * @summary Immediately create an active link using an instructor's 6-character unique link code
+ */
+export const linkInstructorByCode = async (linkInstructorByCodeBody: LinkInstructorByCodeBody, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getLinkInstructorByCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      linkInstructorByCodeBody,)
+  }
+);}
+
+
+
+
+export const getLinkInstructorByCodeMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkInstructorByCode>>, TError,{data: BodyType<LinkInstructorByCodeBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof linkInstructorByCode>>, TError,{data: BodyType<LinkInstructorByCodeBody>}, TContext> => {
+
+const mutationKey = ['linkInstructorByCode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof linkInstructorByCode>>, {data: BodyType<LinkInstructorByCodeBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  linkInstructorByCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LinkInstructorByCodeMutationResult = NonNullable<Awaited<ReturnType<typeof linkInstructorByCode>>>
+    export type LinkInstructorByCodeMutationBody = BodyType<LinkInstructorByCodeBody>
+    export type LinkInstructorByCodeMutationError = ErrorType<void>
+
+    /**
+ * @summary Immediately create an active link using an instructor's 6-character unique link code
+ */
+export const useLinkInstructorByCode = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof linkInstructorByCode>>, TError,{data: BodyType<LinkInstructorByCodeBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof linkInstructorByCode>>,
+        TError,
+        {data: BodyType<LinkInstructorByCodeBody>},
+        TContext
+      > => {
+      return useMutation(getLinkInstructorByCodeMutationOptions(options));
+    }
+
+export const getInviteInstructorByEmailUrl = () => {
+
+
+
+
+  return `/api/instructor-links/invite`
+}
+
+/**
+ * @summary Send an invite email and create a pending invite token
+ */
+export const inviteInstructorByEmail = async (inviteInstructorByEmailBody: InviteInstructorByEmailBody, options?: RequestInit): Promise<InviteCreatedResponse> => {
+
+  return customFetch<InviteCreatedResponse>(getInviteInstructorByEmailUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      inviteInstructorByEmailBody,)
+  }
+);}
+
+
+
+
+export const getInviteInstructorByEmailMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteInstructorByEmail>>, TError,{data: BodyType<InviteInstructorByEmailBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof inviteInstructorByEmail>>, TError,{data: BodyType<InviteInstructorByEmailBody>}, TContext> => {
+
+const mutationKey = ['inviteInstructorByEmail'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof inviteInstructorByEmail>>, {data: BodyType<InviteInstructorByEmailBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  inviteInstructorByEmail(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type InviteInstructorByEmailMutationResult = NonNullable<Awaited<ReturnType<typeof inviteInstructorByEmail>>>
+    export type InviteInstructorByEmailMutationBody = BodyType<InviteInstructorByEmailBody>
+    export type InviteInstructorByEmailMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Send an invite email and create a pending invite token
+ */
+export const useInviteInstructorByEmail = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof inviteInstructorByEmail>>, TError,{data: BodyType<InviteInstructorByEmailBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof inviteInstructorByEmail>>,
+        TError,
+        {data: BodyType<InviteInstructorByEmailBody>},
+        TContext
+      > => {
+      return useMutation(getInviteInstructorByEmailMutationOptions(options));
+    }
+
+export const getGetInstructorInvitePreviewUrl = (token: string,) => {
+
+
+
+
+  return `/api/instructor-links/invite/${token}`
+}
+
+/**
+ * @summary Public preview of an invite token — no auth required
+ */
+export const getInstructorInvitePreview = async (token: string, options?: RequestInit): Promise<InvitePreview> => {
+
+  return customFetch<InvitePreview>(getGetInstructorInvitePreviewUrl(token),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInstructorInvitePreviewQueryKey = (token: string,) => {
+    return [
+    `/api/instructor-links/invite/${token}`
+    ] as const;
+    }
+
+
+export const getGetInstructorInvitePreviewQueryOptions = <TData = Awaited<ReturnType<typeof getInstructorInvitePreview>>, TError = ErrorType<void>>(token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorInvitePreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInstructorInvitePreviewQueryKey(token);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInstructorInvitePreview>>> = ({ signal }) => getInstructorInvitePreview(token, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(token), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInstructorInvitePreview>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInstructorInvitePreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getInstructorInvitePreview>>>
+export type GetInstructorInvitePreviewQueryError = ErrorType<void>
+
+
+/**
+ * @summary Public preview of an invite token — no auth required
+ */
+
+export function useGetInstructorInvitePreview<TData = Awaited<ReturnType<typeof getInstructorInvitePreview>>, TError = ErrorType<void>>(
+ token: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorInvitePreview>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInstructorInvitePreviewQueryOptions(token,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getClaimInstructorInviteUrl = (token: string,) => {
+
+
+
+
+  return `/api/instructor-links/invite/${token}/claim`
+}
+
+/**
+ * @summary Authenticated user claims an invite token, creating the school-instructor link
+ */
+export const claimInstructorInvite = async (token: string, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getClaimInstructorInviteUrl(token),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getClaimInstructorInviteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimInstructorInvite>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof claimInstructorInvite>>, TError,{token: string}, TContext> => {
+
+const mutationKey = ['claimInstructorInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof claimInstructorInvite>>, {token: string}> = (props) => {
+          const {token} = props ?? {};
+
+          return  claimInstructorInvite(token,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ClaimInstructorInviteMutationResult = NonNullable<Awaited<ReturnType<typeof claimInstructorInvite>>>
+
+    export type ClaimInstructorInviteMutationError = ErrorType<void>
+
+    /**
+ * @summary Authenticated user claims an invite token, creating the school-instructor link
+ */
+export const useClaimInstructorInvite = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof claimInstructorInvite>>, TError,{token: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof claimInstructorInvite>>,
+        TError,
+        {token: string},
+        TContext
+      > => {
+      return useMutation(getClaimInstructorInviteMutationOptions(options));
+    }
+
+export const getCancelInstructorInviteUrl = (id: number,) => {
+
+
+
+
+  return `/api/instructor-links/invite/${id}`
+}
+
+/**
+ * @summary Cancel a pending invite
+ */
+export const cancelInstructorInvite = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getCancelInstructorInviteUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getCancelInstructorInviteMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelInstructorInvite>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cancelInstructorInvite>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['cancelInstructorInvite'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cancelInstructorInvite>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  cancelInstructorInvite(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CancelInstructorInviteMutationResult = NonNullable<Awaited<ReturnType<typeof cancelInstructorInvite>>>
+
+    export type CancelInstructorInviteMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Cancel a pending invite
+ */
+export const useCancelInstructorInvite = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cancelInstructorInvite>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cancelInstructorInvite>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getCancelInstructorInviteMutationOptions(options));
+    }
+
+export const getRevokeInstructorLinkUrl = (id: number,) => {
+
+
+
+
+  return `/api/instructor-links/${id}`
+}
+
+/**
+ * @summary Revoke an active instructor link
+ */
+export const revokeInstructorLink = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeInstructorLinkUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeInstructorLinkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInstructorLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeInstructorLink>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeInstructorLink'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeInstructorLink>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeInstructorLink(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeInstructorLinkMutationResult = NonNullable<Awaited<ReturnType<typeof revokeInstructorLink>>>
+
+    export type RevokeInstructorLinkMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Revoke an active instructor link
+ */
+export const useRevokeInstructorLink = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeInstructorLink>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeInstructorLink>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeInstructorLinkMutationOptions(options));
     }
 

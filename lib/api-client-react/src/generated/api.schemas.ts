@@ -741,6 +741,60 @@ export interface CreateSchoolInstructorLink {
   linkCode: string;
 }
 
+export type InstructorLinkDetailStatus = typeof InstructorLinkDetailStatus[keyof typeof InstructorLinkDetailStatus];
+
+
+export const InstructorLinkDetailStatus = {
+  pending: 'pending',
+  active: 'active',
+  declined: 'declined',
+  revoked: 'revoked',
+} as const;
+
+export interface InstructorLinkDetail {
+  id: number;
+  instructorId: number;
+  instructorName: string;
+  instructorEmail: string;
+  /** @nullable */
+  instructorLinkCode?: string | null;
+  status: InstructorLinkDetailStatus;
+  invitedAt: string;
+  /** @nullable */
+  activatedAt?: string | null;
+  /** @nullable */
+  revokedAt?: string | null;
+}
+
+export interface PendingInvite {
+  id: number;
+  inviteeEmail: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+}
+
+export interface InstructorLinksResponse {
+  links: InstructorLinkDetail[];
+  pendingInvites: PendingInvite[];
+}
+
+export interface InviteCreatedResponse {
+  invite?: PendingInvite;
+  emailDelivered: boolean;
+  inviteUrl: string;
+}
+
+export interface InvitePreview {
+  valid: boolean;
+  status: string;
+  expired?: boolean;
+  /** School admin's name or email */
+  invitedBy: string;
+  inviteeEmail: string;
+  expiresAt: string;
+}
+
 export type ManeuverAssessmentType = typeof ManeuverAssessmentType[keyof typeof ManeuverAssessmentType];
 
 
@@ -2967,5 +3021,19 @@ export const SetAdminSubRoleBodyAdminSubRole = {
 export type SetAdminSubRoleBody = {
   /** @nullable */
   adminSubRole?: SetAdminSubRoleBodyAdminSubRole;
+};
+
+export type LinkInstructorByCodeBody = {
+  /**
+     * @minLength 6
+     * @maxLength 6
+     */
+  linkCode: string;
+};
+
+export type InviteInstructorByEmailBody = {
+  email: string;
+  /** Frontend base URL used to construct the invite link */
+  joinBaseUrl?: string;
 };
 

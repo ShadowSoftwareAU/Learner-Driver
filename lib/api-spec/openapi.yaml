@@ -2702,6 +2702,142 @@ paths:
           description: Updated user
         "403": { description: Access denied }
 
+  # ─── Instructor links (hybrid school/independent model) ─────────────────────
+  /instructor-links:
+    get:
+      operationId: getInstructorLinks
+      tags: [schools]
+      summary: List all links and pending invites for the authenticated school admin
+      responses:
+        "200":
+          description: Links and pending invites
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorLinksResponse"
+
+  /instructor-links/link-by-code:
+    post:
+      operationId: linkInstructorByCode
+      tags: [schools]
+      summary: Immediately create an active link using an instructor's 6-character unique link code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [linkCode]
+              properties:
+                linkCode:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+      responses:
+        "201":
+          description: Link created
+        "409":
+          description: Already linked
+
+  /instructor-links/invite:
+    post:
+      operationId: inviteInstructorByEmail
+      tags: [schools]
+      summary: Send an invite email and create a pending invite token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                joinBaseUrl:
+                  type: string
+                  description: "Frontend base URL used to construct the invite link"
+      responses:
+        "201":
+          description: Invite created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InviteCreatedResponse"
+
+  /instructor-links/invite/{token}:
+    get:
+      operationId: getInstructorInvitePreview
+      tags: [schools]
+      summary: Public preview of an invite token — no auth required
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitePreview"
+        "404":
+          description: Not found
+
+  /instructor-links/invite/{token}/claim:
+    post:
+      operationId: claimInstructorInvite
+      tags: [schools]
+      summary: Authenticated user claims an invite token, creating the school-instructor link
+      parameters:
+        - in: path
+          name: token
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Invite claimed
+        "404":
+          description: Not found
+        "409":
+          description: Already used
+        "410":
+          description: Expired
+
+  /instructor-links/invite/{id}:
+    delete:
+      operationId: cancelInstructorInvite
+      tags: [schools]
+      summary: Cancel a pending invite
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Cancelled
+
+  /instructor-links/{id}:
+    delete:
+      operationId: revokeInstructorLink
+      tags: [schools]
+      summary: Revoke an active instructor link
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Revoked
+
 components:
   schemas:
     HealthStatus:
@@ -3268,6 +3404,87 @@ components:
         linkCode:
           type: string
           description: "The instructor's 6-character uniqueLinkCode"
+
+    InstructorLinkDetail:
+      type: object
+      required: [id, instructorId, instructorName, instructorEmail, status, invitedAt]
+      properties:
+        id:
+          type: integer
+        instructorId:
+          type: integer
+        instructorName:
+          type: string
+        instructorEmail:
+          type: string
+        instructorLinkCode:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [pending, active, declined, revoked]
+        invitedAt:
+          type: string
+        activatedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
+
+    PendingInvite:
+      type: object
+      required: [id, inviteeEmail, status, expiresAt, createdAt]
+      properties:
+        id:
+          type: integer
+        inviteeEmail:
+          type: string
+        status:
+          type: string
+        expiresAt:
+          type: string
+        createdAt:
+          type: string
+
+    InstructorLinksResponse:
+      type: object
+      required: [links, pendingInvites]
+      properties:
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/InstructorLinkDetail"
+        pendingInvites:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingInvite"
+
+    InviteCreatedResponse:
+      type: object
+      required: [emailDelivered, inviteUrl]
+      properties:
+        invite:
+          $ref: "#/components/schemas/PendingInvite"
+        emailDelivered:
+          type: boolean
+        inviteUrl:
+          type: string
+
+    InvitePreview:
+      type: object
+      required: [valid, status, invitedBy, inviteeEmail, expiresAt]
+      properties:
+        valid:
+          type: boolean
+        status:
+          type: string
+        expired:
+          type: boolean
+        invitedBy:
+          type: string
+          description: "School admin's name or email"
+        inviteeEmail:
+          type: string
+        expiresAt:
+          type: string
 
     # ─── Maneuvers ─────────────────────────────────────────────────────────────
     Maneuver:

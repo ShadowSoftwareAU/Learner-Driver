@@ -80,3 +80,25 @@ export const schoolInstructorLinksTable = pgTable("school_instructor_links", {
 export const insertSchoolInstructorLinkSchema = createInsertSchema(schoolInstructorLinksTable).omit({ id: true, invitedAt: true });
 export type InsertSchoolInstructorLink = z.infer<typeof insertSchoolInstructorLinkSchema>;
 export type SchoolInstructorLink = typeof schoolInstructorLinksTable.$inferSelect;
+
+/**
+ * Single-use tokens for the "Invite via Email" workflow.
+ * A school admin generates a token, sends it in an email, and the recipient
+ * claims it after signing up — creating their school_instructor_links record.
+ */
+export const instructorInviteTokensTable = pgTable("instructor_invite_tokens", {
+  id: serial("id").primaryKey(),
+  // Crypto-random UUID — hard to guess, safe to embed in email links
+  token: text("token").notNull().unique(),
+  // The school admin user who sent the invite
+  schoolAdminId: integer("school_admin_id").notNull(),
+  // Email address the invite was sent to
+  inviteeEmail: text("invitee_email").notNull(),
+  // pending → accepted | expired | cancelled
+  status: text("status").notNull().default("pending"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  // The instructor who ultimately claimed this token (set on acceptance)
+  claimedByInstructorId: integer("claimed_by_instructor_id"),
+});

@@ -31,6 +31,7 @@ import handoverAuditRouter from "./handover-audit";
 import instructorVehiclesRouter from "./instructor-vehicles";
 import walletRouter from "./wallet";
 import adminBackfillRouter from "./admin-backfill";
+import instructorLinksRouter from "./instructor-links";
 
 const router: IRouter = Router();
 
@@ -66,5 +67,6 @@ router.use(handoverAuditRouter);
 router.use(instructorVehiclesRouter);
 router.use(walletRouter);
 router.use(adminBackfillRouter);
+router.use(instructorLinksRouter);
 
 export default router;
