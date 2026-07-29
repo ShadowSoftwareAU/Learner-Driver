@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { getManeuverImage } from "@/lib/maneuver-images";
+import { getManeuverChips } from "@/lib/maneuver-chips";
 import { Badge } from "@/components/ui/badge";
 import { useLocation, useSearch } from "wouter";
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
@@ -758,6 +759,7 @@ export default function GuidedAssessment() {
                 <QuickNoteChips
                   value={maneuverNotes[currentManeuver.id] || ""}
                   onChange={(next) => setManeuverNotes(prev => ({ ...prev, [currentManeuver.id]: next }))}
+                  chips={getManeuverChips(currentManeuver.name, currentManeuver.category)}
                 />
                 <Textarea
                   placeholder="Quick notes for this maneuver..."

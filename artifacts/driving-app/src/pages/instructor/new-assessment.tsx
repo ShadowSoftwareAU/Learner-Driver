@@ -28,6 +28,7 @@ import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
 import { getManeuverImage } from "@/lib/maneuver-images";
+import { getManeuverChips } from "@/lib/maneuver-chips";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
@@ -540,6 +541,7 @@ export default function NewAssessment() {
                   <QuickNoteChips
                     value={maneuverNotes[m.id] || ""}
                     onChange={(next) => handleManeuverNoteChange(m.id, next)}
+                    chips={getManeuverChips(m.name, m.category)}
                   />
                   <Textarea
                     placeholder="Add instructor notes for this maneuver…"
@@ -651,6 +653,7 @@ export default function NewAssessment() {
                             <QuickNoteChips
                               value={maneuverNotes[m.id] || ""}
                               onChange={(next) => handleManeuverNoteChange(m.id, next)}
+                              chips={getManeuverChips(m.name, m.category)}
                             />
                             <Textarea
                               placeholder="Add notes for this maneuver..."
