@@ -141,8 +141,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-[100dvh] w-full bg-gray-50">
       {/* Desktop sidebar */}
       <aside className="w-64 flex-shrink-0 bg-sidebar border-r border-sidebar-border text-sidebar-foreground hidden md:flex flex-col">
-        <div className="h-16 flex items-center px-3 border-b border-sidebar-border bg-sidebar-accent/50">
-          <img src="/steps2drive-logo.png" alt="Steps2Drive" style={{ width: 220, height: 50, objectFit: "cover", objectPosition: "center center" }} />
+        <div className="h-16 flex items-center px-4 border-b border-sidebar-border bg-sidebar-accent/50">
+          <img src="/steps2drive-logo.png" alt="Steps2Drive" className="max-w-[210px] h-auto" />
         </div>
         <NavList />
       </aside>
@@ -150,8 +150,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile layout */}
       <div className="flex flex-col flex-1 min-w-0">
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center justify-between h-14 px-3 bg-sidebar border-b border-sidebar-border text-sidebar-foreground sticky top-0 z-10">
-          <img src="/steps2drive-logo.png" alt="Steps2Drive" style={{ width: 180, height: 40, objectFit: "cover", objectPosition: "center center" }} />
+        <header className="md:hidden flex items-center justify-between h-14 px-4 bg-sidebar border-b border-sidebar-border text-sidebar-foreground sticky top-0 z-10">
+          <img src="/steps2drive-logo.png" alt="Steps2Drive" className="max-w-[170px] h-auto" />
           <div className="flex items-center gap-2">
             <NotificationBell />
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -161,8 +161,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-72 p-0 bg-sidebar border-sidebar-border text-sidebar-foreground flex flex-col">
-                <div className="h-16 flex items-center px-3 border-b border-sidebar-border bg-sidebar-accent/50">
-                  <img src="/steps2drive-logo.png" alt="Steps2Drive" style={{ width: 220, height: 50, objectFit: "cover", objectPosition: "center center" }} />
+                <div className="h-16 flex items-center px-4 border-b border-sidebar-border bg-sidebar-accent/50">
+                  <img src="/steps2drive-logo.png" alt="Steps2Drive" className="max-w-[210px] h-auto" />
                 </div>
                 <NavList onItemClick={() => setMobileOpen(false)} />
               </SheetContent>

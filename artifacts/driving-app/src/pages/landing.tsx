@@ -7,7 +7,7 @@ export default function Landing() {
     <div className="min-h-[100dvh] flex flex-col bg-background">
       <header className="h-16 flex items-center justify-between px-6 md:px-12 border-b border-border bg-[#0a1628] sticky top-0 z-10">
         <div className="flex items-center">
-          <img src="/steps2drive-logo.png" alt="Steps2Drive" style={{ width: 260, height: 52, objectFit: "cover", objectPosition: "center center" }} />
+          <img src="/steps2drive-logo.png" alt="Steps2Drive" className="max-w-[260px] h-auto" />
         </div>
         <div className="flex items-center gap-3">
           <Link href="/sign-in">
