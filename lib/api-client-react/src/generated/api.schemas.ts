@@ -48,6 +48,16 @@ export interface UserProfile {
   createdAt?: string;
 }
 
+export interface UpdateUserProfile {
+  /** @minLength 2 */
+  name: string;
+}
+
+export interface UpdateOwnStudentProfile {
+  /** @nullable */
+  phone?: string | null;
+}
+
 export type RoleUpdateRole = typeof RoleUpdateRole[keyof typeof RoleUpdateRole];
 
 

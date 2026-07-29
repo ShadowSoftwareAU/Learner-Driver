@@ -108,6 +108,27 @@ router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   res.status(201).json(formatStudent(s));
 });
 
+// ─── Own student profile (authenticated student) ─────────────────────────────
+
+router.get("/students/me", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const [s] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+  if (!s) { res.status(404).json({ error: "Student profile not found" }); return; }
+  res.json(formatStudent(s));
+});
+
+router.patch("/students/me", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const [s] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+  if (!s) { res.status(404).json({ error: "Student profile not found" }); return; }
+  const { phone } = req.body as { phone?: string | null };
+  const [updated] = await db.update(studentsTable)
+    .set({ phone: phone ?? null })
+    .where(eq(studentsTable.id, s.id))
+    .returning();
+  res.json(formatStudent(updated));
+});
+
 // ─── Get one ───────────────────────────────────────────────────────────────────
 
 router.get("/students/:id", requireAuth, async (req: any, res): Promise<void> => {

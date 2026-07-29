@@ -144,6 +144,8 @@ import type {
   ToiletSummary,
   UpdateInstructorTrainingCategories200,
   UpdateInstructorTrainingCategoriesBody,
+  UpdateOwnStudentProfile,
+  UpdateUserProfile,
   UserProfile,
   VerificationDocument,
   VerificationStatusResponse,
@@ -321,6 +323,77 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
 
 
 
+export const getUpdateMeUrl = () => {
+
+
+
+
+  return `/api/users/me`
+}
+
+/**
+ * @summary Update own display name
+ */
+export const updateMe = async (updateUserProfile: UpdateUserProfile, options?: RequestInit): Promise<UserProfile> => {
+
+  return customFetch<UserProfile>(getUpdateMeUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateUserProfile,)
+  }
+);}
+
+
+
+
+export const getUpdateMeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,{data: BodyType<UpdateUserProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,{data: BodyType<UpdateUserProfile>}, TContext> => {
+
+const mutationKey = ['updateMe'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMe>>, {data: BodyType<UpdateUserProfile>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMe(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMeMutationResult = NonNullable<Awaited<ReturnType<typeof updateMe>>>
+    export type UpdateMeMutationBody = BodyType<UpdateUserProfile>
+    export type UpdateMeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update own display name
+ */
+export const useUpdateMe = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMe>>, TError,{data: BodyType<UpdateUserProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMe>>,
+        TError,
+        {data: BodyType<UpdateUserProfile>},
+        TContext
+      > => {
+      return useMutation(getUpdateMeMutationOptions(options));
+    }
+
 export const getUpdateMyRoleUrl = () => {
 
 
@@ -390,6 +463,154 @@ export const useUpdateMyRole = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateMyRoleMutationOptions(options));
+    }
+
+export const getGetMyStudentProfileUrl = () => {
+
+
+
+
+  return `/api/students/me`
+}
+
+/**
+ * @summary Get the authenticated student's own profile
+ */
+export const getMyStudentProfile = async ( options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getGetMyStudentProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyStudentProfileQueryKey = () => {
+    return [
+    `/api/students/me`
+    ] as const;
+    }
+
+
+export const getGetMyStudentProfileQueryOptions = <TData = Awaited<ReturnType<typeof getMyStudentProfile>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyStudentProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyStudentProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyStudentProfile>>> = ({ signal }) => getMyStudentProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyStudentProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyStudentProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getMyStudentProfile>>>
+export type GetMyStudentProfileQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get the authenticated student's own profile
+ */
+
+export function useGetMyStudentProfile<TData = Awaited<ReturnType<typeof getMyStudentProfile>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyStudentProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyStudentProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateMyStudentProfileUrl = () => {
+
+
+
+
+  return `/api/students/me`
+}
+
+/**
+ * @summary Update the authenticated student's own profile fields
+ */
+export const updateMyStudentProfile = async (updateOwnStudentProfile: UpdateOwnStudentProfile, options?: RequestInit): Promise<Student> => {
+
+  return customFetch<Student>(getUpdateMyStudentProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      updateOwnStudentProfile,)
+  }
+);}
+
+
+
+
+export const getUpdateMyStudentProfileMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyStudentProfile>>, TError,{data: BodyType<UpdateOwnStudentProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMyStudentProfile>>, TError,{data: BodyType<UpdateOwnStudentProfile>}, TContext> => {
+
+const mutationKey = ['updateMyStudentProfile'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMyStudentProfile>>, {data: BodyType<UpdateOwnStudentProfile>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateMyStudentProfile(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMyStudentProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyStudentProfile>>>
+    export type UpdateMyStudentProfileMutationBody = BodyType<UpdateOwnStudentProfile>
+    export type UpdateMyStudentProfileMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update the authenticated student's own profile fields
+ */
+export const useUpdateMyStudentProfile = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyStudentProfile>>, TError,{data: BodyType<UpdateOwnStudentProfile>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMyStudentProfile>>,
+        TError,
+        {data: BodyType<UpdateOwnStudentProfile>},
+        TContext
+      > => {
+      return useMutation(getUpdateMyStudentProfileMutationOptions(options));
     }
 
 export const getListStudentsUrl = () => {

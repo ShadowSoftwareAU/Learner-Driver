@@ -43,6 +43,30 @@ router.get("/users/me", requireAuth, async (req: any, res): Promise<void> => {
   });
 });
 
+// ─── Update own display name ──────────────────────────────────────────────────
+
+router.patch("/users/me", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const { name } = req.body as { name?: string };
+  if (!name || typeof name !== "string" || name.trim().length < 2) {
+    res.status(400).json({ error: "name must be at least 2 characters" });
+    return;
+  }
+  const trimmed = name.trim();
+  const [updated] = await db.update(usersTable).set({ name: trimmed }).where(eq(usersTable.id, user.id)).returning();
+  res.json({
+    id: updated.id,
+    clerkId: updated.clerkId,
+    email: updated.email,
+    name: updated.name,
+    role: updated.role,
+    adminSubRole: updated.adminSubRole ?? null,
+    schoolId: updated.schoolId ?? null,
+    sessionTimeoutMinutes: updated.sessionTimeoutMinutes,
+    createdAt: updated.createdAt,
+  });
+});
+
 router.patch("/users/me/role", requireAuth, async (req: any, res): Promise<void> => {
   const auth = getAuth(req);
   const user = await getOrCreateUser(req.clerkUserId, auth?.sessionClaims?.email as string ?? "", auth?.sessionClaims?.name as string ?? undefined);

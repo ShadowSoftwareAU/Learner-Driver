@@ -32,6 +32,29 @@ export const GetMeResponse = zod.object({
 
 
 /**
+ * @summary Update own display name
+ */
+export const updateMeBodyNameMin = 2;
+
+
+
+export const UpdateMeBody = zod.object({
+  "name": zod.string().min(updateMeBodyNameMin)
+})
+
+export const UpdateMeResponse = zod.object({
+  "id": zod.number(),
+  "clerkId": zod.string(),
+  "email": zod.string(),
+  "name": zod.string().nullish(),
+  "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin', 'unassigned']),
+  "adminSubRole": zod.union([zod.literal('owner'),zod.literal('manager'),zod.literal('coordinator'),zod.literal(null)]).nullish(),
+  "schoolId": zod.number().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
  * @summary Set or update user role (admin only in prod; open for onboarding)
  */
 export const UpdateMyRoleBody = zod.object({
@@ -46,6 +69,94 @@ export const UpdateMyRoleResponse = zod.object({
   "role": zod.enum(['student', 'instructor', 'admin', 'school_admin', 'viewer', 'super_admin', 'unassigned']),
   "adminSubRole": zod.union([zod.literal('owner'),zod.literal('manager'),zod.literal('coordinator'),zod.literal(null)]).nullish(),
   "schoolId": zod.number().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Get the authenticated student's own profile
+ */
+export const GetMyStudentProfileResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "createdByInstructorId": zod.number().nullish(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "guardianName": zod.string().nullish(),
+  "guardianPhone": zod.string().nullish(),
+  "guardianEmail": zod.string().nullish(),
+  "pcycSchoolEmail": zod.string().nullish(),
+  "licenseNumber": zod.string().nullish(),
+  "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
+  "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
+  "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceFrontPath": zod.string().nullish(),
+  "licenceBackPath": zod.string().nullish(),
+  "headshotPath": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "region": zod.string().nullish(),
+  "state": zod.string().nullish().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
+  "country": zod.string().nullish(),
+  "totalHours": zod.number().optional(),
+  "instructorHours": zod.number().optional().describe('Hours logged with a professional instructor'),
+  "supervisedHours": zod.number().optional().describe('Hours logged under parent\/guardian supervision'),
+  "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().nullish().describe('Decrypted medical conditions — only visible to authorised roles'),
+  "allergies": zod.string().nullish().describe('Decrypted allergy info — only visible to authorised roles'),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
+  "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
+  "viewerCodeIssuedAt": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Update the authenticated student's own profile fields
+ */
+export const UpdateMyStudentProfileBody = zod.object({
+  "phone": zod.string().nullish()
+})
+
+export const UpdateMyStudentProfileResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number().nullish(),
+  "createdByInstructorId": zod.number().nullish(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "guardianName": zod.string().nullish(),
+  "guardianPhone": zod.string().nullish(),
+  "guardianEmail": zod.string().nullish(),
+  "pcycSchoolEmail": zod.string().nullish(),
+  "licenseNumber": zod.string().nullish(),
+  "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
+  "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
+  "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceFrontPath": zod.string().nullish(),
+  "licenceBackPath": zod.string().nullish(),
+  "headshotPath": zod.string().nullish(),
+  "notes": zod.string().nullish(),
+  "region": zod.string().nullish(),
+  "state": zod.string().nullish().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
+  "country": zod.string().nullish(),
+  "totalHours": zod.number().optional(),
+  "instructorHours": zod.number().optional().describe('Hours logged with a professional instructor'),
+  "supervisedHours": zod.number().optional().describe('Hours logged under parent\/guardian supervision'),
+  "status": zod.enum(['active', 'on_hold', 'completed']).optional(),
+  "medicalConditions": zod.string().nullish().describe('Decrypted medical conditions — only visible to authorised roles'),
+  "allergies": zod.string().nullish().describe('Decrypted allergy info — only visible to authorised roles'),
+  "medicalConditionsPreview": zod.string().nullish(),
+  "allergiesPreview": zod.string().nullish(),
+  "noShowCount": zod.number().optional(),
+  "attendanceReliabilityScore": zod.number().nullish().describe('0-100; 100 = perfect attendance'),
+  "viewerCode": zod.string().nullish().describe('Unique code for parent\/guardian linking (DRV-XXXXXXX)'),
+  "viewerCodeIssuedAt": zod.string().nullish(),
   "createdAt": zod.string().optional()
 })
 

@@ -281,6 +281,7 @@ function formatInstructor(i: any, activeStudents: number, primaryVehicle: any | 
     adtaNumber: i.adtaNumber ?? null,
     hourlyRateCents: i.hourlyRateCents ?? null,
     isIndependent: i.isIndependent,
+    uniqueLinkCode: i.uniqueLinkCode ?? null,
     activeStudents,
     primaryVehicle: primaryVehicle ? {
       id: primaryVehicle.id,

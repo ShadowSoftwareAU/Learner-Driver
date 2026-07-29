@@ -62,6 +62,7 @@ import SchoolAdminDashboard from "@/pages/school-admin/dashboard";
 import SchoolSettings from "@/pages/school-admin/settings";
 import BookingApprovals from "@/pages/school-admin/booking-approvals";
 import InstructorManagement from "@/pages/school-admin/instructor-management";
+import SettingsPage from "@/pages/settings";
 
 import JoinPage, { PENDING_JOIN_TOKEN_KEY } from "@/pages/join";
 
@@ -440,7 +441,8 @@ function ClerkProviderWithRoutes() {
           <Route path="/admin/handover-notes" component={() => <ProtectedRoute component={AdminHandoverNotes} />} />
           <Route path="/admin/feedback" component={() => <ProtectedRoute component={AdminFeedback} />} />
 
-          {/* Account routes */}
+          {/* Account / Settings routes */}
+          <Route path="/settings" component={() => <ProtectedRoute component={SettingsPage} />} />
           <Route path="/account/notifications" component={() => <ProtectedRoute component={NotificationPreferencesPage} />} />
           <Route path="/account/billing" component={() => <ProtectedRoute component={BillingPage} />} />
 

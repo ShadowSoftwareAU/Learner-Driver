@@ -74,6 +74,23 @@ paths:
                 $ref: "#/components/schemas/UserProfile"
         "401":
           description: Unauthorized
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update own display name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserProfile"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
 
   /users/me/role:
     patch:
@@ -95,6 +112,38 @@ paths:
                 $ref: "#/components/schemas/UserProfile"
 
   # ─── Students ────────────────────────────────────────────────────────────────
+  /students/me:
+    get:
+      operationId: getMyStudentProfile
+      tags: [students]
+      summary: Get the authenticated student's own profile
+      responses:
+        "200":
+          description: Student profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+        "404":
+          description: Profile not found
+    patch:
+      operationId: updateMyStudentProfile
+      tags: [students]
+      summary: Update the authenticated student's own profile fields
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOwnStudentProfile"
+      responses:
+        "200":
+          description: Updated student profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Student"
+
   /students:
     get:
       operationId: listStudents
@@ -2870,6 +2919,20 @@ components:
           type: ["integer", "null"]
         createdAt:
           type: string
+
+    UpdateUserProfile:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 2
+
+    UpdateOwnStudentProfile:
+      type: object
+      properties:
+        phone:
+          type: ["string", "null"]
 
     RoleUpdate:
       type: object

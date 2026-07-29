@@ -22,6 +22,7 @@ import {
   Settings,
   AlertTriangle,
   UserCog,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -48,11 +49,13 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Teaching Zones", href: "/instructor/zones", icon: MapPin },
       { label: "My Verification", href: "/instructor/verification", icon: ShieldCheck },
       { label: "Heatmap", href: "/instructor/heatmap", icon: MapPin },
+      { label: "Settings", href: "/settings", icon: User },
     ],
     student: [
       { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
       { label: "Find Instructor", href: "/student/search", icon: Search },
       { label: "My Bookings", href: "/student/bookings", icon: BookOpen },
+      { label: "Settings", href: "/settings", icon: User },
     ],
     admin: [
       { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -72,7 +75,8 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Booking Approvals", href: "/school-admin/booking-approvals", icon: CalendarCheck },
       { label: "Handover Audit", href: "/admin/handover-notes", icon: FileText },
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
-      { label: "Settings", href: "/school-admin/settings", icon: Settings },
+      { label: "My Account", href: "/settings", icon: User },
+      { label: "School Settings", href: "/school-admin/settings", icon: Settings },
     ],
     unassigned: [],
   };
