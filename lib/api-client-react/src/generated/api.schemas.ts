@@ -575,6 +575,11 @@ export interface Instructor {
      */
   hourlyRateCents?: number | null;
   isIndependent?: boolean;
+  /**
+     * 6-character alphanumeric code used by school admins to invite this instructor (auto-generated)
+     * @nullable
+     */
+  uniqueLinkCode?: string | null;
   activeStudents?: number;
   primaryVehicle?: InstructorVehicleSummary | null;
   createdAt?: string;
@@ -706,6 +711,34 @@ export interface InstructorUpdate {
   adtaNumber?: string;
   /** Instructor's hourly rate in Australian cents */
   hourlyRateCents?: number;
+}
+
+export type SchoolInstructorLinkStatus = typeof SchoolInstructorLinkStatus[keyof typeof SchoolInstructorLinkStatus];
+
+
+export const SchoolInstructorLinkStatus = {
+  pending: 'pending',
+  active: 'active',
+  declined: 'declined',
+  revoked: 'revoked',
+} as const;
+
+export interface SchoolInstructorLink {
+  id: number;
+  /** user_id of the school admin who initiated the link */
+  schoolAdminId: number;
+  instructorId: number;
+  status: SchoolInstructorLinkStatus;
+  invitedAt: string;
+  /** @nullable */
+  activatedAt?: string | null;
+  /** @nullable */
+  revokedAt?: string | null;
+}
+
+export interface CreateSchoolInstructorLink {
+  /** The instructor's 6-character uniqueLinkCode */
+  linkCode: string;
 }
 
 export type ManeuverAssessmentType = typeof ManeuverAssessmentType[keyof typeof ManeuverAssessmentType];
@@ -1147,6 +1180,17 @@ export interface AdminDashboard {
   instructorStats?: InstructorStat[];
 }
 
+/**
+ * Whether this slot belongs to the instructor's independent business or a linked school
+ */
+export type AvailabilitySlotContextType = typeof AvailabilitySlotContextType[keyof typeof AvailabilitySlotContextType];
+
+
+export const AvailabilitySlotContextType = {
+  independent: 'independent',
+  school: 'school',
+} as const;
+
 export interface AvailabilitySlot {
   id: number;
   instructorId: number;
@@ -1159,6 +1203,13 @@ export interface AvailabilitySlot {
   /** CSV: auto, manual */
   transmissionTypes: string;
   isActive: boolean;
+  /** Whether this slot belongs to the instructor's independent business or a linked school */
+  contextType: AvailabilitySlotContextType;
+  /**
+     * user_id of the school admin — only set when contextType is 'school'
+     * @nullable
+     */
+  schoolAdminId?: number | null;
   createdAt?: string;
 }
 
@@ -1201,12 +1252,27 @@ export interface InstructorCalendar {
   days: InstructorCalendarDaysItem[];
 }
 
+/**
+ * Context for this slot — defaults to 'independent'
+ */
+export type CreateAvailabilitySlotContextType = typeof CreateAvailabilitySlotContextType[keyof typeof CreateAvailabilitySlotContextType];
+
+
+export const CreateAvailabilitySlotContextType = {
+  independent: 'independent',
+  school: 'school',
+} as const;
+
 export interface CreateAvailabilitySlot {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
   transmissionTypes?: string | string[];
   isActive?: boolean;
+  /** Context for this slot — defaults to 'independent' */
+  contextType?: CreateAvailabilitySlotContextType;
+  /** Required when contextType is 'school' */
+  schoolAdminId?: number;
 }
 
 export interface InstructorZone {

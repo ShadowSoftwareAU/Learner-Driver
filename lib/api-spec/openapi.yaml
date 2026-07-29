@@ -3041,6 +3041,9 @@ components:
           description: "Instructor's hourly rate in Australian cents (e.g. 8500 = $85.00)"
         isIndependent:
           type: boolean
+        uniqueLinkCode:
+          type: ["string", "null"]
+          description: "6-character alphanumeric code used by school admins to invite this instructor (auto-generated)"
         activeStudents:
           type: integer
         primaryVehicle:
@@ -3219,6 +3222,36 @@ components:
         hourlyRateCents:
           type: integer
           description: "Instructor's hourly rate in Australian cents"
+
+    # ─── School–Instructor Links ────────────────────────────────────────────────
+    SchoolInstructorLink:
+      type: object
+      required: [id, schoolAdminId, instructorId, status, invitedAt]
+      properties:
+        id:
+          type: integer
+        schoolAdminId:
+          type: integer
+          description: "user_id of the school admin who initiated the link"
+        instructorId:
+          type: integer
+        status:
+          type: string
+          enum: [pending, active, declined, revoked]
+        invitedAt:
+          type: string
+        activatedAt:
+          type: ["string", "null"]
+        revokedAt:
+          type: ["string", "null"]
+
+    CreateSchoolInstructorLink:
+      type: object
+      required: [linkCode]
+      properties:
+        linkCode:
+          type: string
+          description: "The instructor's 6-character uniqueLinkCode"
 
     # ─── Maneuvers ─────────────────────────────────────────────────────────────
     Maneuver:
@@ -3807,7 +3840,7 @@ components:
     # ─── Scheduling Schemas ───────────────────────────────────────────────────────
     AvailabilitySlot:
       type: object
-      required: [id, instructorId, dayOfWeek, startTime, endTime, transmissionTypes, isActive]
+      required: [id, instructorId, dayOfWeek, startTime, endTime, transmissionTypes, isActive, contextType]
       properties:
         id:
           type: integer
@@ -3827,6 +3860,13 @@ components:
           description: "CSV: auto, manual"
         isActive:
           type: boolean
+        contextType:
+          type: string
+          enum: [independent, school]
+          description: "Whether this slot belongs to the instructor's independent business or a linked school"
+        schoolAdminId:
+          type: ["integer", "null"]
+          description: "user_id of the school admin — only set when contextType is 'school'"
         createdAt:
           type: string
 
@@ -3907,6 +3947,13 @@ components:
                 type: string
         isActive:
           type: boolean
+        contextType:
+          type: string
+          enum: [independent, school]
+          description: "Context for this slot — defaults to 'independent'"
+        schoolAdminId:
+          type: integer
+          description: "Required when contextType is 'school'"
 
     InstructorZone:
       type: object

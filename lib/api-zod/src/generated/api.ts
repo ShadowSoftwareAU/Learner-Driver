@@ -434,6 +434,7 @@ export const ListInstructorsResponseItem = zod.object({
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
+  "uniqueLinkCode": zod.string().nullish().describe('6-character alphanumeric code used by school admins to invite this instructor (auto-generated)'),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
   "id": zod.number(),
@@ -476,6 +477,7 @@ export const GetInstructorResponse = zod.object({
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
+  "uniqueLinkCode": zod.string().nullish().describe('6-character alphanumeric code used by school admins to invite this instructor (auto-generated)'),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
   "id": zod.number(),
@@ -561,6 +563,7 @@ export const UpdateInstructorResponse = zod.object({
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
+  "uniqueLinkCode": zod.string().nullish().describe('6-character alphanumeric code used by school admins to invite this instructor (auto-generated)'),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
   "id": zod.number(),
@@ -1402,6 +1405,7 @@ export const GetInstructorProfileResponse = zod.object({
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
   "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
+  "uniqueLinkCode": zod.string().nullish().describe('6-character alphanumeric code used by school admins to invite this instructor (auto-generated)'),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
   "id": zod.number(),
@@ -1431,6 +1435,8 @@ export const GetMyAvailabilityResponseItem = zod.object({
   "endTime": zod.string().describe('HH:mm'),
   "transmissionTypes": zod.string().describe('CSV: auto, manual'),
   "isActive": zod.boolean(),
+  "contextType": zod.enum(['independent', 'school']).describe('Whether this slot belongs to the instructor\'s independent business or a linked school'),
+  "schoolAdminId": zod.number().nullish().describe('user_id of the school admin — only set when contextType is \'school\''),
   "createdAt": zod.string().optional()
 })
 export const GetMyAvailabilityResponse = zod.array(GetMyAvailabilityResponseItem)
@@ -1444,7 +1450,9 @@ export const CreateAvailabilitySlotBody = zod.object({
   "startTime": zod.string(),
   "endTime": zod.string(),
   "transmissionTypes": zod.union([zod.string(),zod.array(zod.string())]).optional(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "contextType": zod.enum(['independent', 'school']).optional().describe('Context for this slot — defaults to \'independent\''),
+  "schoolAdminId": zod.number().optional().describe('Required when contextType is \'school\'')
 })
 
 
@@ -1498,7 +1506,9 @@ export const UpdateAvailabilitySlotBody = zod.object({
   "startTime": zod.string(),
   "endTime": zod.string(),
   "transmissionTypes": zod.union([zod.string(),zod.array(zod.string())]).optional(),
-  "isActive": zod.boolean().optional()
+  "isActive": zod.boolean().optional(),
+  "contextType": zod.enum(['independent', 'school']).optional().describe('Context for this slot — defaults to \'independent\''),
+  "schoolAdminId": zod.number().optional().describe('Required when contextType is \'school\'')
 })
 
 export const UpdateAvailabilitySlotResponse = zod.object({
@@ -1509,6 +1519,8 @@ export const UpdateAvailabilitySlotResponse = zod.object({
   "endTime": zod.string().describe('HH:mm'),
   "transmissionTypes": zod.string().describe('CSV: auto, manual'),
   "isActive": zod.boolean(),
+  "contextType": zod.enum(['independent', 'school']).describe('Whether this slot belongs to the instructor\'s independent business or a linked school'),
+  "schoolAdminId": zod.number().nullish().describe('user_id of the school admin — only set when contextType is \'school\''),
   "createdAt": zod.string().optional()
 })
 

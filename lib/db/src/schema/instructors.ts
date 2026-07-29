@@ -2,6 +2,11 @@ import { pgTable, text, serial, timestamp, integer, boolean, jsonb } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
+function genLinkCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no ambiguous I/O/0/1
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+}
+
 export const instructorsTable = pgTable("instructors", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().unique(),
@@ -19,6 +24,9 @@ export const instructorsTable = pgTable("instructors", {
   // School relationship flags
   // true = sole trader/independent; false = managed by a driving school
   isIndependent: boolean("is_independent").notNull().default(true),
+  // Unique invite/link code used for hybrid school-to-instructor invitations (6-char alphanumeric, auto-generated).
+  // Column + unique index applied via SQL migration; $defaultFn generates codes for new rows at the ORM layer.
+  uniqueLinkCode: text("unique_link_code").unique().$defaultFn(genLinkCode),
   // Primary school affiliation (when not independent)
   defaultSchoolId: integer("default_school_id"),
   // When false + school-managed: cannot create/cancel bookings unilaterally

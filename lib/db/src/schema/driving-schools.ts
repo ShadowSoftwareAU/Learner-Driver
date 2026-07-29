@@ -52,3 +52,31 @@ export type DrivingSchool = typeof drivingSchoolsTable.$inferSelect;
 export const insertSchoolInstructorSchema = createInsertSchema(schoolInstructorsTable).omit({ id: true, joinedAt: true });
 export type InsertSchoolInstructor = z.infer<typeof insertSchoolInstructorSchema>;
 export type SchoolInstructor = typeof schoolInstructorsTable.$inferSelect;
+
+/**
+ * Hybrid model: a school admin (user) invites an independent instructor by their uniqueLinkCode.
+ * status flow: pending → active (accepted) | declined | revoked
+ * Unlike schoolInstructorsTable (which links a school entity to an instructor), this table
+ * links a school_admin user directly to an instructor for cross-context scheduling.
+ */
+export const schoolInstructorLinksTable = pgTable("school_instructor_links", {
+  id: serial("id").primaryKey(),
+  // The user_id of the school admin who initiated the link
+  schoolAdminId: integer("school_admin_id").notNull(),
+  // The instructor being linked
+  instructorId: integer("instructor_id").notNull(),
+  // pending = invite sent / awaiting instructor acceptance
+  // active  = instructor accepted, both sides can see cross-context slots
+  // declined = instructor declined the invite
+  // revoked = either party ended the relationship
+  status: text("status").notNull().default("pending"), // 'pending' | 'active' | 'declined' | 'revoked'
+  invitedAt: timestamp("invited_at", { withTimezone: true }).notNull().defaultNow(),
+  activatedAt: timestamp("activated_at", { withTimezone: true }),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}, (t) => [
+  unique().on(t.schoolAdminId, t.instructorId),
+]);
+
+export const insertSchoolInstructorLinkSchema = createInsertSchema(schoolInstructorLinksTable).omit({ id: true, invitedAt: true });
+export type InsertSchoolInstructorLink = z.infer<typeof insertSchoolInstructorLinkSchema>;
+export type SchoolInstructorLink = typeof schoolInstructorLinksTable.$inferSelect;

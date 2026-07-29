@@ -10,6 +10,12 @@ export const instructorAvailabilityTable = pgTable("instructor_availability", {
   endTime: text("end_time").notNull(), // HH:mm
   transmissionTypes: text("transmission_types").notNull().default("auto,manual"), // CSV
   isActive: boolean("is_active").notNull().default(true),
+  // Hybrid model: which context this slot belongs to
+  // 'independent' = shown under the instructor's own business
+  // 'school' = only visible/bookable via the linked school admin
+  contextType: text("context_type").notNull().default("independent"), // 'independent' | 'school'
+  // Set when contextType = 'school' — references users.id of the school admin who owns this slot
+  schoolAdminId: integer("school_admin_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
