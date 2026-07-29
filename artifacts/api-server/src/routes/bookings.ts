@@ -102,12 +102,58 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
     [student] = await db.insert(studentsTable).values({ userId: user.id, fullName: user.name ?? "Student", email: user.email ?? "" }).returning();
   }
 
-  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory } = req.body;
+  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory, instructorId: directInstructorId } = req.body;
   if (!requestedDate || !requestedTime || !suburb || !postcode) {
     res.status(400).json({ error: "requestedDate, requestedTime, suburb, postcode are required" }); return;
   }
 
-  // Create the booking
+  // ── Direct booking: student picked a specific instructor from their calendar ──
+  if (directInstructorId) {
+    const [directInstructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.id, directInstructorId));
+    if (!directInstructor) { res.status(404).json({ error: "Instructor not found" }); return; }
+
+    const [directBooking] = await db.insert(bookingsTable).values({
+      studentId: student.id,
+      instructorId: directInstructor.id,
+      requestedDate, requestedTime,
+      durationMinutes: durationMinutes ?? 60,
+      transmissionType: transmissionType ?? "auto",
+      suburb, postcode,
+      carType: carType ?? "trainer_car",
+      trainingCategory: trainingCategory ?? "car_learner",
+      studentNotes: studentNotes ?? null,
+      status: "pending",
+      broadcastCount: 1,
+      claimedAt: null,
+    }).returning();
+
+    // Notify instructor of the direct request
+    if (directInstructor.userId) {
+      await db.insert(notificationsTable).values({
+        userId: directInstructor.userId,
+        type: "booking_request",
+        title: "New direct lesson request",
+        body: `${student.fullName} has requested a lesson with you on ${requestedDate} at ${requestedTime}. Accept or decline from your bookings page.`,
+        relatedId: directBooking.id,
+        isRead: false,
+      });
+    }
+    // Notify student
+    await db.insert(notificationsTable).values({
+      userId: user.id,
+      type: "booking_request",
+      title: "Lesson request sent",
+      body: `Your lesson request with ${directInstructor.fullName} for ${requestedDate} at ${requestedTime} has been sent.`,
+      relatedId: directBooking.id,
+      isRead: false,
+    });
+
+    await logAudit({ actorId: user.id, actorRole: user.role, action: "create_booking", resourceType: "booking", resourceId: directBooking.id, studentId: student.id }, req);
+    res.status(201).json({ ...directBooking, broadcastCount: 1 });
+    return;
+  }
+
+  // Create the booking (broadcast flow)
   const [booking] = await db.insert(bookingsTable).values({
     studentId: student.id,
     requestedDate, requestedTime,

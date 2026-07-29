@@ -52,6 +52,7 @@ import type {
   ExpiringDocument,
   GenerateViewerCode200,
   GetGovNearbyParams,
+  GetInstructorCalendarParams,
   GetManeuverHeatmapParams,
   GetModerationCasesParams,
   GetUnreadNotificationCount200,
@@ -64,6 +65,7 @@ import type {
   HealthStatus,
   HeatmapPoint,
   Instructor,
+  InstructorCalendar,
   InstructorDashboard,
   InstructorDetail,
   InstructorFeedbackSummary,
@@ -3177,6 +3179,83 @@ export function useGetAdminDashboard<TData = Awaited<ReturnType<typeof getAdminD
 
 
 
+export const getGetInstructorProfileUrl = () => {
+
+
+
+
+  return `/api/instructor/profile`
+}
+
+/**
+ * @summary Get the authenticated instructor's own profile
+ */
+export const getInstructorProfile = async ( options?: RequestInit): Promise<Instructor> => {
+
+  return customFetch<Instructor>(getGetInstructorProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInstructorProfileQueryKey = () => {
+    return [
+    `/api/instructor/profile`
+    ] as const;
+    }
+
+
+export const getGetInstructorProfileQueryOptions = <TData = Awaited<ReturnType<typeof getInstructorProfile>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInstructorProfileQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInstructorProfile>>> = ({ signal }) => getInstructorProfile({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInstructorProfile>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInstructorProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getInstructorProfile>>>
+export type GetInstructorProfileQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the authenticated instructor's own profile
+ */
+
+export function useGetInstructorProfile<TData = Awaited<ReturnType<typeof getInstructorProfile>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorProfile>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInstructorProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getGetMyAvailabilityUrl = () => {
 
 
@@ -3324,6 +3403,95 @@ export const useCreateAvailabilitySlot = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateAvailabilitySlotMutationOptions(options));
     }
+
+export const getGetInstructorCalendarUrl = (instructorId: number,
+    params: GetInstructorCalendarParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/availability/instructor/${instructorId}/calendar?${stringifiedParams}` : `/api/availability/instructor/${instructorId}/calendar`
+}
+
+/**
+ * @summary Get an instructor's availability calendar with booked slots for a date range
+ */
+export const getInstructorCalendar = async (instructorId: number,
+    params: GetInstructorCalendarParams, options?: RequestInit): Promise<InstructorCalendar> => {
+
+  return customFetch<InstructorCalendar>(getGetInstructorCalendarUrl(instructorId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetInstructorCalendarQueryKey = (instructorId: number,
+    params?: GetInstructorCalendarParams,) => {
+    return [
+    `/api/availability/instructor/${instructorId}/calendar`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetInstructorCalendarQueryOptions = <TData = Awaited<ReturnType<typeof getInstructorCalendar>>, TError = ErrorType<unknown>>(instructorId: number,
+    params: GetInstructorCalendarParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorCalendar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetInstructorCalendarQueryKey(instructorId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getInstructorCalendar>>> = ({ signal }) => getInstructorCalendar(instructorId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(instructorId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getInstructorCalendar>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetInstructorCalendarQueryResult = NonNullable<Awaited<ReturnType<typeof getInstructorCalendar>>>
+export type GetInstructorCalendarQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get an instructor's availability calendar with booked slots for a date range
+ */
+
+export function useGetInstructorCalendar<TData = Awaited<ReturnType<typeof getInstructorCalendar>>, TError = ErrorType<unknown>>(
+ instructorId: number,
+    params: GetInstructorCalendarParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getInstructorCalendar>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetInstructorCalendarQueryOptions(instructorId,params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getUpdateAvailabilitySlotUrl = (id: number,) => {
 

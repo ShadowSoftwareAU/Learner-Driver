@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import {
   useSearchInstructors,
   useCreateBooking,
@@ -50,6 +51,7 @@ type SearchParams = {
 export default function StudentSearch() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const [params, setParams] = useState<SearchParams>({
     date: "",
@@ -98,7 +100,13 @@ export default function StudentSearch() {
   };
 
   const handleBook = (instructor: any) => {
-    setSelectedInstructor(instructor);
+    if (instructor?.id) {
+      // Navigate to the booking wizard for this specific instructor
+      setLocation(`/student/book/${instructor.id}`);
+      return;
+    }
+    // Broadcast fallback (no specific instructor)
+    setSelectedInstructor(null);
     setBookingNotes("");
     setCarType("trainer_car");
     setTrainingCategory("car_learner");
@@ -250,6 +258,11 @@ export default function StudentSearch() {
                             <p className="font-semibold text-lg">{instructor.fullName}</p>
                             {instructor.qualifications && (
                               <p className="text-sm text-muted-foreground">{instructor.qualifications}</p>
+                            )}
+                            {instructor.hourlyRateCents && (
+                              <p className="text-sm font-medium text-primary mt-0.5">
+                                ${Math.round(instructor.hourlyRateCents / 100)}/hr
+                              </p>
                             )}
                           </div>
                           <div className="rounded-full bg-primary/10 p-2">

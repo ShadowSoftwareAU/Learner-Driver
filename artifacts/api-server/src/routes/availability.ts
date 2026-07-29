@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { eq, and, asc } from "drizzle-orm";
-import { db, instructorAvailabilityTable, instructorsTable } from "@workspace/db";
+import { eq, and, asc, gte, lte, inArray } from "drizzle-orm";
+import { db, instructorAvailabilityTable, instructorsTable, bookingsTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 
 const router = Router();
@@ -28,6 +28,98 @@ router.get("/availability/instructor/:instructorId", requireAuth, async (req: an
   const slots = await db.select().from(instructorAvailabilityTable)
     .where(and(eq(instructorAvailabilityTable.instructorId, instructorId), eq(instructorAvailabilityTable.isActive, true)));
   res.json(slots);
+});
+
+/**
+ * GET /availability/instructor/:instructorId/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * Returns the instructor's availability windows + existing bookings for a date range.
+ * Used by the student booking wizard to render the interactive calendar.
+ */
+router.get("/availability/instructor/:instructorId/calendar", requireAuth, async (req: any, res): Promise<void> => {
+  const instructorId = parseInt(req.params.instructorId as string, 10);
+  const { from, to } = req.query as { from?: string; to?: string };
+
+  if (!from || !to) {
+    res.status(400).json({ error: "from and to query params are required (YYYY-MM-DD)" });
+    return;
+  }
+
+  const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRe.test(from) || !dateRe.test(to)) {
+    res.status(400).json({ error: "Dates must be in YYYY-MM-DD format" });
+    return;
+  }
+
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.id, instructorId));
+  if (!instructor) { res.status(404).json({ error: "Instructor not found" }); return; }
+
+  // Weekly availability windows
+  const slots = await db.select().from(instructorAvailabilityTable)
+    .where(and(
+      eq(instructorAvailabilityTable.instructorId, instructorId),
+      eq(instructorAvailabilityTable.isActive, true),
+    ))
+    .orderBy(asc(instructorAvailabilityTable.dayOfWeek), asc(instructorAvailabilityTable.startTime));
+
+  // Existing bookings claimed by / confirmed for this instructor in the range
+  const bookings = await db.select({
+    requestedDate: bookingsTable.requestedDate,
+    requestedTime: bookingsTable.requestedTime,
+    durationMinutes: bookingsTable.durationMinutes,
+    status: bookingsTable.status,
+  }).from(bookingsTable)
+    .where(and(
+      eq(bookingsTable.instructorId, instructorId),
+      gte(bookingsTable.requestedDate, from),
+      lte(bookingsTable.requestedDate, to),
+      inArray(bookingsTable.status, ["pending", "claimed", "confirmed"]),
+    ));
+
+  // Expand into a day-by-day structure for the requested range
+  const days: Array<{
+    date: string;
+    dayOfWeek: number;
+    windows: Array<{ startTime: string; endTime: string; transmissionTypes: string[] }>;
+    bookedSlots: Array<{ startTime: string; durationMinutes: number | null; status: string }>;
+  }> = [];
+
+  const cur = new Date(from + "T00:00:00");
+  const end = new Date(to + "T00:00:00");
+  while (cur <= end) {
+    const dateStr = cur.toISOString().slice(0, 10);
+    const dow = cur.getDay(); // 0=Sun...6=Sat
+
+    const windows = slots
+      .filter((s) => s.dayOfWeek === dow)
+      .map((s) => ({
+        startTime: s.startTime,
+        endTime: s.endTime,
+        transmissionTypes: String(s.transmissionTypes).split(",").map((t) => t.trim()).filter(Boolean),
+      }));
+
+    const bookedSlots = bookings
+      .filter((b) => b.requestedDate === dateStr)
+      .map((b) => ({
+        startTime: b.requestedTime,
+        durationMinutes: b.durationMinutes,
+        status: b.status,
+      }));
+
+    days.push({ date: dateStr, dayOfWeek: dow, windows, bookedSlots });
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  res.json({
+    instructor: {
+      id: instructor.id,
+      fullName: instructor.fullName,
+      email: instructor.email,
+      phone: instructor.phone ?? null,
+      qualifications: instructor.qualifications ?? null,
+      hourlyRateCents: instructor.hourlyRateCents ?? null,
+    },
+    days,
+  });
 });
 
 // Create availability slot

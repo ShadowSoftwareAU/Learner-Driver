@@ -3,6 +3,7 @@
 - [API server patterns](api-server-patterns.md) — getOrCreateUser signature, zod import, drizzle and() single-arg workaround, schoolInstructorsTable columns.
 - [Resilience & poka-yoke fixes](resilience-fixes.md) — moderationCaseId is number|null; OpenCaseResult is discriminated union; callers use ?? null not > 0; Error boundaries at 3 levels; useLessonDraft for IndexedDB WAL.
 - [Phase 2 completion state](phase2-completion.md) — all 26 tasks (T001–T026) complete; only gap was session inactivity timeout (built); codegen and DB push must be run after schema/spec changes.
+- [Student booking wizard](booking-wizard.md) — direct booking (instructorId in POST /bookings), calendar endpoint, hourlyRateCents on instructors.
 - [Assessment finalization workflow](assessment-finalization.md) — finalizationStatus (draft→pending_approval→approved→dispatched) on assessmentsTable; POST /:id/submit and /:id/approve routes; guided assessment auto-submits after saveResults; detail page has Preview Report sheet + Approve & Dispatch dialog.
 - [Dialog z-index & Leaflet](dialog-leaflet-zindex.md) — Radix Dialog uses z-50 (z-index:50); Leaflet controls sit at 1000 in document stacking context; shadcn dialog.tsx bumped to z-[2000].
 - [Clerk Expo sign-in API](clerk-expo-signin.md) — @clerk/react 6 useSignIn is signals-based (no isLoaded/setActive); use useClerk().client.signIn.create + clerk.setActive or handlers silently no-op.

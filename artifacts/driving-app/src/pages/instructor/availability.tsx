@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   useGetMyAvailability,
+  useGetInstructorProfile,
+  useUpdateInstructor,
   useCreateAvailabilitySlot,
   useDeleteAvailabilitySlot,
 } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Calendar } from "lucide-react";
+import { Loader2, Plus, Trash2, Calendar, DollarSign, Save } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DAY_NAMES } from "@/lib/enums";
 
@@ -24,6 +26,39 @@ export default function InstructorAvailability() {
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  // ── Hourly rate ────────────────────────────────────────────────────────────
+  const profileQK = ["/api/instructor/profile"];
+  const { data: profile } = useGetInstructorProfile({ query: { queryKey: profileQK } });
+  const updateInstructor = useUpdateInstructor();
+  const [rateInput, setRateInput] = useState("");
+  const [savingRate, setSavingRate] = useState(false);
+
+  useEffect(() => {
+    const cents = (profile as any)?.hourlyRateCents;
+    if (cents != null) setRateInput(String(Math.round(cents / 100)));
+  }, [(profile as any)?.hourlyRateCents]);
+
+  const handleSaveRate = async () => {
+    const id = (profile as any)?.id;
+    if (!id) return;
+    const dollars = parseFloat(rateInput);
+    if (isNaN(dollars) || dollars <= 0) {
+      toast({ title: "Enter a valid hourly rate", variant: "destructive" });
+      return;
+    }
+    setSavingRate(true);
+    try {
+      await updateInstructor.mutateAsync({ id, data: { hourlyRateCents: Math.round(dollars * 100) } as any });
+      qc.invalidateQueries({ queryKey: profileQK });
+      toast({ title: "Rate saved", description: `$${dollars.toFixed(0)}/hr` });
+    } catch {
+      toast({ title: "Failed to save rate", variant: "destructive" });
+    } finally {
+      setSavingRate(false);
+    }
+  };
+
+  // ── Availability slots ─────────────────────────────────────────────────────
   const { data: slots, isLoading } = useGetMyAvailability({
     query: { queryKey: ["/api/availability/me"] },
   });
@@ -109,9 +144,50 @@ export default function InstructorAvailability() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Availability</h1>
           <p className="text-muted-foreground">
-            Set your weekly teaching schedule so students can find and book you.
+            Set your weekly teaching schedule and hourly rate so students can find and book you.
           </p>
         </div>
+
+        {/* Hourly rate card */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="w-4 h-4" /> Hourly Rate
+            </CardTitle>
+            <CardDescription>
+              Shown to students when they browse your calendar. Prices are in Australian dollars.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-3 max-w-xs">
+              <div className="flex-1 space-y-1.5">
+                <Label htmlFor="rate-input">Rate (AUD per hour)</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <Input
+                    id="rate-input"
+                    type="number"
+                    min={0}
+                    step={5}
+                    placeholder="e.g. 85"
+                    value={rateInput}
+                    onChange={(e) => setRateInput(e.target.value)}
+                    className="pl-7"
+                  />
+                </div>
+              </div>
+              <Button onClick={handleSaveRate} disabled={savingRate || !rateInput} className="gap-1.5">
+                {savingRate ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save
+              </Button>
+            </div>
+            {(profile as any)?.hourlyRateCents && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Current: <span className="font-medium">${Math.round((profile as any).hourlyRateCents / 100)}/hr</span>
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

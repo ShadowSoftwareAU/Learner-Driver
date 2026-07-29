@@ -569,6 +569,11 @@ export interface Instructor {
      * @nullable
      */
   adtaNumber?: string | null;
+  /**
+     * Instructor's hourly rate in Australian cents (e.g. 8500 = $85.00)
+     * @nullable
+     */
+  hourlyRateCents?: number | null;
   isIndependent?: boolean;
   activeStudents?: number;
   primaryVehicle?: InstructorVehicleSummary | null;
@@ -699,6 +704,8 @@ export interface InstructorUpdate {
   state?: string;
   /** Australian Driver Trainers Association membership number (optional) */
   adtaNumber?: string;
+  /** Instructor's hourly rate in Australian cents */
+  hourlyRateCents?: number;
 }
 
 export type ManeuverAssessmentType = typeof ManeuverAssessmentType[keyof typeof ManeuverAssessmentType];
@@ -1155,6 +1162,45 @@ export interface AvailabilitySlot {
   createdAt?: string;
 }
 
+export type InstructorCalendarInstructor = {
+  id: number;
+  fullName: string;
+  email: string;
+  /** @nullable */
+  phone?: string | null;
+  /** @nullable */
+  qualifications?: string | null;
+  /** @nullable */
+  hourlyRateCents?: number | null;
+};
+
+export type InstructorCalendarDaysItemWindowsItem = {
+  startTime: string;
+  endTime: string;
+  transmissionTypes: string[];
+};
+
+export type InstructorCalendarDaysItemBookedSlotsItem = {
+  startTime: string;
+  /** @nullable */
+  durationMinutes?: number | null;
+  status: string;
+};
+
+export type InstructorCalendarDaysItem = {
+  /** YYYY-MM-DD */
+  date: string;
+  /** 0=Sun, 1=Mon, ..., 6=Sat */
+  dayOfWeek: number;
+  windows: InstructorCalendarDaysItemWindowsItem[];
+  bookedSlots: InstructorCalendarDaysItemBookedSlotsItem[];
+};
+
+export interface InstructorCalendar {
+  instructor: InstructorCalendarInstructor;
+  days: InstructorCalendarDaysItem[];
+}
+
 export interface CreateAvailabilitySlot {
   dayOfWeek: number;
   startTime: string;
@@ -1339,6 +1385,8 @@ export const CreateBookingTrainingCategory = {
 } as const;
 
 export interface CreateBooking {
+  /** When provided, creates a direct booking with this instructor (bypasses broadcast) */
+  instructorId?: number;
   requestedDate: string;
   requestedTime: string;
   durationMinutes?: number;
@@ -2568,6 +2616,17 @@ maneuverId?: number;
 export type ListAuditLogsParams = {
 studentId?: number;
 limit?: number;
+};
+
+export type GetInstructorCalendarParams = {
+/**
+ * Start date YYYY-MM-DD
+ */
+from: string;
+/**
+ * End date YYYY-MM-DD
+ */
+to: string;
 };
 
 export type SearchInstructorsParams = {

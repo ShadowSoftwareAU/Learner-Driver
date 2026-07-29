@@ -432,6 +432,7 @@ export const ListInstructorsResponseItem = zod.object({
   "trainingCategories": zod.array(zod.string()).optional(),
   "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
+  "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -473,6 +474,7 @@ export const GetInstructorResponse = zod.object({
   "trainingCategories": zod.array(zod.string()).optional(),
   "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
+  "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -539,7 +541,8 @@ export const UpdateInstructorBody = zod.object({
   "vehicleYear": zod.number().optional(),
   "qualifications": zod.string().optional(),
   "state": zod.string().optional().describe('AU state\/territory where this instructor primarily operates'),
-  "adtaNumber": zod.string().optional().describe('Australian Driver Trainers Association membership number (optional)')
+  "adtaNumber": zod.string().optional().describe('Australian Driver Trainers Association membership number (optional)'),
+  "hourlyRateCents": zod.number().optional().describe('Instructor\'s hourly rate in Australian cents')
 })
 
 export const UpdateInstructorResponse = zod.object({
@@ -556,6 +559,7 @@ export const UpdateInstructorResponse = zod.object({
   "trainingCategories": zod.array(zod.string()).optional(),
   "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
   "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
+  "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
   "isIndependent": zod.boolean().optional(),
   "activeStudents": zod.number().optional(),
   "primaryVehicle": zod.union([zod.object({
@@ -1380,6 +1384,43 @@ export const GetAdminDashboardResponse = zod.object({
 
 
 /**
+ * @summary Get the authenticated instructor's own profile
+ */
+export const GetInstructorProfileResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string().nullish(),
+  "licenseNumber": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "qualifications": zod.string().nullish(),
+  "trainingCategories": zod.array(zod.string()).optional(),
+  "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
+  "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
+  "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
+  "isIndependent": zod.boolean().optional(),
+  "activeStudents": zod.number().optional(),
+  "primaryVehicle": zod.union([zod.object({
+  "id": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional()
+}),zod.null()]).optional(),
+  "createdAt": zod.string().optional(),
+  "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
+})
+
+
+/**
  * @summary Get my availability slots
  */
 export const GetMyAvailabilityResponseItem = zod.object({
@@ -1404,6 +1445,44 @@ export const CreateAvailabilitySlotBody = zod.object({
   "endTime": zod.string(),
   "transmissionTypes": zod.union([zod.string(),zod.array(zod.string())]).optional(),
   "isActive": zod.boolean().optional()
+})
+
+
+/**
+ * @summary Get an instructor's availability calendar with booked slots for a date range
+ */
+export const GetInstructorCalendarParams = zod.object({
+  "instructorId": zod.coerce.number()
+})
+
+export const GetInstructorCalendarQueryParams = zod.object({
+  "from": zod.coerce.string().describe('Start date YYYY-MM-DD'),
+  "to": zod.coerce.string().describe('End date YYYY-MM-DD')
+})
+
+export const GetInstructorCalendarResponse = zod.object({
+  "instructor": zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string().nullish(),
+  "qualifications": zod.string().nullish(),
+  "hourlyRateCents": zod.number().nullish()
+}),
+  "days": zod.array(zod.object({
+  "date": zod.string().describe('YYYY-MM-DD'),
+  "dayOfWeek": zod.number().describe('0=Sun, 1=Mon, ..., 6=Sat'),
+  "windows": zod.array(zod.object({
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "transmissionTypes": zod.array(zod.string())
+})),
+  "bookedSlots": zod.array(zod.object({
+  "startTime": zod.string(),
+  "durationMinutes": zod.number().nullish(),
+  "status": zod.string()
+}))
+}))
 })
 
 
@@ -1551,6 +1630,7 @@ export const ListBookingsResponse = zod.array(ListBookingsResponseItem)
  * @summary Create a booking request (broadcasts to instructors)
  */
 export const CreateBookingBody = zod.object({
+  "instructorId": zod.number().optional().describe('When provided, creates a direct booking with this instructor (bypasses broadcast)'),
   "requestedDate": zod.string(),
   "requestedTime": zod.string(),
   "durationMinutes": zod.number().optional(),

@@ -894,6 +894,20 @@ paths:
               schema:
                 $ref: "#/components/schemas/AdminDashboard"
 
+  # ─── Instructor own profile ───────────────────────────────────────────────────
+  /instructor/profile:
+    get:
+      operationId: getInstructorProfile
+      tags: [instructors]
+      summary: Get the authenticated instructor's own profile
+      responses:
+        "200":
+          description: Instructor profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instructor"
+
   # ─── Availability ─────────────────────────────────────────────────────────────
   /availability/me:
     get:
@@ -928,6 +942,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AvailabilitySlot"
+
+  /availability/instructor/{instructorId}/calendar:
+    get:
+      operationId: getInstructorCalendar
+      tags: [scheduling]
+      summary: Get an instructor's availability calendar with booked slots for a date range
+      parameters:
+        - in: path
+          name: instructorId
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: from
+          required: true
+          schema:
+            type: string
+          description: "Start date YYYY-MM-DD"
+        - in: query
+          name: to
+          required: true
+          schema:
+            type: string
+          description: "End date YYYY-MM-DD"
+      responses:
+        "200":
+          description: Calendar data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorCalendar"
 
   /availability/{id}:
     patch:
@@ -2991,6 +3036,9 @@ components:
         adtaNumber:
           type: ["string", "null"]
           description: "Australian Driver Trainers Association membership number (optional, not enforced)"
+        hourlyRateCents:
+          type: ["integer", "null"]
+          description: "Instructor's hourly rate in Australian cents (e.g. 8500 = $85.00)"
         isIndependent:
           type: boolean
         activeStudents:
@@ -3168,6 +3216,9 @@ components:
         adtaNumber:
           type: string
           description: "Australian Driver Trainers Association membership number (optional)"
+        hourlyRateCents:
+          type: integer
+          description: "Instructor's hourly rate in Australian cents"
 
     # ─── Maneuvers ─────────────────────────────────────────────────────────────
     Maneuver:
@@ -3779,6 +3830,65 @@ components:
         createdAt:
           type: string
 
+    InstructorCalendar:
+      type: object
+      required: [instructor, days]
+      properties:
+        instructor:
+          type: object
+          required: [id, fullName, email]
+          properties:
+            id:
+              type: integer
+            fullName:
+              type: string
+            email:
+              type: string
+            phone:
+              type: ["string", "null"]
+            qualifications:
+              type: ["string", "null"]
+            hourlyRateCents:
+              type: ["integer", "null"]
+        days:
+          type: array
+          items:
+            type: object
+            required: [date, dayOfWeek, windows, bookedSlots]
+            properties:
+              date:
+                type: string
+                description: "YYYY-MM-DD"
+              dayOfWeek:
+                type: integer
+                description: "0=Sun, 1=Mon, ..., 6=Sat"
+              windows:
+                type: array
+                items:
+                  type: object
+                  required: [startTime, endTime, transmissionTypes]
+                  properties:
+                    startTime:
+                      type: string
+                    endTime:
+                      type: string
+                    transmissionTypes:
+                      type: array
+                      items:
+                        type: string
+              bookedSlots:
+                type: array
+                items:
+                  type: object
+                  required: [startTime, status]
+                  properties:
+                    startTime:
+                      type: string
+                    durationMinutes:
+                      type: ["integer", "null"]
+                    status:
+                      type: string
+
     CreateAvailabilitySlot:
       type: object
       required: [dayOfWeek, startTime, endTime]
@@ -3905,6 +4015,9 @@ components:
       type: object
       required: [requestedDate, requestedTime, suburb, postcode]
       properties:
+        instructorId:
+          type: integer
+          description: "When provided, creates a direct booking with this instructor (bypasses broadcast)"
         requestedDate:
           type: string
         requestedTime:

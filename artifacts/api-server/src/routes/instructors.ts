@@ -15,6 +15,15 @@ import { requireAuth, getOrCreateUser } from "./users";
 
 const router = Router();
 
+// ─── Own instructor profile (authenticated instructor) ────────────────────────
+
+router.get("/instructor/profile", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const [i] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!i) { res.status(404).json({ error: "Instructor profile not found" }); return; }
+  res.json(formatInstructor(i, 0, null));
+});
+
 // ─── List instructors (with primary vehicle + training categories) ─────────────
 
 router.get("/instructors", requireAuth, async (req: any, res): Promise<void> => {
@@ -238,7 +247,7 @@ router.get("/instructors/:id/verifications", requireAuth, requireAdmin, async (r
 
 router.patch("/instructors/:id", requireAuth, async (req: any, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const { fullName, phone, licenseNumber, vehicleMake, vehicleModel, vehicleYear, qualifications, state, adtaNumber } = req.body;
+  const { fullName, phone, licenseNumber, vehicleMake, vehicleModel, vehicleYear, qualifications, state, adtaNumber, hourlyRateCents } = req.body;
   const updates: any = {};
   if (fullName) updates.fullName = fullName;
   if (phone !== undefined) updates.phone = phone;
@@ -249,6 +258,7 @@ router.patch("/instructors/:id", requireAuth, async (req: any, res): Promise<voi
   if (qualifications !== undefined) updates.qualifications = qualifications;
   if (state !== undefined) updates.state = state;
   if (adtaNumber !== undefined) updates.adtaNumber = adtaNumber;
+  if (hourlyRateCents !== undefined) updates.hourlyRateCents = hourlyRateCents;
   const [updated] = await db.update(instructorsTable).set(updates).where(eq(instructorsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatInstructor(updated, 0, null));
@@ -269,6 +279,7 @@ function formatInstructor(i: any, activeStudents: number, primaryVehicle: any | 
     trainingCategories: i.trainingCategories ?? [],
     state: i.state ?? null,
     adtaNumber: i.adtaNumber ?? null,
+    hourlyRateCents: i.hourlyRateCents ?? null,
     isIndependent: i.isIndependent,
     activeStudents,
     primaryVehicle: primaryVehicle ? {

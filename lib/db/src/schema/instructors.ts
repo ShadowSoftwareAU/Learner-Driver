@@ -23,6 +23,8 @@ export const instructorsTable = pgTable("instructors", {
   defaultSchoolId: integer("default_school_id"),
   // When false + school-managed: cannot create/cancel bookings unilaterally
   canSelfManageCalendar: boolean("can_self_manage_calendar").notNull().default(true),
+  // Hourly rate in Australian cents (e.g. 8500 = $85.00)
+  hourlyRateCents: integer("hourly_rate_cents"),
   // ADTA membership number — optional, not enforced; future integration with ADTA database
   adtaNumber: text("adta_number"),
   // Safeguarding notes — classification: restricted
