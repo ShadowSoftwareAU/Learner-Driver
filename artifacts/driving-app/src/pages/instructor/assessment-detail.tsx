@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download } from "lucide-react";
+import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
+import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
+import { getManeuverImage } from "@/lib/maneuver-images";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
-import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -91,6 +93,7 @@ export default function ViewAssessment() {
   const [approveOpen, setApproveOpen] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [emails, setEmails] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useViewMode();
 
   const combinedNotes = useMemo(() => {
     if (!assessment?.maneuverResults) return "";
@@ -263,32 +266,71 @@ export default function ViewAssessment() {
           {/* Maneuver Results */}
           <Card className="col-span-full">
             <CardHeader className="bg-gray-50 border-b">
-              <CardTitle>Maneuver Results</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Maneuver Results</CardTitle>
+                {assessment.maneuverResults && assessment.maneuverResults.length > 0 && (
+                  <ViewToggle value={viewMode} onChange={setViewMode} />
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pt-6">
-              {assessment.maneuverResults && assessment.maneuverResults.length > 0 ? (
-                <div className="space-y-2">
-                  {assessment.maneuverResults.map((result: any) => (
-                    <div key={result.id} className="p-3 border rounded-lg">
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">{result.maneuverName}</span>
-                        <Badge
-                          variant="outline"
-                          className={COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}
-                        >
-                          {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
-                        </Badge>
-                      </div>
-                      {result.notes && (
-                        <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
-                          <MessageSquare className="w-4 h-4 mt-0.5 shrink-0" />
-                          <p>{result.notes}</p>
-                        </div>
-                      )}
+              {assessment.maneuverResults && assessment.maneuverResults.length > 0 ? (() => {
+                // Group by category for tile view
+                const byCategory = (assessment.maneuverResults as any[]).reduce<Record<string, any[]>>((acc, r) => {
+                  const cat = r.category ?? "General";
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push(r);
+                  return acc;
+                }, {});
+
+                const renderRow = (result: any) => (
+                  <div className="p-3 sm:p-4">
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-medium min-w-0 truncate">{result.maneuverName}</span>
+                      <Badge
+                        variant="outline"
+                        className={`shrink-0 ${COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}`}
+                      >
+                        {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
+                      </Badge>
                     </div>
-                  ))}
-                </div>
-              ) : (
+                    {result.notes && (
+                      <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+                        <MessageSquare className="w-4 h-4 mt-0.5 shrink-0" />
+                        <p>{result.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+
+                if (viewMode === "tile") {
+                  return <AssessmentTileView grouped={byCategory} renderItem={renderRow} />;
+                }
+
+                return (
+                  <div className="space-y-2">
+                    {(assessment.maneuverResults as any[]).map((result: any) => (
+                      <div key={result.id} className="p-3 border rounded-lg">
+                        <div className="flex justify-between items-center">
+                          <span className="font-medium">{result.maneuverName}</span>
+                          <Badge
+                            variant="outline"
+                            className={COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}
+                          >
+                            {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
+                          </Badge>
+                        </div>
+                        {result.notes && (
+                          <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
+                            <MessageSquare className="w-4 h-4 mt-0.5 shrink-0" />
+                            <p>{result.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })() : (
                 <div className="text-center py-8 text-muted-foreground">
                   <CheckCircle2 className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                   <p>No maneuvers were explicitly rated during this assessment.</p>

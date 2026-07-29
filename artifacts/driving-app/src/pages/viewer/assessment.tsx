@@ -11,6 +11,8 @@ import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
 import { useState } from "react";
 import { getManeuverImage } from "@/lib/maneuver-images";
+import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
+import { AssessmentTileView, type TileManeuverResult } from "@/components/assessment/AssessmentTileView";
 
 const PEDAL_LABELS: Record<string, string> = {
   standard: "Standard dual-control",
@@ -56,6 +58,8 @@ export default function ViewerAssessment() {
   const { data, isLoading, isError } = useGetViewerAssessmentDetail(Number(id), {
     query: { queryKey: ["/api/viewer/assessments", id] },
   });
+
+  const [viewMode, setViewMode] = useViewMode();
 
   // Track which maneuver guidance panels are open
   const [openGuidance, setOpenGuidance] = useState<Set<number>>(new Set());
@@ -167,13 +171,93 @@ export default function ViewerAssessment() {
           </p>
         </div>
 
-        {/* Maneuver results by category */}
+        {/* View toggle — shown only when there are results */}
+        {maneuverResults.length > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              {Object.keys(grouped).length} {Object.keys(grouped).length === 1 ? "category" : "categories"} &bull; {maneuverResults.length} maneuvers
+            </p>
+            <ViewToggle value={viewMode} onChange={setViewMode} />
+          </div>
+        )}
+
+        {/* Maneuver results */}
         {maneuverResults.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center py-12 gap-3">
               <p className="text-sm text-muted-foreground">No maneuver results recorded yet for this lesson.</p>
             </CardContent>
           </Card>
+        ) : viewMode === "tile" ? (
+          <AssessmentTileView
+            grouped={grouped as Record<string, TileManeuverResult[]>}
+            renderItem={(item) => {
+              const r = item as typeof maneuverResults[0];
+              const level = LEVEL_CONFIG[r.competencyLevel ?? "not_attempted"] ?? LEVEL_CONFIG.not_attempted;
+              const isOpen = openGuidance.has(r.maneuverId);
+              const hasGuidance = !!(r.complianceCriteria || r.masteryDefinition);
+              return (
+                <div className="p-4 sm:p-5">
+                  <div className="flex items-center gap-3">
+                    {(() => {
+                      const img = getManeuverImage(r.maneuverName ?? "", r.category ?? "");
+                      return img ? (
+                        <img
+                          src={img}
+                          alt={r.maneuverName ?? ""}
+                          className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border"
+                        />
+                      ) : null;
+                    })()}
+                    <p className="font-medium text-base flex-1 min-w-0 truncate">
+                      {r.maneuverName ?? "Unknown maneuver"}
+                    </p>
+                    <Badge variant="outline" className={`shrink-0 text-sm px-2 py-0.5 ${level.className}`}>
+                      {level.label}
+                    </Badge>
+                    {hasGuidance && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="shrink-0 gap-1.5 text-sm text-primary h-8"
+                        onClick={() => toggleGuidance(r.maneuverId)}
+                      >
+                        {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {isOpen ? "Hide" : "Guidance"}
+                      </Button>
+                    )}
+                  </div>
+                  {r.notes && (
+                    <p className="mt-1.5 text-sm text-muted-foreground italic">{r.notes}</p>
+                  )}
+                  {isOpen && (
+                    <div className="mt-4 space-y-4 border-t pt-4">
+                      {r.complianceCriteria && (
+                        <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                          <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
+                            QSAFE Compliance Criteria
+                          </p>
+                          <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">
+                            {r.complianceCriteria}
+                          </p>
+                        </div>
+                      )}
+                      {r.masteryDefinition && (
+                        <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
+                          <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">
+                            Competency Definition
+                          </p>
+                          <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">
+                            {r.masteryDefinition}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          />
         ) : (
           Object.entries(grouped).map(([category, items]) => (
             <Card key={category}>
@@ -233,7 +317,6 @@ export default function ViewerAssessment() {
                         {/* Expandable guidance */}
                         {isOpen && (
                           <div className="mt-4 space-y-4 border-t pt-4">
-
                             {r.complianceCriteria && (
                               <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
                                 <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
