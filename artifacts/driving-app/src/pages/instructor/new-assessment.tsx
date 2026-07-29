@@ -29,6 +29,7 @@ import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
 import { getManeuverImage } from "@/lib/maneuver-images";
 import { getManeuverChips } from "@/lib/maneuver-chips";
+import { loadAssessmentDraft, saveAssessmentDraft, clearAssessmentDraft } from "@/lib/assessment-draft";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
@@ -81,27 +82,86 @@ export default function NewAssessment() {
   const urlStudentId = urlParams.get("studentId") ?? "";
   const urlDuration = urlParams.get("durationMinutes") ?? "60";
 
-  // ── Setup state (collected in the modal) ──────────────────────────────────
-  const [setupOpen, setSetupOpen] = useState(true);
-  const [setupDone, setSetupDone] = useState(false);
+  // ── Draft hydration ───────────────────────────────────────────────────────
+  // Loaded once synchronously in the useState initialiser so the correct
+  // values are available on the very first render — no flash of empty state.
+  const [initialDraft] = useState(() => loadAssessmentDraft());
+  // Prevents the write-effect from re-saving after an explicit clear.
+  const draftClearedRef = useRef(false);
 
-  const [assessmentType, setAssessmentType] = useState<AssessmentType>("qsafe");
-  const [studentId, setStudentId] = useState<string>(urlStudentId);
-  const [duration, setDuration] = useState(urlDuration);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">("");
-  const [fitnessConfirmed, setFitnessConfirmed] = useState(false);
-  const [weatherCondition, setWeatherCondition] = useState<WeatherCondition | "">("");
-  const [lightingCondition, setLightingCondition] = useState<LightingCondition | "">("");
+  // ── Setup state (collected in the modal) ──────────────────────────────────
+  // Skip the modal entirely when restoring a completed draft.
+  const [setupOpen, setSetupOpen] = useState(() => !(initialDraft?.setupDone));
+  const [setupDone, setSetupDone] = useState(() => initialDraft?.setupDone ?? false);
+
+  const [assessmentType, setAssessmentType] = useState<AssessmentType>(
+    () => (initialDraft?.assessmentType as AssessmentType) ?? "qsafe"
+  );
+  // URL param wins for studentId (e.g. "New Assessment" tapped from a student's profile)
+  const [studentId, setStudentId] = useState<string>(
+    () => urlStudentId || initialDraft?.studentId || ""
+  );
+  const [duration, setDuration] = useState(() => initialDraft?.duration ?? urlDuration);
+  const [date, setDate] = useState(
+    () => initialDraft?.date ?? new Date().toISOString().split("T")[0]
+  );
+  const [pedalOperator, setPedalOperator] = useState<PedalOperator | "">(
+    () => (initialDraft?.pedalOperator as PedalOperator | "") ?? ""
+  );
+  const [fitnessConfirmed, setFitnessConfirmed] = useState(
+    () => initialDraft?.fitnessConfirmed ?? false
+  );
+  const [weatherCondition, setWeatherCondition] = useState<WeatherCondition | "">(
+    () => (initialDraft?.weatherCondition as WeatherCondition | "") ?? ""
+  );
+  const [lightingCondition, setLightingCondition] = useState<LightingCondition | "">(
+    () => (initialDraft?.lightingCondition as LightingCondition | "") ?? ""
+  );
 
   // ── Assessment state ──────────────────────────────────────────────────────
-  const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>({});
-  const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>({});
+  const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>(
+    () => (initialDraft?.results as Record<number, ManeuverResultItemCompetencyLevel>) ?? {}
+  );
+  const [maneuverNotes, setManeuverNotes] = useState<Record<number, string>>(
+    () => initialDraft?.maneuverNotes ?? {}
+  );
   const [expandedManeuver, setExpandedManeuver] = useState<number | null>(null);
-  const [confidenceNote, setConfidenceNote] = useState("");
-  const [focusAreas, setFocusAreas] = useState("");
+  const [confidenceNote, setConfidenceNote] = useState(
+    () => initialDraft?.confidenceNote ?? ""
+  );
+  const [focusAreas, setFocusAreas] = useState(() => initialDraft?.focusAreas ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useViewMode();
+
+  // Toast once when a completed draft is restored
+  useEffect(() => {
+    if (initialDraft?.setupDone) {
+      toast({
+        title: "Draft restored",
+        description: "Your in-progress assessment has been recovered.",
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Debounced sync — writes to localStorage 400 ms after the last state change.
+  // The ref guard ensures we never re-save after an explicit clear.
+  useEffect(() => {
+    if (draftClearedRef.current) return;
+    const timer = setTimeout(() => {
+      if (draftClearedRef.current) return;
+      saveAssessmentDraft({
+        assessmentType, studentId, date, duration, pedalOperator,
+        fitnessConfirmed, weatherCondition, lightingCondition,
+        results, maneuverNotes, confidenceNote, focusAreas, setupDone,
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [
+    assessmentType, studentId, date, duration, pedalOperator,
+    fitnessConfirmed, weatherCondition, lightingCondition,
+    results, maneuverNotes, confidenceNote, focusAreas, setupDone,
+  ]);
 
   const groupedManeuvers = useMemo(() => {
     if (!maneuvers) return {};
@@ -187,6 +247,8 @@ export default function NewAssessment() {
       }
 
       toast({ title: "Success", description: "Assessment saved successfully." });
+      draftClearedRef.current = true;
+      clearAssessmentDraft();
       setLocation(`/instructor/assessments/${assessment.id}`);
     } catch {
       toast({ title: "Error", description: "Failed to save assessment.", variant: "destructive" });
@@ -712,7 +774,7 @@ export default function NewAssessment() {
         )}
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
-          <Button variant="outline" onClick={() => setLocation("/instructor/students")} className="h-16 text-base px-6">Cancel</Button>
+          <Button variant="outline" onClick={() => { draftClearedRef.current = true; clearAssessmentDraft(); setLocation("/instructor/students"); }} className="h-16 text-base px-6">Cancel</Button>
           <Button
             onClick={handleSave}
             disabled={isSubmitting || !setupDone}
