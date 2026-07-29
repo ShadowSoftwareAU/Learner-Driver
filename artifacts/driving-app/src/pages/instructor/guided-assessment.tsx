@@ -24,6 +24,7 @@ import AssessmentRouteMap from "@/components/AssessmentRouteMap";
 import { useLessonDraft } from "@/hooks/useLessonDraft";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
+import { SelectionTileView } from "@/components/assessment/SelectionTileView";
 import type { LessonDraftState } from "@/hooks/useLessonDraft";
 
 type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
@@ -574,13 +575,21 @@ export default function GuidedAssessment() {
 
   // Step 2: Select maneuvers
   if (step === "select") {
+    // Build a grouped structure compatible with SelectionTileView
+    const selectionGrouped = Object.fromEntries(
+      Object.entries(groupedManeuvers).map(([cat, items]) => [
+        cat,
+        items.map(m => ({ id: m.id, name: m.name, category: m.category ?? cat })),
+      ])
+    );
+
     return (
       <SidebarLayout>
         <div className="space-y-6 max-w-2xl mx-auto pb-28">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Select Maneuvers</h1>
             <p className="text-muted-foreground text-lg mt-1">
-              Choose which maneuvers to work on this lesson.
+              Tap a category, then choose the maneuvers to work on this lesson.
               <span className="font-semibold text-foreground ml-2">{selectedManeuverIds.size} selected</span>
             </p>
           </div>
@@ -595,38 +604,13 @@ export default function GuidedAssessment() {
             </div>
           )}
 
-          {Object.entries(groupedManeuvers).map(([category, items]) => (
-            <Card key={category}>
-              <CardHeader className="bg-gray-50 border-b p-4 flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">{category}</CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-sm h-10"
-                  onClick={() => selectAll(items.map(m => m.id))}
-                >
-                  {items.every(m => selectedManeuverIds.has(m.id)) ? "Deselect All" : "Select All"}
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {items.map(m => (
-                    <label
-                      key={m.id}
-                      className="flex items-center gap-4 p-4 sm:p-5 cursor-pointer hover:bg-gray-50 transition-colors min-h-[64px]"
-                    >
-                      <Checkbox
-                        checked={selectedManeuverIds.has(m.id)}
-                        onCheckedChange={() => toggleManeuver(m.id)}
-                        className="h-6 w-6"
-                      />
-                      <span className="text-base font-medium flex-1">{m.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <SelectionTileView
+            grouped={selectionGrouped}
+            selectedIds={selectedManeuverIds}
+            onToggle={toggleManeuver}
+            onSelectAll={selectAll}
+            getImage={(m) => getManeuverImage(m.name, m.category)}
+          />
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-between gap-4 z-10">
             <Button variant="outline" onClick={() => setStep("setup")} className="h-16 text-base px-6">
