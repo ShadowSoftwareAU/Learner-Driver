@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { eq, and, asc, gte, lte, inArray } from "drizzle-orm";
-import { db, instructorAvailabilityTable, instructorsTable, bookingsTable } from "@workspace/db";
+import { db, instructorAvailabilityTable, instructorsTable, bookingsTable, schoolInstructorLinksTable, usersTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 
 const router = Router();
@@ -9,6 +9,44 @@ const router = Router();
 const timeLte = (a: string, b: string) => a <= b;
 const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
   aStart < bEnd && bStart < aEnd;
+
+/**
+ * GET /availability/my-contexts
+ * Returns the set of contexts the authenticated instructor can assign to slots:
+ * - 'independent' if isIndependent is true
+ * - one entry per actively-linked school admin in school_instructor_links
+ */
+router.get("/availability/my-contexts", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) { res.status(404).json({ error: "Not an instructor" }); return; }
+
+  const contexts: Array<{ type: string; label: string; schoolAdminId: number | null }> = [];
+
+  if (instructor.isIndependent) {
+    contexts.push({ type: "independent", label: "Independent", schoolAdminId: null });
+  }
+
+  const links = await db.select().from(schoolInstructorLinksTable)
+    .where(and(
+      eq(schoolInstructorLinksTable.instructorId, instructor.id),
+      eq(schoolInstructorLinksTable.status, "active"),
+    ));
+
+  for (const link of links) {
+    const [adminUser] = await db.select({ id: usersTable.id, name: usersTable.name, email: usersTable.email })
+      .from(usersTable).where(eq(usersTable.id, link.schoolAdminId));
+    if (adminUser) {
+      contexts.push({
+        type: "school",
+        label: adminUser.name ?? adminUser.email,
+        schoolAdminId: link.schoolAdminId,
+      });
+    }
+  }
+
+  res.json(contexts);
+});
 
 // Get my availability slots — sorted by day then start time
 router.get("/availability/me", requireAuth, async (req: any, res): Promise<void> => {
@@ -130,7 +168,7 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     [instructor] = await db.insert(instructorsTable).values({ userId: user.id, fullName: user.name ?? "Instructor", email: user.email ?? "" }).returning();
   }
 
-  const { dayOfWeek, startTime, endTime, transmissionTypes } = req.body;
+  const { dayOfWeek, startTime, endTime, transmissionTypes, contextType, schoolAdminId } = req.body;
   if (dayOfWeek === undefined || !startTime || !endTime) {
     res.status(400).json({ error: "Day, start time and end time are required" }); return;
   }
@@ -145,7 +183,27 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     res.status(400).json({ error: "End time must be after start time" }); return;
   }
 
-  // Check overlap with existing slots on the same day
+  // Validate context
+  const resolvedContextType: "independent" | "school" = contextType === "school" ? "school" : "independent";
+  const resolvedSchoolAdminId: number | null =
+    resolvedContextType === "school" && typeof schoolAdminId === "number" ? schoolAdminId : null;
+  if (resolvedContextType === "school") {
+    if (!resolvedSchoolAdminId) {
+      res.status(400).json({ error: "schoolAdminId is required when contextType is 'school'" }); return;
+    }
+    // Verify this instructor has an active link to this school admin
+    const [link] = await db.select().from(schoolInstructorLinksTable)
+      .where(and(
+        eq(schoolInstructorLinksTable.instructorId, instructor.id),
+        eq(schoolInstructorLinksTable.schoolAdminId, resolvedSchoolAdminId),
+        eq(schoolInstructorLinksTable.status, "active"),
+      ));
+    if (!link) {
+      res.status(403).json({ error: "No active link to this school admin" }); return;
+    }
+  }
+
+  // Check overlap with existing slots on the same day for the same context
   const sameDay = await db.select().from(instructorAvailabilityTable)
     .where(and(
       eq(instructorAvailabilityTable.instructorId, instructor.id),
@@ -161,6 +219,8 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     instructorId: instructor.id, dayOfWeek, startTime, endTime,
     transmissionTypes: Array.isArray(transmissionTypes) ? transmissionTypes.join(",") : (transmissionTypes ?? "auto,manual"),
     isActive: true,
+    contextType: resolvedContextType,
+    schoolAdminId: resolvedSchoolAdminId,
   }).returning();
   res.status(201).json(slot);
 });
@@ -172,13 +232,15 @@ router.patch("/availability/:id", requireAuth, async (req: any, res): Promise<vo
   const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
   if (!instructor) { res.status(403).json({ error: "Not an instructor" }); return; }
 
-  const { dayOfWeek, startTime, endTime, transmissionTypes, isActive } = req.body;
+  const { dayOfWeek, startTime, endTime, transmissionTypes, isActive, contextType, schoolAdminId } = req.body;
   const updates: any = {};
   if (dayOfWeek !== undefined) updates.dayOfWeek = dayOfWeek;
   if (startTime) updates.startTime = startTime;
   if (endTime) updates.endTime = endTime;
   if (transmissionTypes !== undefined) updates.transmissionTypes = Array.isArray(transmissionTypes) ? transmissionTypes.join(",") : transmissionTypes;
   if (isActive !== undefined) updates.isActive = isActive;
+  if (contextType !== undefined) updates.contextType = contextType;
+  if (schoolAdminId !== undefined) updates.schoolAdminId = schoolAdminId ?? null;
 
   const [updated] = await db.update(instructorAvailabilityTable).set(updates)
     .where(and(eq(instructorAvailabilityTable.id, id), eq(instructorAvailabilityTable.instructorId, instructor.id)))

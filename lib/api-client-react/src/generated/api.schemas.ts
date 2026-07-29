@@ -1181,6 +1181,29 @@ export interface AdminDashboard {
 }
 
 /**
+ * Context type for this slot
+ */
+export type AvailabilityContextType = typeof AvailabilityContextType[keyof typeof AvailabilityContextType];
+
+
+export const AvailabilityContextType = {
+  independent: 'independent',
+  school: 'school',
+} as const;
+
+export interface AvailabilityContext {
+  /** Context type for this slot */
+  type: AvailabilityContextType;
+  /** Human-readable label (e.g. 'Independent' or the school admin's name) */
+  label: string;
+  /**
+     * user_id of the school admin — only present when type is 'school'
+     * @nullable
+     */
+  schoolAdminId?: number | null;
+}
+
+/**
  * Whether this slot belongs to the instructor's independent business or a linked school
  */
 export type AvailabilitySlotContextType = typeof AvailabilitySlotContextType[keyof typeof AvailabilitySlotContextType];

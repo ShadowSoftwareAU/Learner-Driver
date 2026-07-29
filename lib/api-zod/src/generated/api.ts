@@ -1425,6 +1425,18 @@ export const GetInstructorProfileResponse = zod.object({
 
 
 /**
+ * Returns 'independent' if the instructor is independent, plus one entry per actively-linked school admin in school_instructor_links
+ * @summary Get the contexts available to the authenticated instructor when creating or editing availability slots
+ */
+export const GetMyAvailabilityContextsResponseItem = zod.object({
+  "type": zod.enum(['independent', 'school']).describe('Context type for this slot'),
+  "label": zod.string().describe('Human-readable label (e.g. \'Independent\' or the school admin\'s name)'),
+  "schoolAdminId": zod.number().nullish().describe('user_id of the school admin — only present when type is \'school\'')
+})
+export const GetMyAvailabilityContextsResponse = zod.array(GetMyAvailabilityContextsResponseItem)
+
+
+/**
  * @summary Get my availability slots
  */
 export const GetMyAvailabilityResponseItem = zod.object({

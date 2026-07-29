@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   useGetMyAvailability,
+  useGetMyAvailabilityContexts,
   useGetInstructorProfile,
   useUpdateInstructor,
   useCreateAvailabilitySlot,
@@ -13,7 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Trash2, Calendar, DollarSign, Save } from "lucide-react";
+import {
+  Loader2, Plus, Trash2, Calendar, DollarSign, Save,
+  User, Building2, AlertCircle, ChevronDown,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DAY_NAMES } from "@/lib/enums";
 
@@ -21,6 +25,22 @@ const TRANSMISSION_OPTIONS: { value: string; label: string }[] = [
   { value: "auto", label: "Automatic" },
   { value: "manual", label: "Manual" },
 ];
+
+// ── Context helpers ───────────────────────────────────────────────────────────
+
+function contextKey(type: string, schoolAdminId?: number | null): string {
+  return type === "school" && schoolAdminId ? `school:${schoolAdminId}` : "independent";
+}
+
+function parseContextKey(val: string): { contextType: "independent" | "school"; schoolAdminId?: number } {
+  if (val.startsWith("school:")) {
+    const id = parseInt(val.slice(7), 10);
+    if (!isNaN(id)) return { contextType: "school", schoolAdminId: id };
+  }
+  return { contextType: "independent" };
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function InstructorAvailability() {
   const { toast } = useToast();
@@ -58,6 +78,13 @@ export default function InstructorAvailability() {
     }
   };
 
+  // ── Contexts ───────────────────────────────────────────────────────────────
+  const contextsQK = ["/api/availability/my-contexts"];
+  const { data: contexts, isLoading: contextsLoading } = useGetMyAvailabilityContexts({
+    query: { queryKey: contextsQK },
+  });
+  const contextList = (contexts ?? []) as Array<{ type: string; label: string; schoolAdminId?: number | null }>;
+
   // ── Availability slots ─────────────────────────────────────────────────────
   const { data: slots, isLoading } = useGetMyAvailability({
     query: { queryKey: ["/api/availability/me"] },
@@ -71,7 +98,19 @@ export default function InstructorAvailability() {
     startTime: "09:00",
     endTime: "17:00",
     transmissionTypes: ["auto", "manual"] as string[],
+    contextValue: "independent",
   });
+
+  // Auto-select first context when contexts load
+  useEffect(() => {
+    if (contextList.length > 0) {
+      const first = contextList[0];
+      setForm((f) => ({
+        ...f,
+        contextValue: contextKey(first.type, first.schoolAdminId),
+      }));
+    }
+  }, [contextList.length]);
 
   const [deletingId, setDeletingId] = useState<number | null>(null);
 
@@ -80,7 +119,7 @@ export default function InstructorAvailability() {
     idx,
     slots: ((slots ?? []) as any[])
       .filter((s) => s.dayOfWeek === idx)
-      .sort((a, b) => String(a.startTime).localeCompare(String(b.startTime))),
+      .sort((a: any, b: any) => String(a.startTime).localeCompare(String(b.startTime))),
   }));
 
   const toggleTransmission = (type: string) => {
@@ -101,6 +140,16 @@ export default function InstructorAvailability() {
       toast({ title: "End time must be after start time", variant: "destructive" });
       return;
     }
+    if (!form.contextValue) {
+      toast({ title: "Select who you are driving for", variant: "destructive" });
+      return;
+    }
+
+    const { contextType, schoolAdminId } = parseContextKey(form.contextValue);
+    const contextLabel = contextList.find((c) =>
+      contextKey(c.type, c.schoolAdminId) === form.contextValue,
+    )?.label ?? contextType;
+
     try {
       await createSlot.mutateAsync({
         data: {
@@ -108,10 +157,15 @@ export default function InstructorAvailability() {
           startTime: form.startTime,
           endTime: form.endTime,
           transmissionTypes: form.transmissionTypes,
-        },
+          contextType,
+          ...(schoolAdminId !== undefined ? { schoolAdminId } : {}),
+        } as any,
       });
       await qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
-      toast({ title: "Availability slot added", description: `${DAY_NAMES[Number(form.dayOfWeek)]} ${form.startTime}–${form.endTime}` });
+      toast({
+        title: "Availability slot added",
+        description: `${DAY_NAMES[Number(form.dayOfWeek)]} ${form.startTime}–${form.endTime} · ${contextLabel}`,
+      });
     } catch (err: any) {
       const status = err?.status ?? err?.response?.status;
       const serverMsg = err?.body?.error ?? err?.response?.data?.error;
@@ -137,6 +191,19 @@ export default function InstructorAvailability() {
   };
 
   const hasSlots = grouped.some((g) => g.slots.length > 0);
+  const hasNoContexts = !contextsLoading && contextList.length === 0;
+  const multipleContexts = contextList.length > 1;
+
+  // Resolve a context label from stored slot fields
+  const resolveContextLabel = (slot: any): { label: string; isSchool: boolean } => {
+    if (slot.contextType === "school") {
+      const match = contextList.find(
+        (c) => c.type === "school" && c.schoolAdminId === slot.schoolAdminId,
+      );
+      return { label: match?.label ?? "School", isSchool: true };
+    }
+    return { label: "Independent", isSchool: false };
+  };
 
   return (
     <SidebarLayout>
@@ -189,6 +256,21 @@ export default function InstructorAvailability() {
           </CardContent>
         </Card>
 
+        {/* No-context warning */}
+        {hasNoContexts && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-amber-900">No teaching contexts available</p>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Your profile does not have an independent flag set, and you have no active school links.
+                Contact your school admin or update your profile to add availability slots.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Add Time Slot card */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -196,6 +278,69 @@ export default function InstructorAvailability() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+
+            {/* ── Driving For ──────────────────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label htmlFor="context-select" className="flex items-center gap-1.5">
+                Driving For
+                <span className="text-destructive ml-0.5">*</span>
+              </Label>
+
+              {contextsLoading ? (
+                <div className="flex items-center gap-2 h-9 text-sm text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading contexts…
+                </div>
+              ) : contextList.length === 1 ? (
+                // Single context — show as a read-only info badge, still sets the value
+                <div className="flex items-center gap-2 h-9">
+                  {contextList[0].type === "school" ? (
+                    <Building2 className="w-4 h-4 text-amber-600" />
+                  ) : (
+                    <User className="w-4 h-4 text-primary" />
+                  )}
+                  <span className="text-sm font-medium">{contextList[0].label}</span>
+                  <Badge
+                    variant="outline"
+                    className={
+                      contextList[0].type === "school"
+                        ? "text-xs text-amber-700 border-amber-200 bg-amber-50"
+                        : "text-xs text-blue-700 border-blue-200 bg-blue-50"
+                    }
+                  >
+                    {contextList[0].type === "school" ? "School" : "Independent"}
+                  </Badge>
+                </div>
+              ) : contextList.length > 1 ? (
+                // Multiple contexts — show a styled dropdown
+                <div className="relative">
+                  <select
+                    id="context-select"
+                    className="flex h-9 w-full max-w-sm rounded-md border border-input bg-transparent pl-3 pr-8 py-1 text-sm shadow-sm appearance-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={form.contextValue}
+                    onChange={(e) => setForm((f) => ({ ...f, contextValue: e.target.value }))}
+                  >
+                    {contextList.map((ctx) => {
+                      const val = contextKey(ctx.type, ctx.schoolAdminId);
+                      return (
+                        <option key={val} value={val}>
+                          {ctx.type === "school" ? `🏫 ${ctx.label}` : `👤 ${ctx.label}`}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                </div>
+              ) : null}
+
+              {multipleContexts && (
+                <p className="text-xs text-muted-foreground">
+                  Slots tagged as a school context are only visible to that school's bookings.
+                </p>
+              )}
+            </div>
+
+            {/* ── Day / times / transmission ─────────────────────────── */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label>Day of Week</Label>
@@ -246,7 +391,10 @@ export default function InstructorAvailability() {
               </div>
             </div>
 
-            <Button onClick={handleAdd} disabled={createSlot.isPending}>
+            <Button
+              onClick={handleAdd}
+              disabled={createSlot.isPending || hasNoContexts || contextsLoading}
+            >
               {createSlot.isPending ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
@@ -257,6 +405,7 @@ export default function InstructorAvailability() {
           </CardContent>
         </Card>
 
+        {/* ── Existing slots ────────────────────────────────────────────── */}
         {isLoading ? (
           <div className="flex items-center justify-center h-40">
             <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -289,36 +438,57 @@ export default function InstructorAvailability() {
                             .filter(Boolean);
                       const labelFor = (v: string) =>
                         TRANSMISSION_OPTIONS.find((o) => o.value === v)?.label ?? v;
+                      const { label: ctxLabel, isSchool } = resolveContextLabel(slot);
+
                       return (
                         <div
                           key={slot.id}
-                          className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                          className="rounded-md border px-3 py-2 text-sm space-y-1.5"
                         >
-                          <div>
+                          <div className="flex items-center justify-between">
                             <span className="font-medium">
                               {slot.startTime} – {slot.endTime}
                             </span>
-                            <div className="flex gap-1 mt-1 flex-wrap">
-                              {types.map((t: string) => (
-                                <Badge key={t} variant="secondary" className="text-xs">
-                                  {labelFor(t)}
-                                </Badge>
-                              ))}
-                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(slot.id)}
+                              disabled={deletingId === slot.id}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 p-1 h-auto -mr-1"
+                            >
+                              {deletingId === slot.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-4 h-4" />
+                              )}
+                            </Button>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(slot.id)}
-                            disabled={deletingId === slot.id}
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10 p-1 h-auto"
-                          >
-                            {deletingId === slot.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-4 h-4" />
+
+                          <div className="flex flex-wrap gap-1">
+                            {types.map((t: string) => (
+                              <Badge key={t} variant="secondary" className="text-xs">
+                                {labelFor(t)}
+                              </Badge>
+                            ))}
+                            {/* Context badge — only show when there are multiple contexts or it's a school slot */}
+                            {(multipleContexts || isSchool) && (
+                              <Badge
+                                variant="outline"
+                                className={`text-xs flex items-center gap-1 ${
+                                  isSchool
+                                    ? "text-amber-700 border-amber-200 bg-amber-50"
+                                    : "text-blue-700 border-blue-200 bg-blue-50"
+                                }`}
+                              >
+                                {isSchool ? (
+                                  <Building2 className="w-2.5 h-2.5" />
+                                ) : (
+                                  <User className="w-2.5 h-2.5" />
+                                )}
+                                {ctxLabel}
+                              </Badge>
                             )}
-                          </Button>
+                          </div>
                         </div>
                       );
                     })}

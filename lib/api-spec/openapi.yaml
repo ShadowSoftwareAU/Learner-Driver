@@ -909,6 +909,22 @@ paths:
                 $ref: "#/components/schemas/Instructor"
 
   # ─── Availability ─────────────────────────────────────────────────────────────
+  /availability/my-contexts:
+    get:
+      operationId: getMyAvailabilityContexts
+      tags: [scheduling]
+      summary: Get the contexts available to the authenticated instructor when creating or editing availability slots
+      description: "Returns 'independent' if the instructor is independent, plus one entry per actively-linked school admin in school_instructor_links"
+      responses:
+        "200":
+          description: List of available contexts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AvailabilityContext"
+
   /availability/me:
     get:
       operationId: getMyAvailability
@@ -3838,6 +3854,21 @@ components:
           type: number
 
     # ─── Scheduling Schemas ───────────────────────────────────────────────────────
+    AvailabilityContext:
+      type: object
+      required: [type, label]
+      properties:
+        type:
+          type: string
+          enum: [independent, school]
+          description: "Context type for this slot"
+        label:
+          type: string
+          description: "Human-readable label (e.g. 'Independent' or the school admin's name)"
+        schoolAdminId:
+          type: ["integer", "null"]
+          description: "user_id of the school admin — only present when type is 'school'"
+
     AvailabilitySlot:
       type: object
       required: [id, instructorId, dayOfWeek, startTime, endTime, transmissionTypes, isActive, contextType]

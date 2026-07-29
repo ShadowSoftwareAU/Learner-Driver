@@ -29,6 +29,7 @@ import type {
   AssessmentUpdate,
   AssignSchoolAdminBody,
   AuditLog,
+  AvailabilityContext,
   AvailabilitySlot,
   AvailableInstructor,
   BookingChangeRequest,
@@ -3244,6 +3245,84 @@ export function useGetInstructorProfile<TData = Awaited<ReturnType<typeof getIns
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetInstructorProfileQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetMyAvailabilityContextsUrl = () => {
+
+
+
+
+  return `/api/availability/my-contexts`
+}
+
+/**
+ * Returns 'independent' if the instructor is independent, plus one entry per actively-linked school admin in school_instructor_links
+ * @summary Get the contexts available to the authenticated instructor when creating or editing availability slots
+ */
+export const getMyAvailabilityContexts = async ( options?: RequestInit): Promise<AvailabilityContext[]> => {
+
+  return customFetch<AvailabilityContext[]>(getGetMyAvailabilityContextsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyAvailabilityContextsQueryKey = () => {
+    return [
+    `/api/availability/my-contexts`
+    ] as const;
+    }
+
+
+export const getGetMyAvailabilityContextsQueryOptions = <TData = Awaited<ReturnType<typeof getMyAvailabilityContexts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAvailabilityContexts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyAvailabilityContextsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyAvailabilityContexts>>> = ({ signal }) => getMyAvailabilityContexts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyAvailabilityContexts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyAvailabilityContextsQueryResult = NonNullable<Awaited<ReturnType<typeof getMyAvailabilityContexts>>>
+export type GetMyAvailabilityContextsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get the contexts available to the authenticated instructor when creating or editing availability slots
+ */
+
+export function useGetMyAvailabilityContexts<TData = Awaited<ReturnType<typeof getMyAvailabilityContexts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyAvailabilityContexts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyAvailabilityContextsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
