@@ -10,6 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { format } from "date-fns";
 import { BookingStatus } from "@/lib/enums";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DualDialProgress } from "@/components/DualDialProgress";
 
 // ─── Icon map for milestone badges ───────────────────────────────────────────
 
@@ -168,6 +169,17 @@ export default function StudentDashboard() {
           <h1 className="text-3xl font-bold tracking-tight">My Progress</h1>
           <p className="text-muted-foreground">Track your learning journey towards getting your licence.</p>
         </div>
+
+        {/* ── Dual-Dial Progress Indicator ── */}
+        <DualDialProgress
+          hoursLogged={effectiveTotalHours}
+          hoursRequired={100}
+          maneuvarsCompleted={dashboard.completedManeuvers}
+          totalManeuvers={dashboard.totalManeuvers}
+          isQLD={isQLD}
+          instructorHours={instructorHours}
+          supervisedHours={supervisedHours}
+        />
 
         {/* ── Stats row ── */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
