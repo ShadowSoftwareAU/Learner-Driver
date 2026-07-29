@@ -28,6 +28,8 @@ import { PreviousLessonCard } from "@/components/PreviousLessonCard";
 import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
 import { getManeuverImage } from "@/lib/maneuver-images";
+import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
+import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { PedalControlSelector } from "@/components/PedalControlSelector";
 
 type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
@@ -98,6 +100,7 @@ export default function NewAssessment() {
   const [confidenceNote, setConfidenceNote] = useState("");
   const [focusAreas, setFocusAreas] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useViewMode();
 
   const groupedManeuvers = useMemo(() => {
     if (!maneuvers) return {};
@@ -107,6 +110,16 @@ export default function NewAssessment() {
       return acc;
     }, {} as Record<string, typeof maneuvers>);
   }, [maneuvers]);
+
+  // Enrich with current competency level so tile summary badges stay live
+  const groupedWithLevels = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(groupedManeuvers).map(([cat, items]) => [
+        cat,
+        items.map(m => ({ ...m, competencyLevel: results[m.id] ?? "not_attempted" })),
+      ])
+    );
+  }, [groupedManeuvers, results]);
 
   const handleLevelSelect = (maneuverId: number, level: ManeuverResultItemCompetencyLevel) => {
     setResults(prev => ({ ...prev, [maneuverId]: level }));
@@ -472,112 +485,204 @@ export default function NewAssessment() {
           }}
         />
 
-        {Object.entries(groupedManeuvers).map(([category, items]) => (
-          <Card key={category}>
-            <CardHeader className="bg-gray-50 border-b pb-4 p-6">
-              <CardTitle className="text-lg">{category}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {items.map(m => (
-                  <div key={m.id} className="p-4 sm:p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      {(() => {
-                        const img = getManeuverImage(m.name, m.category);
-                        return img ? (
-                          <img
-                            src={img}
-                            alt={m.name}
-                            className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border"
-                          />
-                        ) : null;
-                      })()}
-                      <p className="font-medium text-base flex-1">{m.name}</p>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 shrink-0"
-                        onClick={() => toggleExpanded(m.id)}
-                        aria-label={expandedManeuver === m.id ? "Collapse guidance and notes" : "Expand guidance and notes"}
-                      >
-                        {expandedManeuver === m.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
-                        { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",        color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100", active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
-                        { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",         color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
-                        { val: ManeuverResultItemCompetencyLevel.mastered,      label: "Consistent Skills", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
-                      ].map(level => (
-                        <button
-                          key={level.val}
-                          type="button"
-                          onClick={() => handleLevelSelect(m.id, level.val)}
-                          className={`
-                            h-16 rounded-md border flex flex-col items-center justify-center transition-all text-sm font-medium min-w-0
-                            ${results[m.id] === level.val ? level.active : level.color}
-                          `}
-                        >
-                          {results[m.id] === level.val && <Check className="w-4 h-4 mb-0.5" />}
-                          {level.label}
-                        </button>
-                      ))}
-                    </div>
-                    {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
-                      <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
-                        <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
-                        <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
-                      </div>
-                    )}
-                    {expandedManeuver === m.id && (
-                      <div className="mt-4 space-y-4">
+        {/* View toggle */}
+        {Object.keys(groupedManeuvers).length > 0 && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              {Object.keys(groupedManeuvers).length} categories &bull; {Object.values(groupedManeuvers).flat().length} maneuvers
+            </p>
+            <ViewToggle value={viewMode} onChange={setViewMode} />
+          </div>
+        )}
 
-                        {/* QSAFE Compliance Criteria */}
-                        {m.complianceCriteria && (
-                          <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
-                            <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
-                              QSAFE Compliance Criteria
-                            </p>
-                            <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">
-                              {m.complianceCriteria}
-                            </p>
-                          </div>
-                        )}
-                        {/* Competency definition */}
-                        {m.masteryDefinition && (
-                          <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
-                            <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">
-                              Competency Definition
-                            </p>
-                            <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">
-                              {m.masteryDefinition}
-                            </p>
-                          </div>
-                        )}
-                        {/* Maneuver notes */}
-                        <div className="space-y-2">
-                          <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
-                          <QuickNoteChips
-                            value={maneuverNotes[m.id] || ""}
-                            onChange={(next) => handleManeuverNoteChange(m.id, next)}
-                          />
-                          <Textarea
-                            placeholder="Add notes for this maneuver..."
-                            value={maneuverNotes[m.id] || ""}
-                            onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
-                            rows={2}
-                            className="text-base"
-                          />
-                        </div>
-                      </div>
-                    )}
+        {viewMode === "tile" ? (
+          <AssessmentTileView
+            grouped={groupedWithLevels}
+            renderItem={(item: any) => {
+              const m = item;
+              return (
+                <div className="p-4 sm:p-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    {(() => {
+                      const img = getManeuverImage(m.name, m.category);
+                      return img ? (
+                        <img src={img} alt={m.name} className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border" />
+                      ) : null;
+                    })()}
+                    <p className="font-medium text-base flex-1">{m.name}</p>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 shrink-0"
+                      onClick={() => toggleExpanded(m.id)}
+                      aria-label={expandedManeuver === m.id ? "Collapse guidance and notes" : "Expand guidance and notes"}
+                    >
+                      {expandedManeuver === m.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                    </Button>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                  <div className="grid grid-cols-4 gap-2">
+                    {[
+                      { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
+                      { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",        color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100",   active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
+                      { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",         color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
+                      { val: ManeuverResultItemCompetencyLevel.mastered,      label: "Consistent Skills", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
+                    ].map(level => (
+                      <button
+                        key={level.val}
+                        type="button"
+                        onClick={() => handleLevelSelect(m.id, level.val)}
+                        className={`h-16 rounded-md border flex flex-col items-center justify-center transition-all text-sm font-medium min-w-0 ${results[m.id] === level.val ? level.active : level.color}`}
+                      >
+                        {results[m.id] === level.val && <Check className="w-4 h-4 mb-0.5" />}
+                        {level.label}
+                      </button>
+                    ))}
+                  </div>
+                  {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
+                    <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
+                      <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
+                      <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
+                    </div>
+                  )}
+                  {expandedManeuver === m.id && (
+                    <div className="mt-4 space-y-4">
+                      {m.complianceCriteria && (
+                        <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                          <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">QSAFE Compliance Criteria</p>
+                          <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">{m.complianceCriteria}</p>
+                        </div>
+                      )}
+                      {m.masteryDefinition && (
+                        <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
+                          <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">Competency Definition</p>
+                          <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">{m.masteryDefinition}</p>
+                        </div>
+                      )}
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
+                        <QuickNoteChips value={maneuverNotes[m.id] || ""} onChange={(next) => handleManeuverNoteChange(m.id, next)} />
+                        <Textarea
+                          placeholder="Add notes for this maneuver..."
+                          value={maneuverNotes[m.id] || ""}
+                          onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
+                          rows={2}
+                          className="text-base"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            }}
+          />
+        ) : (
+          Object.entries(groupedManeuvers).map(([category, items]) => (
+            <Card key={category}>
+              <CardHeader className="bg-gray-50 border-b pb-4 p-6">
+                <CardTitle className="text-lg">{category}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y">
+                  {items.map(m => (
+                    <div key={m.id} className="p-4 sm:p-6">
+                      <div className="flex items-center gap-2 mb-3">
+                        {(() => {
+                          const img = getManeuverImage(m.name, m.category);
+                          return img ? (
+                            <img
+                              src={img}
+                              alt={m.name}
+                              className="w-[100px] h-[100px] shrink-0 rounded-xl object-cover border border-border"
+                            />
+                          ) : null;
+                        })()}
+                        <p className="font-medium text-base flex-1">{m.name}</p>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
+                          onClick={() => toggleExpanded(m.id)}
+                          aria-label={expandedManeuver === m.id ? "Collapse guidance and notes" : "Expand guidance and notes"}
+                        >
+                          {expandedManeuver === m.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
+                          { val: ManeuverResultItemCompetencyLevel.attempted,     label: "Developing",        color: "bg-red-50 hover:bg-red-100 text-red-700 border-red-100", active: "bg-red-100 border-red-400 text-red-900 ring-2 ring-red-400" },
+                          { val: ManeuverResultItemCompetencyLevel.practiced,     label: "Competent",         color: "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-100", active: "bg-yellow-100 border-yellow-400 text-yellow-900 ring-2 ring-yellow-400" },
+                          { val: ManeuverResultItemCompetencyLevel.mastered,      label: "Consistent Skills", color: "bg-green-50 hover:bg-green-100 text-green-700 border-green-100", active: "bg-green-100 border-green-400 text-green-900 ring-2 ring-green-400" },
+                        ].map(level => (
+                          <button
+                            key={level.val}
+                            type="button"
+                            onClick={() => handleLevelSelect(m.id, level.val)}
+                            className={`
+                              h-16 rounded-md border flex flex-col items-center justify-center transition-all text-sm font-medium min-w-0
+                              ${results[m.id] === level.val ? level.active : level.color}
+                            `}
+                          >
+                            {results[m.id] === level.val && <Check className="w-4 h-4 mb-0.5" />}
+                            {level.label}
+                          </button>
+                        ))}
+                      </div>
+                      {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
+                        <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
+                          <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
+                          <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
+                        </div>
+                      )}
+                      {expandedManeuver === m.id && (
+                        <div className="mt-4 space-y-4">
+
+                          {/* QSAFE Compliance Criteria */}
+                          {m.complianceCriteria && (
+                            <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                              <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
+                                QSAFE Compliance Criteria
+                              </p>
+                              <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">
+                                {m.complianceCriteria}
+                              </p>
+                            </div>
+                          )}
+                          {/* Competency definition */}
+                          {m.masteryDefinition && (
+                            <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
+                              <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">
+                                Competency Definition
+                              </p>
+                              <p className="text-sm text-purple-900/80 whitespace-pre-wrap leading-relaxed">
+                                {m.masteryDefinition}
+                              </p>
+                            </div>
+                          )}
+                          {/* Maneuver notes */}
+                          <div className="space-y-2">
+                            <Label className="text-sm text-muted-foreground">Notes for {m.name}</Label>
+                            <QuickNoteChips
+                              value={maneuverNotes[m.id] || ""}
+                              onChange={(next) => handleManeuverNoteChange(m.id, next)}
+                            />
+                            <Textarea
+                              placeholder="Add notes for this maneuver..."
+                              value={maneuverNotes[m.id] || ""}
+                              onChange={e => handleManeuverNoteChange(m.id, e.target.value)}
+                              rows={2}
+                              className="text-base"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
 
         <Card>
           <CardHeader className="p-6">

@@ -21,6 +21,8 @@ import { QuickNoteChips } from "@/components/QuickNoteChips";
 import { CategorySummary } from "@/components/CategorySummary";
 import AssessmentRouteMap from "@/components/AssessmentRouteMap";
 import { useLessonDraft } from "@/hooks/useLessonDraft";
+import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
+import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import type { LessonDraftState } from "@/hooks/useLessonDraft";
 
 type AssessmentType = "qsafe" | "qride" | "heavy_vehicle";
@@ -91,6 +93,7 @@ export default function GuidedAssessment() {
   const [confidenceNote, setConfidenceNote] = useState("");
   const [focusAreas, setFocusAreas] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useViewMode();
 
   // Guidance panel — expanded per-maneuver in the assess step
   const [guidanceOpen, setGuidanceOpen] = useState(false);
@@ -856,27 +859,63 @@ export default function GuidedAssessment() {
 
           <Card>
             <CardHeader className="bg-gray-50 border-b p-6">
-              <CardTitle>Maneuver Results</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Maneuver Results</CardTitle>
+                <ViewToggle value={viewMode} onChange={setViewMode} />
+              </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y">
-                {selectedManeuvers.map(m => (
-                  <div key={m.id} className="p-4 sm:p-5 flex items-center justify-between gap-4">
+            <CardContent className="pt-4 pb-2">
+              {(() => {
+                // Build grouped + level data for tile view
+                const groupedSummary = selectedManeuvers.reduce<Record<string, any[]>>((acc, m) => {
+                  const cat = m.category ?? "General";
+                  if (!acc[cat]) acc[cat] = [];
+                  acc[cat].push({ ...m, competencyLevel: results[m.id] ?? "not_attempted" });
+                  return acc;
+                }, {});
+
+                const renderSummaryRow = (item: any) => (
+                  <div className="p-4 sm:p-5 flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-base truncate">{m.name}</p>
-                      {maneuverNotes[m.id] && (
-                        <p className="text-sm text-muted-foreground mt-1 truncate">{maneuverNotes[m.id]}</p>
+                      <p className="font-medium text-base truncate">{item.name}</p>
+                      {maneuverNotes[item.id] && (
+                        <p className="text-sm text-muted-foreground mt-1 truncate">{maneuverNotes[item.id]}</p>
                       )}
                     </div>
                     <Badge
                       variant="outline"
-                      className={`shrink-0 text-sm px-3 py-1 ${levelColor[results[m.id] || "not_attempted"]}`}
+                      className={`shrink-0 text-sm px-3 py-1 ${levelColor[results[item.id] || "not_attempted"]}`}
                     >
-                      {levelLabel[results[m.id] || "not_attempted"]}
+                      {levelLabel[results[item.id] || "not_attempted"]}
                     </Badge>
                   </div>
-                ))}
-              </div>
+                );
+
+                if (viewMode === "tile") {
+                  return <AssessmentTileView grouped={groupedSummary} renderItem={renderSummaryRow} />;
+                }
+
+                return (
+                  <div className="divide-y -mx-4 -mb-2 border rounded-lg overflow-hidden">
+                    {selectedManeuvers.map(m => (
+                      <div key={m.id} className="p-4 sm:p-5 flex items-center justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-base truncate">{m.name}</p>
+                          {maneuverNotes[m.id] && (
+                            <p className="text-sm text-muted-foreground mt-1 truncate">{maneuverNotes[m.id]}</p>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 text-sm px-3 py-1 ${levelColor[results[m.id] || "not_attempted"]}`}
+                        >
+                          {levelLabel[results[m.id] || "not_attempted"]}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
