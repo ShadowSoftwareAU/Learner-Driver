@@ -1,4 +1,4 @@
-import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents } from "@workspace/api-client-react";
+import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents, useUpdateAssessment, useGetAssessment, getGetAssessmentQueryKey } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -67,6 +67,7 @@ export default function NewAssessment() {
   const { data: maneuvers, isLoading: isManeuversLoading } = useListManeuvers();
   const createAssessment = useCreateAssessment();
   const saveResults = useSaveManeuverResults();
+  const updateAssessment = useUpdateAssessment();
 
   const currentPositionRef = useRef<GeolocationCoordinates | null>(null);
   const geoWatchRef = useRef<number | null>(null);
@@ -90,6 +91,13 @@ export default function NewAssessment() {
   const urlParams = new URLSearchParams(search);
   const urlStudentId = urlParams.get("studentId") ?? "";
   const urlDuration = urlParams.get("durationMinutes") ?? "60";
+  const resumeIdRaw = urlParams.get("resume");
+  const resumeId = resumeIdRaw ? parseInt(resumeIdRaw, 10) : null;
+
+  // Load existing assessment when resuming a saved in-progress session
+  const { data: existingAssessment, isLoading: isResumeLoading } = useGetAssessment(resumeId ?? 0, {
+    query: { enabled: !!resumeId, queryKey: getGetAssessmentQueryKey(resumeId ?? 0) },
+  });
 
   // ── Draft hydration ───────────────────────────────────────────────────────
   // Loaded once synchronously in the useState initialiser so the correct
@@ -144,10 +152,12 @@ export default function NewAssessment() {
   const [focusAreas, setFocusAreas] = useState(() => initialDraft?.focusAreas ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useViewMode();
+  // Tracks whether we've already hydrated form state from an existing (resumed) assessment
+  const [resumeHydrated, setResumeHydrated] = useState(false);
 
-  // Toast once when a completed draft is restored
+  // Toast once when a localStorage draft is restored (only when not in resume mode)
   useEffect(() => {
-    if (initialDraft?.setupDone) {
+    if (!resumeId && initialDraft?.setupDone) {
       toast({
         title: "Draft restored",
         description: "Your in-progress assessment has been recovered.",
@@ -155,6 +165,43 @@ export default function NewAssessment() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Hydrate form from an existing assessment when the ?resume=ID URL param is present.
+  // Runs once after the API fetch resolves; overwrites any localStorage draft state.
+  useEffect(() => {
+    if (!resumeId || !existingAssessment || resumeHydrated) return;
+    const a = existingAssessment as any;
+    setAssessmentType((a.assessmentType as AssessmentType) ?? "qsafe");
+    setStudentId(a.studentId?.toString() ?? "");
+    setDate(a.lessonDate ?? new Date().toISOString().split("T")[0]);
+    setDuration(a.durationMinutes?.toString() ?? "60");
+    setPedalOperator((a.pedalOperator as PedalOperator) ?? "");
+    setWeatherCondition((a.weatherCondition as WeatherCondition) ?? "");
+    setLightingCondition((a.lightingCondition as LightingCondition) ?? "");
+    setConfidenceNote(a.confidenceNote ?? "");
+    setFocusAreas(a.focusAreasNext ?? "");
+    setSetupDone(true);
+    setSetupOpen(false);
+    // Rebuild maneuver result maps from saved results
+    if (Array.isArray(a.maneuverResults)) {
+      const resultsMap: Record<number, ManeuverResultItemCompetencyLevel> = {};
+      const notesMap: Record<number, string> = {};
+      const locationsMap: Record<number, { lat: number; lng: number }> = {};
+      for (const r of a.maneuverResults) {
+        if (r.competencyLevel && r.competencyLevel !== "not_attempted") {
+          resultsMap[r.maneuverId] = r.competencyLevel as ManeuverResultItemCompetencyLevel;
+        }
+        if (r.notes) notesMap[r.maneuverId] = r.notes;
+        if (r.lat != null && r.lng != null) locationsMap[r.maneuverId] = { lat: r.lat, lng: r.lng };
+      }
+      setResults(resultsMap);
+      setManeuverNotes(notesMap);
+      setManeuverLocations(locationsMap);
+    }
+    toast({ title: "Assessment loaded", description: "Pick up where you left off — existing ratings have been pre-filled." });
+    setResumeHydrated(true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeId, existingAssessment, resumeHydrated]);
 
   // Debounced sync — writes to localStorage 400 ms after the last state change.
   // The ref guard ensures we never re-save after an explicit clear.
@@ -241,38 +288,61 @@ export default function NewAssessment() {
       return;
     }
     setIsSubmitting(true);
+
+    const maneuverResultsArray = Object.entries(results).map(([id, level]) => ({
+      maneuverId: parseInt(id),
+      competencyLevel: level,
+      notes: maneuverNotes[parseInt(id)] || undefined,
+      lat: maneuverLocations[parseInt(id)]?.lat ?? undefined,
+      lng: maneuverLocations[parseInt(id)]?.lng ?? undefined,
+    }));
+
     try {
-      const assessment = await createAssessment.mutateAsync({
-        data: {
-          studentId: parseInt(studentId),
-          lessonDate: new Date(date).toISOString(),
-          durationMinutes: parseInt(duration),
-          assessmentType,
-          pedalOperator: pedalOperator || undefined,
-          confidenceNote,
-          focusAreasNext: focusAreas,
-          acknowledgeFitness: true,
-          weatherCondition: weatherCondition || undefined,
-          lightingCondition: lightingCondition || undefined,
-        } as any,
-      });
-
-      const maneuverResultsArray = Object.entries(results).map(([id, level]) => ({
-        maneuverId: parseInt(id),
-        competencyLevel: level,
-        notes: maneuverNotes[parseInt(id)] || undefined,
-        lat: maneuverLocations[parseInt(id)]?.lat ?? undefined,
-        lng: maneuverLocations[parseInt(id)]?.lng ?? undefined,
-      }));
-
-      if (maneuverResultsArray.length > 0) {
-        await saveResults.mutateAsync({ id: assessment.id, data: { results: maneuverResultsArray } });
+      if (resumeId) {
+        // ── Resuming an existing in-progress assessment ──────────────────────
+        // PATCH the existing record with any updated details, then upsert results.
+        await updateAssessment.mutateAsync({
+          id: resumeId,
+          data: {
+            confidenceNote: confidenceNote || undefined,
+            focusAreasNext: focusAreas || undefined,
+            durationMinutes: parseInt(duration),
+            pedalOperator: (pedalOperator || undefined) as any,
+            weatherCondition: (weatherCondition || undefined) as any,
+            lightingCondition: (lightingCondition || undefined) as any,
+          } as any,
+        });
+        if (maneuverResultsArray.length > 0) {
+          await saveResults.mutateAsync({ id: resumeId, data: { results: maneuverResultsArray } });
+        }
+        toast({ title: "Assessment updated", description: "Changes saved. Ready to submit when you're done." });
+        draftClearedRef.current = true;
+        clearAssessmentDraft();
+        setLocation(`/instructor/assessments/${resumeId}`);
+      } else {
+        // ── Creating a fresh assessment ──────────────────────────────────────
+        const assessment = await createAssessment.mutateAsync({
+          data: {
+            studentId: parseInt(studentId),
+            lessonDate: new Date(date).toISOString(),
+            durationMinutes: parseInt(duration),
+            assessmentType,
+            pedalOperator: pedalOperator || undefined,
+            confidenceNote,
+            focusAreasNext: focusAreas,
+            acknowledgeFitness: true,
+            weatherCondition: weatherCondition || undefined,
+            lightingCondition: lightingCondition || undefined,
+          } as any,
+        });
+        if (maneuverResultsArray.length > 0) {
+          await saveResults.mutateAsync({ id: assessment.id, data: { results: maneuverResultsArray } });
+        }
+        toast({ title: "Assessment saved", description: "Assessment saved successfully." });
+        draftClearedRef.current = true;
+        clearAssessmentDraft();
+        setLocation(`/instructor/assessments/${assessment.id}`);
       }
-
-      toast({ title: "Success", description: "Assessment saved successfully." });
-      draftClearedRef.current = true;
-      clearAssessmentDraft();
-      setLocation(`/instructor/assessments/${assessment.id}`);
     } catch {
       toast({ title: "Error", description: "Failed to save assessment.", variant: "destructive" });
     } finally {
@@ -280,7 +350,7 @@ export default function NewAssessment() {
     }
   };
 
-  if (isStudentsLoading || isManeuversLoading) {
+  if (isStudentsLoading || isManeuversLoading || (resumeId && isResumeLoading)) {
     return (
       <SidebarLayout>
         <div className="flex items-center justify-center h-[50vh]">
@@ -509,8 +579,14 @@ export default function NewAssessment() {
       <div className="space-y-6 max-w-4xl mx-auto pb-28">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">New Assessment</h1>
-            <p className="text-muted-foreground">Log lesson details and maneuver proficiency.</p>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {resumeId ? "Continue Assessment" : "New Assessment"}
+            </h1>
+            <p className="text-muted-foreground">
+              {resumeId
+                ? "Pick up where you left off — existing ratings are pre-filled."
+                : "Log lesson details and maneuver proficiency."}
+            </p>
           </div>
           <Link href="/instructor/assessments/guided">
             <Button variant="outline" className="h-16 text-base px-6 gap-2">
@@ -589,6 +665,17 @@ export default function NewAssessment() {
               const m = item;
               return (
                 <div className="space-y-3">
+                  {/* QSAFE Compliance Criteria — visible in tile view so instructors know what they're assessing */}
+                  {m.complianceCriteria && (
+                    <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
+                      <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1">
+                        QSAFE Compliance Criteria
+                      </p>
+                      <p className="text-xs text-blue-900/80 whitespace-pre-wrap leading-relaxed">
+                        {m.complianceCriteria}
+                      </p>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-3">
                     {[
                       { val: ManeuverResultItemCompetencyLevel.not_attempted, label: "Not Attempted",    color: "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200", active: "bg-gray-200 border-gray-400 text-gray-900 ring-2 ring-gray-400" },
@@ -701,27 +788,28 @@ export default function NewAssessment() {
                           </button>
                         ))}
                       </div>
+                      {/* QSAFE Compliance Criteria — always visible so instructors know what to assess against */}
+                      {m.complianceCriteria && (
+                        <div className="mt-3 rounded-md bg-blue-50 border border-blue-100 p-3">
+                          <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
+                            QSAFE Compliance Criteria
+                          </p>
+                          <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">
+                            {m.complianceCriteria}
+                          </p>
+                        </div>
+                      )}
+                      {/* Mastered hint — shown when instructor selects Consistent Skills */}
                       {results[m.id] === ManeuverResultItemCompetencyLevel.mastered && m.masteryDefinition && (
                         <div className="mt-3 rounded-md bg-green-50 border border-green-100 px-3 py-2">
                           <p className="text-xs font-medium text-green-800 mb-0.5">Consistent Skills means:</p>
                           <p className="text-xs text-green-900/80 whitespace-pre-wrap italic">{m.masteryDefinition}</p>
                         </div>
                       )}
+                      {/* Expand section — competency definition + notes */}
                       {expandedManeuver === m.id && (
                         <div className="mt-4 space-y-4">
-
-                          {/* QSAFE Compliance Criteria */}
-                          {m.complianceCriteria && (
-                            <div className="rounded-md bg-blue-50 border border-blue-100 p-3">
-                              <p className="text-xs font-semibold text-blue-900 uppercase tracking-wider mb-1.5">
-                                QSAFE Compliance Criteria
-                              </p>
-                              <p className="text-sm text-blue-900/80 whitespace-pre-wrap leading-relaxed">
-                                {m.complianceCriteria}
-                              </p>
-                            </div>
-                          )}
-                          {/* Competency definition */}
+                          {/* Competency definition (full) */}
                           {m.masteryDefinition && (
                             <div className="rounded-md bg-purple-50 border border-purple-100 p-3">
                               <p className="text-xs font-semibold text-purple-900 uppercase tracking-wider mb-1.5">
@@ -797,14 +885,24 @@ export default function NewAssessment() {
         )}
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
-          <Button variant="outline" onClick={() => { draftClearedRef.current = true; clearAssessmentDraft(); setLocation("/instructor/students"); }} className="h-16 text-base px-6">Cancel</Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              draftClearedRef.current = true;
+              clearAssessmentDraft();
+              setLocation(resumeId ? `/instructor/assessments/${resumeId}` : "/instructor/students");
+            }}
+            className="h-16 text-base px-6"
+          >
+            Cancel
+          </Button>
           <Button
             onClick={handleSave}
             disabled={isSubmitting || !setupDone}
             className="h-16 text-base px-6"
           >
             {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
-            Save Assessment
+            {resumeId ? "Save & Return" : "Save Assessment"}
           </Button>
         </div>
       </div>

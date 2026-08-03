@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download } from "lucide-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine } from "lucide-react";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { getManeuverImage } from "@/lib/maneuver-images";
@@ -105,6 +105,7 @@ export default function ViewAssessment() {
 
   const finStatus = (assessment as any)?.finalizationStatus ?? "draft";
   const banner = FINALIZATION_BANNER[finStatus] ?? FINALIZATION_BANNER.draft;
+  const isInProgress = (assessment as any)?.status === "in_progress";
 
   const dispatchEmails: string[] = useMemo(() => {
     const raw = (assessment as any)?.reportDispatchedTo;
@@ -165,7 +166,10 @@ export default function ViewAssessment() {
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary" className="text-sm px-3 py-1">
+            <Badge
+              variant="secondary"
+              className={`text-sm px-3 py-1 ${isInProgress ? "bg-amber-100 text-amber-800 border-amber-200" : ""}`}
+            >
               {(assessment.status as string).replace("_", " ")}
             </Badge>
             {/* Assessment program type badge */}
@@ -183,6 +187,14 @@ export default function ViewAssessment() {
                 </Badge>
               );
             })()}
+            {/* Continue button — only for in-progress assessments */}
+            {isInProgress && (
+              <Link href={`/instructor/assessments/new?resume=${assessment.id}`}>
+                <Button size="sm" className="gap-2 bg-amber-500 hover:bg-amber-600 text-white">
+                  <PenLine className="w-4 h-4" /> Continue Assessment
+                </Button>
+              </Link>
+            )}
             {/* Preview report button — always available once there are results */}
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setPreviewOpen(true)}>
               <Eye className="w-4 h-4" /> Preview Report
@@ -209,6 +221,24 @@ export default function ViewAssessment() {
             )}
           </div>
         </div>
+
+        {/* In-progress continuation banner */}
+        {isInProgress && (
+          <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <PenLine className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-amber-900">Assessment in progress</p>
+              <p className="text-sm text-amber-700">
+                This assessment was saved mid-session. You can continue rating maneuvers and add more details before submitting.
+              </p>
+            </div>
+            <Link href={`/instructor/assessments/new?resume=${assessment.id}`}>
+              <Button size="sm" className="shrink-0 gap-1.5 bg-amber-500 hover:bg-amber-600 text-white">
+                <PenLine className="w-3.5 h-3.5" /> Continue
+              </Button>
+            </Link>
+          </div>
+        )}
 
         {/* Finalization status banner */}
         <div className={`flex items-start gap-3 rounded-lg border px-4 py-3 ${banner.bg} ${banner.border}`}>
