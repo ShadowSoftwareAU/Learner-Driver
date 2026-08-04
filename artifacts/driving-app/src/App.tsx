@@ -116,7 +116,7 @@ const clerkAppearance = {
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
     headerTitle: "text-2xl font-bold tracking-tight text-foreground",
     headerSubtitle: "text-sm text-muted-foreground",
-    socialButtonsBlockButtonText: "font-medium text-foreground",
+    socialButtonsBlockButtonText: { color: "hsl(222 47% 11%)", fontWeight: "500" },
     formFieldLabel: "text-sm font-medium text-foreground",
     footerActionLink: "text-primary hover:text-primary/90 font-medium",
     footerActionText: "text-muted-foreground text-sm",
