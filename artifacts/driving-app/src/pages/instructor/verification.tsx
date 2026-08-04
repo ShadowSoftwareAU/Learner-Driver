@@ -388,6 +388,7 @@ export default function InstructorVerification() {
   const [deliversQRide, setDeliversQRide] = useState(false);
   const [instructorState, setInstructorState] = useState("");
   const [adtaNumber, setAdtaNumber] = useState("");
+  const [adtaInitialised, setAdtaInitialised] = useState(false);
 
   const handleExpiryChange = (docType: DocType, expiresAt: string) => {
     setUploads((prev) => {
@@ -429,7 +430,6 @@ export default function InstructorVerification() {
   }
 
   // Pre-fill ADTA from saved instructor profile once data loads
-  const [adtaInitialised, setAdtaInitialised] = useState(false);
   if (data && !adtaInitialised) {
     const saved = (data as any).adtaNumber ?? "";
     if (saved) setAdtaNumber(saved);
