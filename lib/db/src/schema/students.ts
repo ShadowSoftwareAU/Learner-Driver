@@ -19,6 +19,13 @@ export const studentsTable = pgTable("students", {
   licenseNumber: text("license_number"),
   licenseStatus: text("license_status"), // 'learner' | 'provisional' | 'open' | 'overseas'
   transmissionPreference: text("transmission_preference"), // 'automatic' | 'manual'
+  // Licence metadata — populated manually or via AI OCR scan
+  licenceClass: text("licence_class"),         // e.g. "MR", "C"
+  licenceType: text("licence_type"),           // e.g. "O" (Open), "P1", "P2"
+  licenceEffectiveDate: text("licence_effective_date"), // ISO date string
+  licenceExpiry: text("licence_expiry"),       // ISO date string
+  licenceCardNumber: text("licence_card_number"), // e.g. "DE7 A42 6BE D"
+  address: text("address"),                    // Street address from rear of licence
   licenceFrontPath: text("licence_front_path"),
   licenceBackPath: text("licence_back_path"),
   headshotPath: text("headshot_path"),

@@ -74,6 +74,34 @@ export const UpdateMyRoleResponse = zod.object({
 
 
 /**
+ * @summary OCR-parse a driver licence image
+ */
+export const parseLicenceBodyFrontMimeTypeDefault = `image/jpeg`;
+
+export const ParseLicenceBody = zod.object({
+  "frontBase64": zod.string().describe('Base64-encoded front image'),
+  "frontMimeType": zod.string().default(parseLicenceBodyFrontMimeTypeDefault),
+  "backBase64": zod.string().optional().describe('Base64-encoded rear image (optional)'),
+  "backMimeType": zod.string().optional()
+})
+
+export const ParseLicenceResponse = zod.object({
+  "surname": zod.string().optional(),
+  "firstName": zod.string().optional(),
+  "middleName": zod.string().optional(),
+  "fullName": zod.string().optional(),
+  "dateOfBirth": zod.string().optional(),
+  "licenceClass": zod.string().optional(),
+  "licenceType": zod.string().optional(),
+  "licenceEffectiveDate": zod.string().optional(),
+  "licenceExpiry": zod.string().optional(),
+  "licenceNumber": zod.string().optional(),
+  "address": zod.string().optional(),
+  "cardNumber": zod.string().optional()
+})
+
+
+/**
  * @summary Get the authenticated student's own profile
  */
 export const GetMyStudentProfileResponse = zod.object({
@@ -92,6 +120,12 @@ export const GetMyStudentProfileResponse = zod.object({
   "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
   "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().nullish().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().nullish().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().nullish().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().nullish().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().nullish().describe('Physical card number printed on the rear'),
+  "address": zod.string().nullish().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().nullish(),
   "licenceBackPath": zod.string().nullish(),
   "headshotPath": zod.string().nullish(),
@@ -140,6 +174,12 @@ export const UpdateMyStudentProfileResponse = zod.object({
   "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
   "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().nullish().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().nullish().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().nullish().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().nullish().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().nullish().describe('Physical card number printed on the rear'),
+  "address": zod.string().nullish().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().nullish(),
   "licenceBackPath": zod.string().nullish(),
   "headshotPath": zod.string().nullish(),
@@ -184,6 +224,12 @@ export const ListStudentsResponseItem = zod.object({
   "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
   "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().nullish().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().nullish().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().nullish().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().nullish().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().nullish().describe('Physical card number printed on the rear'),
+  "address": zod.string().nullish().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().nullish(),
   "licenceBackPath": zod.string().nullish(),
   "headshotPath": zod.string().nullish(),
@@ -226,13 +272,20 @@ export const CreateStudentBody = zod.object({
   "licenseStatus": zod.enum(['learner', 'provisional', 'open', 'overseas']).optional().describe('Current licence status of the student'),
   "transmissionPreference": zod.enum(['automatic', 'manual']).optional().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().optional().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().optional().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().optional().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().optional().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().optional().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().optional().describe('Physical card number printed on the rear'),
+  "address": zod.string().optional().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().optional(),
   "licenceBackPath": zod.string().optional(),
   "headshotPath": zod.string().optional(),
   "notes": zod.string().optional(),
   "region": zod.string().optional(),
   "state": zod.string().optional().describe('AU state\/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)'),
-  "country": zod.string().optional()
+  "country": zod.string().optional(),
+  "sendInvite": zod.boolean().optional().describe('If true, send a welcome\/login email to the student\'s email address')
 })
 
 
@@ -259,6 +312,12 @@ export const GetStudentResponse = zod.object({
   "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
   "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().nullish().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().nullish().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().nullish().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().nullish().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().nullish().describe('Physical card number printed on the rear'),
+  "address": zod.string().nullish().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().nullish(),
   "licenceBackPath": zod.string().nullish(),
   "headshotPath": zod.string().nullish(),
@@ -333,6 +392,12 @@ export const UpdateStudentResponse = zod.object({
   "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
   "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().nullish().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().nullish().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().nullish().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().nullish().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().nullish().describe('Physical card number printed on the rear'),
+  "address": zod.string().nullish().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().nullish(),
   "licenceBackPath": zod.string().nullish(),
   "headshotPath": zod.string().nullish(),
@@ -1220,6 +1285,12 @@ export const GetHandoverResponse = zod.object({
   "licenseStatus": zod.union([zod.literal('learner'),zod.literal('provisional'),zod.literal('open'),zod.literal('overseas'),zod.literal(null)]).nullish().describe('Current licence status of the student'),
   "transmissionPreference": zod.union([zod.literal('automatic'),zod.literal('manual'),zod.literal(null)]).nullish().describe('Student\'s preferred vehicle transmission type'),
   "medicalNotes": zod.string().nullish().describe('Plain-text instructor-awareness notes (e.g. wears glasses, medication)'),
+  "licenceClass": zod.string().nullish().describe('Licence class code (e.g. MR, C, RE)'),
+  "licenceType": zod.string().nullish().describe('Licence type\/condition code (e.g. O, P1, P2)'),
+  "licenceEffectiveDate": zod.string().nullish().describe('ISO date string — when the current licence became effective'),
+  "licenceExpiry": zod.string().nullish().describe('ISO date string — licence expiry date'),
+  "licenceCardNumber": zod.string().nullish().describe('Physical card number printed on the rear'),
+  "address": zod.string().nullish().describe('Street address from rear of licence'),
   "licenceFrontPath": zod.string().nullish(),
   "licenceBackPath": zod.string().nullish(),
   "headshotPath": zod.string().nullish(),

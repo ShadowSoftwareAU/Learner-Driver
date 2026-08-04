@@ -113,6 +113,8 @@ import type {
   NotificationPreferences,
   NotificationPreferencesPatch,
   OkResponse,
+  ParseLicenceBody,
+  ParsedLicenceData,
   PatchBookingInput,
   PayBookingWithCredits200,
   PushToken,
@@ -470,6 +472,77 @@ export const useUpdateMyRole = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getUpdateMyRoleMutationOptions(options));
+    }
+
+export const getParseLicenceUrl = () => {
+
+
+
+
+  return `/api/students/parse-licence`
+}
+
+/**
+ * @summary OCR-parse a driver licence image
+ */
+export const parseLicence = async (parseLicenceBody: ParseLicenceBody, options?: RequestInit): Promise<ParsedLicenceData> => {
+
+  return customFetch<ParsedLicenceData>(getParseLicenceUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      parseLicenceBody,)
+  }
+);}
+
+
+
+
+export const getParseLicenceMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof parseLicence>>, TError,{data: BodyType<ParseLicenceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof parseLicence>>, TError,{data: BodyType<ParseLicenceBody>}, TContext> => {
+
+const mutationKey = ['parseLicence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof parseLicence>>, {data: BodyType<ParseLicenceBody>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  parseLicence(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ParseLicenceMutationResult = NonNullable<Awaited<ReturnType<typeof parseLicence>>>
+    export type ParseLicenceMutationBody = BodyType<ParseLicenceBody>
+    export type ParseLicenceMutationError = ErrorType<void>
+
+    /**
+ * @summary OCR-parse a driver licence image
+ */
+export const useParseLicence = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof parseLicence>>, TError,{data: BodyType<ParseLicenceBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof parseLicence>>,
+        TError,
+        {data: BodyType<ParseLicenceBody>},
+        TContext
+      > => {
+      return useMutation(getParseLicenceMutationOptions(options));
     }
 
 export const getGetMyStudentProfileUrl = () => {

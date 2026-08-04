@@ -146,6 +146,36 @@ export interface Student {
      * @nullable
      */
   medicalNotes?: string | null;
+  /**
+     * Licence class code (e.g. MR, C, RE)
+     * @nullable
+     */
+  licenceClass?: string | null;
+  /**
+     * Licence type/condition code (e.g. O, P1, P2)
+     * @nullable
+     */
+  licenceType?: string | null;
+  /**
+     * ISO date string — when the current licence became effective
+     * @nullable
+     */
+  licenceEffectiveDate?: string | null;
+  /**
+     * ISO date string — licence expiry date
+     * @nullable
+     */
+  licenceExpiry?: string | null;
+  /**
+     * Physical card number printed on the rear
+     * @nullable
+     */
+  licenceCardNumber?: string | null;
+  /**
+     * Street address from rear of licence
+     * @nullable
+     */
+  address?: string | null;
   /** @nullable */
   licenceFrontPath?: string | null;
   /** @nullable */
@@ -203,6 +233,21 @@ export interface Student {
   createdAt?: string;
 }
 
+export interface ParsedLicenceData {
+  surname?: string;
+  firstName?: string;
+  middleName?: string;
+  fullName?: string;
+  dateOfBirth?: string;
+  licenceClass?: string;
+  licenceType?: string;
+  licenceEffectiveDate?: string;
+  licenceExpiry?: string;
+  licenceNumber?: string;
+  address?: string;
+  cardNumber?: string;
+}
+
 /**
  * Current licence status of the student
  */
@@ -243,6 +288,18 @@ export interface StudentInput {
   transmissionPreference?: StudentInputTransmissionPreference;
   /** Plain-text instructor-awareness notes (e.g. wears glasses, medication) */
   medicalNotes?: string;
+  /** Licence class code (e.g. MR, C, RE) */
+  licenceClass?: string;
+  /** Licence type/condition code (e.g. O, P1, P2) */
+  licenceType?: string;
+  /** ISO date string — when the current licence became effective */
+  licenceEffectiveDate?: string;
+  /** ISO date string — licence expiry date */
+  licenceExpiry?: string;
+  /** Physical card number printed on the rear */
+  licenceCardNumber?: string;
+  /** Street address from rear of licence */
+  address?: string;
   licenceFrontPath?: string;
   licenceBackPath?: string;
   headshotPath?: string;
@@ -251,6 +308,8 @@ export interface StudentInput {
   /** AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT) */
   state?: string;
   country?: string;
+  /** If true, send a welcome/login email to the student's email address */
+  sendInvite?: boolean;
 }
 
 /**
@@ -2858,6 +2917,15 @@ export interface SchoolFeedbackSettings {
   /** @nullable */
   mentorGroupEmail?: string | null;
 }
+
+export type ParseLicenceBody = {
+  /** Base64-encoded front image */
+  frontBase64: string;
+  frontMimeType?: string;
+  /** Base64-encoded rear image (optional) */
+  backBase64?: string;
+  backMimeType?: string;
+};
 
 export type GenerateViewerCode200 = {
   viewerCode: string;

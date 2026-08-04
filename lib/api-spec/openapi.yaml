@@ -112,6 +112,42 @@ paths:
                 $ref: "#/components/schemas/UserProfile"
 
   # ─── Students ────────────────────────────────────────────────────────────────
+  /students/parse-licence:
+    post:
+      tags: [Students]
+      summary: OCR-parse a driver licence image
+      operationId: parseLicence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [frontBase64]
+              properties:
+                frontBase64:
+                  type: string
+                  description: "Base64-encoded front image"
+                frontMimeType:
+                  type: string
+                  default: image/jpeg
+                backBase64:
+                  type: string
+                  description: "Base64-encoded rear image (optional)"
+                backMimeType:
+                  type: string
+      responses:
+        "200":
+          description: Extracted licence data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ParsedLicenceData"
+        "400":
+          description: Bad request
+        "422":
+          description: Could not parse OCR response
+
   /students/me:
     get:
       operationId: getMyStudentProfile
@@ -3151,6 +3187,24 @@ components:
         medicalNotes:
           type: ["string", "null"]
           description: "Plain-text instructor-awareness notes (e.g. wears glasses, medication)"
+        licenceClass:
+          type: ["string", "null"]
+          description: "Licence class code (e.g. MR, C, RE)"
+        licenceType:
+          type: ["string", "null"]
+          description: "Licence type/condition code (e.g. O, P1, P2)"
+        licenceEffectiveDate:
+          type: ["string", "null"]
+          description: "ISO date string — when the current licence became effective"
+        licenceExpiry:
+          type: ["string", "null"]
+          description: "ISO date string — licence expiry date"
+        licenceCardNumber:
+          type: ["string", "null"]
+          description: "Physical card number printed on the rear"
+        address:
+          type: ["string", "null"]
+          description: "Street address from rear of licence"
         licenceFrontPath:
           type: ["string", "null"]
         licenceBackPath:
@@ -3210,6 +3264,34 @@ components:
         createdAt:
           type: string
 
+    ParsedLicenceData:
+      type: object
+      properties:
+        surname:
+          type: string
+        firstName:
+          type: string
+        middleName:
+          type: string
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        licenceClass:
+          type: string
+        licenceType:
+          type: string
+        licenceEffectiveDate:
+          type: string
+        licenceExpiry:
+          type: string
+        licenceNumber:
+          type: string
+        address:
+          type: string
+        cardNumber:
+          type: string
+
     StudentInput:
       type: object
       required: [fullName, email]
@@ -3243,6 +3325,24 @@ components:
         medicalNotes:
           type: string
           description: "Plain-text instructor-awareness notes (e.g. wears glasses, medication)"
+        licenceClass:
+          type: string
+          description: "Licence class code (e.g. MR, C, RE)"
+        licenceType:
+          type: string
+          description: "Licence type/condition code (e.g. O, P1, P2)"
+        licenceEffectiveDate:
+          type: string
+          description: "ISO date string — when the current licence became effective"
+        licenceExpiry:
+          type: string
+          description: "ISO date string — licence expiry date"
+        licenceCardNumber:
+          type: string
+          description: "Physical card number printed on the rear"
+        address:
+          type: string
+          description: "Street address from rear of licence"
         licenceFrontPath:
           type: string
         licenceBackPath:
@@ -3258,6 +3358,9 @@ components:
           description: "AU state/territory code (QLD, NSW, VIC, SA, WA, TAS, NT, ACT)"
         country:
           type: string
+        sendInvite:
+          type: boolean
+          description: "If true, send a welcome/login email to the student's email address"
 
     StudentUpdate:
       type: object

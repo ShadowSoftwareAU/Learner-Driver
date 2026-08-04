@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db, studentsTable, usersTable, assessmentsTable, maneuverResultsTable, maneuversTable, instructorsTable, bookingsTable, studentMilestonesTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
+import { sendExternalEmail } from "../lib/notifications/emailChannel";
 import { encrypt, decrypt, derivePreview } from "../lib/crypto";
 import { canViewRestrictedMedicalData } from "../lib/authz";
 import { isSchoolAdmin, isSuperAdmin } from "../lib/config";
@@ -69,7 +70,7 @@ router.get("/students", requireAuth, async (req: any, res): Promise<void> => {
 
 router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
-  const { fullName, email, phone, dateOfBirth, licenseStatus, transmissionPreference, medicalNotes, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceFrontPath, licenceBackPath, headshotPath, notes, region, state, country } = req.body;
+  const { fullName, email, phone, dateOfBirth, licenseStatus, transmissionPreference, medicalNotes, guardianName, guardianPhone, guardianEmail, pcycSchoolEmail, licenseNumber, licenceClass, licenceType, licenceEffectiveDate, licenceExpiry, licenceCardNumber, address, licenceFrontPath, licenceBackPath, headshotPath, notes, region, state, country, sendInvite } = req.body;
   if (!fullName || !email) { res.status(400).json({ error: "fullName and email required" }); return; }
 
   const validLicenseStatuses = ["learner", "provisional", "open", "overseas"];
@@ -100,11 +101,30 @@ router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
     medicalNotes: medicalNotes ?? null,
     guardianName: guardianName ?? null, guardianPhone: guardianPhone ?? null,
     guardianEmail: guardianEmail ?? null, pcycSchoolEmail: pcycSchoolEmail ?? null,
-    licenseNumber: licenseNumber ?? null, licenceFrontPath: licenceFrontPath ?? null,
+    licenseNumber: licenseNumber ?? null,
+    licenceClass: licenceClass ?? null,
+    licenceType: licenceType ?? null,
+    licenceEffectiveDate: licenceEffectiveDate ?? null,
+    licenceExpiry: licenceExpiry ?? null,
+    licenceCardNumber: licenceCardNumber ?? null,
+    address: address ?? null,
+    licenceFrontPath: licenceFrontPath ?? null,
     licenceBackPath: licenceBackPath ?? null, headshotPath: headshotPath ?? null,
     notes: notes ?? null, region: region ?? null, state: state ?? null, country: country ?? null,
   }).returning();
   await logAudit({ actorId: user.id, actorRole: user.role, action: "create_student", resourceType: "student", resourceId: s.id, studentId: s.id }, req);
+
+  // Optionally send a welcome / login invitation email to the student
+  if (sendInvite && email) {
+    const appUrl = process.env.APP_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN ?? "steps2drive.app"}`;
+    await sendExternalEmail({
+      to: email,
+      subject: `Welcome to Steps2Drive — ${fullName}`,
+      title: `Welcome to Steps2Drive, ${fullName.split(" ")[0]}!`,
+      body: `Your instructor has created a learner profile for you on Steps2Drive.\n\nYou can sign in to review your lesson assessments, track your progress, and manage bookings at:\n\n${appUrl}\n\nUse this email address (${email}) to create your account or sign in.\n\nIf you have any questions, contact your instructor directly.`,
+    }).catch(() => {/* non-fatal */});
+  }
+
   res.status(201).json(formatStudent(s));
 });
 

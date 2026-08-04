@@ -26,7 +26,8 @@
     "pino-http": "^10.5.0",
     "resend": "^6.16.0",
     "stripe": "^22.3.0",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "@workspace/integrations-openai-ai-server": "workspace:*"
   },
   "devDependencies": {
     "@types/cookie-parser": "^1.4.10",

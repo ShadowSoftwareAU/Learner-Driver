@@ -152,19 +152,19 @@ function buildEmailHtml(payload: NotificationPayload): string {
 </head>
 <body>
   <div class="wrapper">
-    <div class="header"><h1>Learner Log</h1></div>
+    <div class="header"><h1>Steps2Drive</h1></div>
     <div class="body">
       <p><strong>${escapeHtml(payload.title)}</strong></p>
       <p>${body}</p>
     </div>
-    <div class="footer">You received this email because you have an active instructor account on Learner Log.</div>
+    <div class="footer">You received this email because you have an active instructor account on Steps2Drive.</div>
   </div>
 </body>
 </html>`;
 }
 
 function buildEmailText(payload: NotificationPayload): string {
-  return `${payload.title}\n\n${payload.body}\n\n---\nLearner Log`;
+  return `${payload.title}\n\n${payload.body}\n\n---\nSteps2Drive`;
 }
 
 function escapeHtml(str: string): string {

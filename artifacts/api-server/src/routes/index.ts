@@ -3,6 +3,7 @@ import healthRouter from "./health";
 import clearSessionRouter from "./clear-session";
 import usersRouter from "./users";
 import studentsRouter from "./students";
+import parseLicenceRouter from "./parse-licence";
 import instructorsRouter from "./instructors";
 import maneuversRouter from "./maneuvers";
 import assessmentsRouter from "./assessments";
@@ -70,5 +71,6 @@ router.use(walletRouter);
 router.use(adminBackfillRouter);
 router.use(instructorLinksRouter);
 router.use(adminStaffRouter);
+router.use(parseLicenceRouter);
 
 export default router;
