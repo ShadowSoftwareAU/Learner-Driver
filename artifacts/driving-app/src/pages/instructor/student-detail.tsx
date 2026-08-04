@@ -63,6 +63,8 @@ export default function InstructorStudentDetail() {
   const [editNotes, setEditNotes] = useState("");
   const [editMedicalNotes, setEditMedicalNotes] = useState("");
   const [editHeadshotPath, setEditHeadshotPath] = useState<string | null>(null);
+  const [editLicenceFrontPath, setEditLicenceFrontPath] = useState<string | null>(null);
+  const [editLicenceBackPath, setEditLicenceBackPath] = useState<string | null>(null);
   const updateStudent = useUpdateStudent();
 
   const { data: student, isLoading: isStudentLoading } = useGetStudent(id, { query: { enabled: !!id, queryKey: getGetStudentQueryKey(id) } });
@@ -153,6 +155,8 @@ export default function InstructorStudentDetail() {
                 setEditNotes(student.notes ?? "");
                 setEditMedicalNotes((student as any).medicalNotes ?? "");
                 setEditHeadshotPath(student.headshotPath ?? null);
+                setEditLicenceFrontPath((student as any).licenceFrontPath ?? null);
+                setEditLicenceBackPath((student as any).licenceBackPath ?? null);
                 setEditOpen(true);
               }}
             >
@@ -730,6 +734,21 @@ export default function InstructorStudentDetail() {
                 </Select>
               </div>
             </div>
+            <div className="space-y-3">
+              <Label>Licence photos</Label>
+              <PhotoCaptureField
+                label="Licence front"
+                description="Front of the current licence card."
+                value={editLicenceFrontPath}
+                onChange={setEditLicenceFrontPath}
+              />
+              <PhotoCaptureField
+                label="Licence back"
+                description="Rear of the current licence card."
+                value={editLicenceBackPath}
+                onChange={setEditLicenceBackPath}
+              />
+            </div>
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} placeholder="Any notes about this student..." />
@@ -764,6 +783,8 @@ export default function InstructorStudentDetail() {
                       notes: editNotes || undefined,
                       medicalNotes: editMedicalNotes || undefined,
                       headshotPath: editHeadshotPath ?? undefined,
+                      licenceFrontPath: editLicenceFrontPath ?? undefined,
+                      licenceBackPath: editLicenceBackPath ?? undefined,
                     },
                   });
                   await qc.invalidateQueries({ queryKey: getGetStudentQueryKey(id) });
