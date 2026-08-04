@@ -19,12 +19,31 @@ interface CategorySummaryProps {
   onlyAssessed?: boolean;
 }
 
-const LEVEL_META: Record<string, { label: string; color: string }> = {
-  not_attempted: { label: "Not Attempted",    color: "bg-gray-100 text-gray-700" },
-  attempted:     { label: "Developing",        color: "bg-red-100 text-red-700" },
-  practiced:     { label: "Competent",         color: "bg-yellow-100 text-yellow-700" },
-  mastered:      { label: "Consistent Skills", color: "bg-green-100 text-green-700" },
+const LEVEL_META: Record<string, { label: string; shortLabel: string; color: string }> = {
+  not_attempted: { label: "Not Attempted",    shortLabel: "not attempted",    color: "bg-gray-100 text-gray-700" },
+  attempted:     { label: "Developing",        shortLabel: "developing",       color: "bg-red-100 text-red-700" },
+  practiced:     { label: "Competent",         shortLabel: "competent",        color: "bg-yellow-100 text-yellow-700" },
+  mastered:      { label: "Consistent Skills", shortLabel: "consistent skills", color: "bg-green-100 text-green-700" },
 };
+
+/**
+ * Canonical category order matching the QSAFE assessment sequence.
+ * Any category not in this list is appended alphabetically at the end.
+ */
+const QSAFE_CATEGORY_ORDER = [
+  "Vehicle Controls & Pre-Drive",
+  "Moving Off & Stopping",
+  "Intersections",
+  "Road Positioning & Speed",
+  "Observation & Hazard Perception",
+  "QSAFE Compliance",
+];
+
+function sortCategories(categories: string[]): string[] {
+  const known = QSAFE_CATEGORY_ORDER.filter(c => categories.includes(c));
+  const unknown = categories.filter(c => !QSAFE_CATEGORY_ORDER.includes(c)).sort();
+  return [...known, ...unknown];
+}
 
 export function CategorySummary({
   maneuvers,
@@ -71,57 +90,63 @@ export function CategorySummary({
   const totalCount = Object.values(totals).reduce((a, b) => a + b, 0);
   if (totalCount === 0) return null;
 
+  const sortedCategories = sortCategories(Object.keys(byCategory));
+
   return (
     <Card>
       <CardHeader className="p-6 pb-3">
         <CardTitle className="text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-6 pt-0 space-y-5">
-        {/* Totals row — Attempted → Practiced → Competent first, Not Attempted last */}
-        <div className="grid grid-cols-3 gap-2">
-          {(["attempted", "practiced", "mastered"] as const).map(level => {
+
+        {/* Top summary — all four levels in a 2×2 grid */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {(["attempted", "practiced", "mastered", "not_attempted"] as const).map(level => {
             const meta = LEVEL_META[level];
+            const count = totals[level] ?? 0;
             return (
               <div key={level} className={`rounded-md p-3 text-center ${meta.color}`}>
-                <div className="text-2xl font-bold">{totals[level] ?? 0}</div>
-                <div className="text-xs font-medium mt-0.5">{meta.label}</div>
+                <div className="text-2xl font-bold">{count}</div>
+                <div className="text-xs font-medium mt-0.5 leading-tight">{meta.label}</div>
               </div>
             );
           })}
         </div>
-        {(totals.not_attempted ?? 0) > 0 && (
-          <div className={`rounded-md p-2.5 text-center text-sm ${LEVEL_META.not_attempted.color}`}>
-            <span className="font-semibold">{totals.not_attempted}</span>
-            <span className="ml-1 font-medium">Not Attempted</span>
-          </div>
-        )}
 
-        {/* Per-category breakdown */}
-        {Object.keys(byCategory).length > 0 && (
+        {/* Total count */}
+        <p className="text-xs text-center text-muted-foreground -mt-2">
+          {totalCount} maneuver{totalCount !== 1 ? "s" : ""} total
+        </p>
+
+        {/* Per-category breakdown — ordered by QSAFE assessment sequence */}
+        {sortedCategories.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">By Category</p>
             <div className="space-y-2">
-              {Object.entries(byCategory).map(([cat, counts]) => (
-                <div key={cat} className="flex items-center gap-2 text-sm">
-                  <span className="flex-1 truncate font-medium">{cat}</span>
-                  <div className="flex gap-1.5 flex-shrink-0">
-                    {(["attempted", "practiced", "mastered", "not_attempted"] as const).map(level => {
-                      const count = counts[level] ?? 0;
-                      if (count === 0) return null;
-                      const meta = LEVEL_META[level];
-                      return (
-                        <span
-                          key={level}
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${meta.color}`}
-                          title={meta.label}
-                        >
-                          {count} {meta.label.toLowerCase()}
-                        </span>
-                      );
-                    })}
+              {sortedCategories.map(cat => {
+                const counts = byCategory[cat];
+                return (
+                  <div key={cat} className="flex items-center gap-2 text-sm">
+                    <span className="flex-1 truncate font-medium">{cat}</span>
+                    <div className="flex gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                      {(["attempted", "practiced", "mastered", "not_attempted"] as const).map(level => {
+                        const count = counts[level] ?? 0;
+                        if (count === 0) return null;
+                        const meta = LEVEL_META[level];
+                        return (
+                          <span
+                            key={level}
+                            className={`px-2 py-0.5 rounded-full text-xs font-medium ${meta.color}`}
+                            title={meta.label}
+                          >
+                            {count} {meta.shortLabel}
+                          </span>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
