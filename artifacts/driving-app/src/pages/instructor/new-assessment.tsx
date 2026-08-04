@@ -180,6 +180,7 @@ export default function NewAssessment() {
     setLightingCondition((a.lightingCondition as LightingCondition) ?? "");
     setConfidenceNote(a.confidenceNote ?? "");
     setFocusAreas(a.focusAreasNext ?? "");
+    setFitnessConfirmed(true); // already confirmed when the assessment was originally created
     setSetupDone(true);
     setSetupOpen(false);
     // Rebuild maneuver result maps from saved results
