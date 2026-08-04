@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, CreditCard, CheckCircle2, GraduationCap, Users, Plus, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Eye, ArrowLeft, Clock, Calendar, MapPin, CreditCard, CheckCircle2, GraduationCap, Users, Plus, Pencil, Trash2, UserCircle2 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -503,7 +503,7 @@ export default function ViewerStudentDetail() {
                         <button
                           type="button"
                           onClick={() => !isSupervised && navigate(`/viewer/assessments/${a.id}`)}
-                          className={`flex-1 text-left rounded-lg p-2 -mx-2 space-y-1 ${isSupervised ? "cursor-default" : "hover:bg-muted/50 transition-colors"}`}
+                          className={`flex-1 text-left rounded-lg p-2 -mx-2 space-y-1.5 ${isSupervised ? "cursor-default" : "hover:bg-muted/50 transition-colors"}`}
                         >
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -525,6 +525,13 @@ export default function ViewerStudentDetail() {
                               {a.totalHoursThisLesson != null && ` · +${Number(a.totalHoursThisLesson / 60).toFixed(1)} hrs`}
                             </span>
                           </div>
+                          {/* Instructor name for instructor-led lessons */}
+                          {!isSupervised && a.instructorName && (
+                            <div className="flex items-center gap-1.5">
+                              <UserCircle2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground">{a.instructorName}</span>
+                            </div>
+                          )}
                           <p className="text-xs text-muted-foreground">
                             {a.pedalOperator ? (PEDAL_LABELS[a.pedalOperator] ?? a.pedalOperator) : ""}
                           </p>

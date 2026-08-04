@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Eye, Plus, ChevronRight, Clock, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Loader2, Eye, Plus, ChevronRight, Clock, AlertTriangle, Wallet, ArrowUpRight, ArrowDownRight, ClipboardList, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
@@ -28,6 +28,174 @@ import { useQueryClient } from "@tanstack/react-query";
 
 const QK = "/api/viewer/students";
 const WALLET_QK = "/api/wallet";
+
+// ── Student selector ──────────────────────────────────────────────────────────
+
+function StudentSelector({
+  students,
+  onNavigate,
+}: {
+  students: ViewerStudent[];
+  onNavigate: (id: number) => void;
+}) {
+  const [selectedId, setSelectedId] = useState<number>(students[0]?.id ?? 0);
+  const s = students.find((x) => x.id === selectedId) ?? students[0];
+
+  return (
+    <div className="space-y-4">
+      {/* Selector — only shown when there are multiple students */}
+      {students.length > 1 && (
+        <div className="space-y-1.5">
+          <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            Select student
+          </Label>
+          <Select
+            value={String(selectedId)}
+            onValueChange={(v) => setSelectedId(Number(v))}
+          >
+            <SelectTrigger className="max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {students.map((st) => (
+                <SelectItem key={st.id} value={String(st.id)}>
+                  {st.fullName}
+                  {st.relationshipType ? ` (${st.relationshipType.replace(/_/g, " ")})` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {/* Selected student card */}
+      {s && (
+        <Card>
+          <CardContent className="pt-5 pb-4 space-y-4">
+            {/* Name + relationship */}
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="font-semibold text-lg">{s.fullName}</p>
+                {s.relationshipType && (
+                  <p className="text-sm text-muted-foreground capitalize">
+                    {s.relationshipType.replace(/_/g, " ")}
+                    {s.linkedAt && (
+                      <span className="text-xs ml-2">
+                        · linked {new Date(s.linkedAt).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    )}
+                  </p>
+                )}
+              </div>
+              {students.length === 1 && (
+                <Badge variant="outline" className="text-xs shrink-0 capitalize">
+                  {s.relationshipType?.replace(/_/g, " ") ?? "Linked"}
+                </Badge>
+              )}
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3 py-3 border-y">
+              <div className="text-center">
+                <p className="text-xl font-bold">
+                  {s.isQLD && s.effectiveTotalHours != null
+                    ? Number(s.effectiveTotalHours).toFixed(1)
+                    : s.totalHours != null
+                    ? Number(s.totalHours).toFixed(1)
+                    : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {s.isQLD ? "effective hrs" : "total hrs"}
+                </p>
+                {s.isQLD && s.effectiveTotalHours != null && (
+                  <p className="text-[10px] text-muted-foreground">
+                    {Number(s.instructorHours ?? 0).toFixed(1)}i + {Number(s.supervisedHours ?? 0).toFixed(1)}s
+                  </p>
+                )}
+              </div>
+              <div className="text-center">
+                <p className={`text-xl font-bold ${(s.noShowCount ?? 0) > 0 ? "text-yellow-700" : ""}`}>
+                  {s.noShowCount ?? 0}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">no-shows</p>
+              </div>
+              <div className="text-center">
+                <p className="text-xl font-bold">
+                  {s.attendanceReliabilityScore != null ? `${s.attendanceReliabilityScore}%` : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">attendance</p>
+              </div>
+            </div>
+
+            {/* Attendance bar */}
+            {s.attendanceReliabilityScore != null && (
+              <div>
+                <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      s.attendanceReliabilityScore >= 80
+                        ? "bg-green-500"
+                        : s.attendanceReliabilityScore >= 60
+                        ? "bg-yellow-500"
+                        : "bg-red-500"
+                    }`}
+                    style={{ width: `${s.attendanceReliabilityScore}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={() => onNavigate(s.id)}
+              >
+                <ClipboardList className="w-3.5 h-3.5 mr-1.5" />
+                View Lessons &amp; Assessments
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 sm:flex-none"
+                onClick={() => onNavigate(s.id)}
+              >
+                <ChevronRight className="w-3.5 h-3.5 mr-1" />
+                Full Profile
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Other students as compact links (when >1) */}
+      {students.length > 1 && (
+        <div className="space-y-1">
+          <p className="text-xs text-muted-foreground font-medium px-1">All linked students</p>
+          {students.map((st) => (
+            <button
+              key={st.id}
+              type="button"
+              onClick={() => setSelectedId(st.id)}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm border transition-colors ${
+                st.id === selectedId
+                  ? "border-primary/40 bg-primary/5 text-primary font-medium"
+                  : "border-transparent hover:bg-muted text-foreground"
+              }`}
+            >
+              <span>{st.fullName}</span>
+              <span className="text-xs text-muted-foreground capitalize">
+                {st.totalHours != null ? `${Number(st.totalHours).toFixed(1)} hrs` : "—"}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const RELATIONSHIP_OPTIONS = [
   { value: "parent", label: "Parent" },
@@ -223,74 +391,10 @@ export default function ViewerDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {students.map((s: ViewerStudent) => (
-              <Card
-                key={s.id}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/viewer/students/${s.id}`)}
-              >
-                <CardContent className="pt-5 pb-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <p className="font-semibold">{s.fullName}</p>
-                      {s.relationshipType && (
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {s.relationshipType.replace(/_/g, " ")}
-                        </p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground mt-0.5" />
-                  </div>
-
-                  <div className="flex gap-4 text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Clock className="w-3.5 h-3.5" />
-                      {s.isQLD && s.effectiveTotalHours != null ? (
-                        <span title={`${Number(s.instructorHours ?? 0).toFixed(1)} instructor + ${Number(s.supervisedHours ?? 0).toFixed(1)} supervised (3x multiplier applied)`}>
-                          {Number(s.effectiveTotalHours).toFixed(1)} effective hrs
-                        </span>
-                      ) : (
-                        <span>{s.totalHours != null ? `${Number(s.totalHours).toFixed(1)} hrs` : "—"}</span>
-                      )}
-                    </div>
-                    {s.isQLD && s.effectiveTotalHours != null && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <span>{Number(s.instructorHours ?? 0).toFixed(1)}i + {Number(s.supervisedHours ?? 0).toFixed(1)}s</span>
-                      </div>
-                    )}
-                    {s.noShowCount > 0 && (
-                      <div className="flex items-center gap-1 text-yellow-700">
-                        <AlertTriangle className="w-3.5 h-3.5" />
-                        <span>{s.noShowCount} no-show{s.noShowCount !== 1 ? "s" : ""}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {s.attendanceReliabilityScore != null && (
-                    <div className="mt-2">
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Attendance reliability</span>
-                        <span className="font-medium">{s.attendanceReliabilityScore}%</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            s.attendanceReliabilityScore >= 80
-                              ? "bg-green-500"
-                              : s.attendanceReliabilityScore >= 60
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                          }`}
-                          style={{ width: `${s.attendanceReliabilityScore}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <StudentSelector
+            students={students}
+            onNavigate={(id) => navigate(`/viewer/students/${id}`)}
+          />
         )}
       </div>
 

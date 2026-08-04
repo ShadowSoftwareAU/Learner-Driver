@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Loader2, ArrowLeft, ChevronDown, ChevronUp, Calendar, Clock,
-  Cloud, CloudRain, Sun, Wind, Eye, Moon, Sunrise, Sunset,
+  Cloud, CloudRain, Sun, Wind, Eye, Moon, Sunrise, Sunset, UserCircle2,
 } from "lucide-react";
 import { useLocation, useParams } from "wouter";
 import { format } from "date-fns";
@@ -124,6 +124,28 @@ export default function ViewerAssessment() {
             </p>
           </div>
         </div>
+
+        {/* Instructor card */}
+        {(assessment as any).instructorName && (
+          <Card className="border-blue-100 bg-blue-50/50">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-100 border border-blue-200 flex items-center justify-center shrink-0">
+                <span className="text-sm font-semibold text-blue-700">
+                  {(assessment as any).instructorName
+                    .split(" ")
+                    .map((n: string) => n[0])
+                    .slice(0, 2)
+                    .join("")
+                    .toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <p className="text-xs text-blue-700/70 font-medium uppercase tracking-wider">Instructor</p>
+                <p className="font-semibold text-blue-900">{(assessment as any).instructorName}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Lesson summary card */}
         <Card>

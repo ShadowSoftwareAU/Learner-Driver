@@ -203,7 +203,7 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
 
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
 
-  // Recent assessments — summary only, no private notes
+  // Recent assessments — summary only, no private notes; include instructor name
   const recentAssessments = await db.select({
     id: assessmentsTable.id,
     lessonDate: assessmentsTable.lessonDate,
@@ -212,7 +212,9 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     focusAreasNext: assessmentsTable.focusAreasNext,
     totalHoursThisLesson: assessmentsTable.durationMinutes,
     performedByRole: assessmentsTable.performedByRole,
+    instructorName: instructorsTable.fullName,
   }).from(assessmentsTable)
+    .leftJoin(instructorsTable, eq(assessmentsTable.instructorId, instructorsTable.id))
     .where(eq(assessmentsTable.studentId, studentId))
     .orderBy(assessmentsTable.lessonDate)
     .limit(10);
@@ -542,6 +544,10 @@ router.get("/viewer/assessments/:assessmentId", requireAuth, async (req: any, re
   const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName })
     .from(studentsTable).where(eq(studentsTable.id, assessment.studentId));
 
+  // Fetch instructor name
+  const [instructor] = await db.select({ fullName: instructorsTable.fullName })
+    .from(instructorsTable).where(eq(instructorsTable.id, assessment.instructorId));
+
   // Fetch maneuver results joined with maneuver details
   const results = await db
     .select({
@@ -570,6 +576,7 @@ router.get("/viewer/assessments/:assessmentId", requireAuth, async (req: any, re
       confidenceNote: assessment.confidenceNote,
       weatherCondition: (assessment as any).weatherCondition ?? null,
       lightingCondition: (assessment as any).lightingCondition ?? null,
+      instructorName: instructor?.fullName ?? null,
     },
     maneuverResults: results,
   });
