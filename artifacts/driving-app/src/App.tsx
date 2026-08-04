@@ -93,9 +93,7 @@ const clerkAppearance = {
   theme: shadcn,
   cssLayerName: "clerk",
   options: {
-    logoPlacement: "inside" as const,
-    logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
+    logoPlacement: "none" as const,
   },
   variables: {
     colorPrimary: "hsl(221 83% 53%)",
@@ -124,8 +122,6 @@ const clerkAppearance = {
     identityPreviewEditButton: "text-primary hover:text-primary/90",
     formFieldSuccessText: "text-sm text-green-600",
     alertText: "text-sm text-destructive",
-    logoBox: "h-12 w-auto mx-auto mb-4",
-    logoImage: "h-full w-auto",
     socialButtonsBlockButton: "border-border hover:bg-accent hover:text-accent-foreground",
     formButtonPrimary: "bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium",
     formFieldInput: "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
@@ -138,19 +134,87 @@ const clerkAppearance = {
   },
 };
 
+const AUTH_FEATURES = [
+  "Tap-friendly lesson logging designed for the passenger seat",
+  "Students track their own progress toward their test day",
+  "Multi-instructor school management with full audit trails",
+];
+
+function AuthLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-[100dvh] flex">
+      {/* Branded left panel — desktop only */}
+      <div className="hidden lg:flex lg:w-[460px] xl:w-[520px] flex-shrink-0 flex-col justify-between p-12 bg-[#0a1628]">
+        <a href={basePath || "/"}>
+          <img
+            src={`${window.location.origin}${basePath}/steps2drive-logo.png`}
+            alt="Steps2Drive"
+            className="h-10 w-auto"
+          />
+        </a>
+
+        <div className="space-y-8">
+          <div className="space-y-3">
+            <h2 className="text-4xl xl:text-5xl font-bold text-white leading-tight tracking-tight">
+              Learn. Track.<br />Drive Confident.
+            </h2>
+            <p className="text-2xl xl:text-3xl font-bold text-red-500 leading-tight">
+              Be Safe.
+            </p>
+          </div>
+          <p className="text-white/60 text-base leading-relaxed max-w-sm">
+            The digital platform for professional driving instructors and learner drivers across Australia.
+          </p>
+          <div className="space-y-4">
+            {AUTH_FEATURES.map((feat) => (
+              <div key={feat} className="flex items-start gap-3">
+                <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <div className="w-2 h-2 rounded-full bg-blue-400" />
+                </div>
+                <p className="text-white/75 text-sm leading-relaxed">{feat}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <p className="text-white/30 text-xs">
+          © {new Date().getFullYear()} Steps2Drive. All rights reserved.
+        </p>
+      </div>
+
+      {/* Right panel — form */}
+      <div className="flex-1 flex flex-col min-h-[100dvh] bg-gray-50">
+        {/* Mobile-only branded header */}
+        <div className="lg:hidden bg-[#0a1628] px-5 py-4 flex items-center">
+          <a href={basePath || "/"}>
+            <img
+              src={`${window.location.origin}${basePath}/steps2drive-logo.png`}
+              alt="Steps2Drive"
+              className="h-8 w-auto"
+            />
+          </a>
+        </div>
+        <div className="flex-1 flex items-center justify-center px-4 py-10">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SignInPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
       <SignIn routing="path" path={`${basePath}/sign-in`} signUpUrl={`${basePath}/sign-up`} />
-    </div>
+    </AuthLayout>
   );
 }
 
 function SignUpPage() {
   return (
-    <div className="flex min-h-[100dvh] items-center justify-center bg-gray-50 px-4">
+    <AuthLayout>
       <SignUp routing="path" path={`${basePath}/sign-up`} signInUrl={`${basePath}/sign-in`} />
-    </div>
+    </AuthLayout>
   );
 }
 
