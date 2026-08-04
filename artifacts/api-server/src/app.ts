@@ -52,8 +52,9 @@ app.post("/api/wallet/webhook", express.raw({ type: "application/json" }), async
   }
 });
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// 20 MB limit to accommodate base64 image payloads (e.g. licence OCR endpoint)
+app.use(express.json({ limit: "20mb" }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 app.use(
   clerkMiddleware((req) => ({
