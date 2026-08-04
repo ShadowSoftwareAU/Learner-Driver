@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { PhotoCaptureField } from "@/components/PhotoCaptureField";
+import { uploadFileToBucket } from "@/lib/upload";
 import { ChevronLeft, Loader2, UserPlus, ScanLine, CheckCircle2, Upload, X, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -141,6 +142,14 @@ export default function InstructorStudentNew() {
       });
 
       setScanResult(data);
+
+      // Upload the scanned images to storage so they populate the licence photo fields
+      const [frontUpload, backUpload] = await Promise.all([
+        uploadFileToBucket(frontFile),
+        backFile ? uploadFileToBucket(backFile) : Promise.resolve(null),
+      ]);
+      if (frontUpload) setLicenceFrontPath(frontUpload.objectPath);
+      if (backUpload)  setLicenceBackPath(backUpload.objectPath);
 
       // Pre-fill the form from OCR results
       setForm(prev => ({
@@ -322,7 +331,7 @@ export default function InstructorStudentNew() {
               {scanResult && (
                 <div className="rounded-lg border border-green-200 bg-green-50 p-3 space-y-2">
                   <p className="text-sm font-semibold text-green-800 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-4 h-4" /> Scan complete — fields pre-filled
+                    <CheckCircle2 className="w-4 h-4" /> Scan complete, fields pre-filled
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {scanResult.fullName       && <Badge variant="secondary" className="text-xs">{scanResult.fullName}</Badge>}
@@ -453,13 +462,13 @@ export default function InstructorStudentNew() {
                 rounded
               />
               <PhotoCaptureField
-                label="Licence — front"
+                label="Licence front"
                 description="Photo showing name, licence number and photo."
                 value={licenceFrontPath}
                 onChange={setLicenceFrontPath}
               />
               <PhotoCaptureField
-                label="Licence — back"
+                label="Licence back"
                 description="Photo showing address, card number and conditions."
                 value={licenceBackPath}
                 onChange={setLicenceBackPath}
