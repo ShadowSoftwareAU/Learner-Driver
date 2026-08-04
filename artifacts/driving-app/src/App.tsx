@@ -116,7 +116,7 @@ const clerkAppearance = {
     footer: "!shadow-none !border-0 !bg-transparent !rounded-none",
     headerTitle: "text-2xl font-bold tracking-tight text-foreground",
     headerSubtitle: "text-sm text-muted-foreground",
-    socialButtonsBlockButtonText: "font-medium",
+    socialButtonsBlockButtonText: "font-medium text-foreground",
     formFieldLabel: "text-sm font-medium text-foreground",
     footerActionLink: "text-primary hover:text-primary/90 font-medium",
     footerActionText: "text-muted-foreground text-sm",
@@ -403,6 +403,20 @@ function ClerkProviderWithRoutes() {
       appearance={clerkAppearance}
       signInUrl={`${basePath}/sign-in`}
       signUpUrl={`${basePath}/sign-up`}
+      localization={{
+        signIn: {
+          start: {
+            title: "Welcome back",
+            subtitle: "Sign in to Steps2Drive",
+          },
+        },
+        signUp: {
+          start: {
+            title: "Create your account",
+            subtitle: "Get started with Steps2Drive",
+          },
+        },
+      }}
       routerPush={(to) => setLocation(stripBase(to))}
       routerReplace={(to) => setLocation(stripBase(to), { replace: true })}
     >

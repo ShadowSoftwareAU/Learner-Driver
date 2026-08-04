@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, jsonb, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -37,6 +37,12 @@ export const instructorsTable = pgTable("instructors", {
   adtaNumber: text("adta_number"),
   // Safeguarding notes — classification: restricted
   safeguardingNotes: text("safeguarding_notes"),
+  // Working With Children Check — admin-managed, future: live API validation
+  // Status values: not_checked | valid | restricted | expired
+  wwccNumber: text("wwcc_number"),
+  wwccStatus: text("wwcc_status").default("not_checked"),
+  wwccCheckedAt: timestamp("wwcc_checked_at", { withTimezone: true }),
+  wwccExpiresAt: date("wwcc_expires_at"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

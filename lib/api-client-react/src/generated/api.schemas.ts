@@ -586,6 +586,20 @@ export const InstructorComplianceStatus = {
   incomplete: 'incomplete',
 } as const;
 
+/**
+ * Current WWCC status — admin-managed until live API validation is wired
+ * @nullable
+ */
+export type InstructorWwccStatus = typeof InstructorWwccStatus[keyof typeof InstructorWwccStatus] | null;
+
+
+export const InstructorWwccStatus = {
+  valid: 'valid',
+  restricted: 'restricted',
+  expired: 'expired',
+  not_checked: 'not_checked',
+} as const;
+
 export type InstructorVehicleSummaryVehicleType = typeof InstructorVehicleSummaryVehicleType[keyof typeof InstructorVehicleSummaryVehicleType];
 
 
@@ -659,6 +673,26 @@ export interface Instructor {
   complianceStatus?: InstructorComplianceStatus;
   /** True if any compliance document expires within 30 days */
   hasExpiringDocs?: boolean;
+  /**
+     * Working With Children Check card number
+     * @nullable
+     */
+  wwccNumber?: string | null;
+  /**
+     * Current WWCC status — admin-managed until live API validation is wired
+     * @nullable
+     */
+  wwccStatus?: InstructorWwccStatus;
+  /**
+     * ISO timestamp of the last manual WWCC verification
+     * @nullable
+     */
+  wwccCheckedAt?: string | null;
+  /**
+     * WWCC expiry date (YYYY-MM-DD)
+     * @nullable
+     */
+  wwccExpiresAt?: string | null;
 }
 
 export type InstructorDetailStats = {
@@ -1929,6 +1963,19 @@ export const AdminVerificationStatus = {
   needs_revision: 'needs_revision',
 } as const;
 
+/**
+ * @nullable
+ */
+export type AdminVerificationWwccStatus = typeof AdminVerificationWwccStatus[keyof typeof AdminVerificationWwccStatus] | null;
+
+
+export const AdminVerificationWwccStatus = {
+  valid: 'valid',
+  restricted: 'restricted',
+  expired: 'expired',
+  not_checked: 'not_checked',
+} as const;
+
 export interface AdminVerification {
   id: number;
   status: AdminVerificationStatus;
@@ -1942,7 +1989,37 @@ export interface AdminVerification {
   instructorId: number;
   instructorName: string;
   instructorEmail: string;
+  /** @nullable */
+  wwccStatus?: AdminVerificationWwccStatus;
+  /** @nullable */
+  wwccNumber?: string | null;
+  /** @nullable */
+  wwccExpiresAt?: string | null;
   documents: VerificationDocument[];
+}
+
+export type WwccUpdateWwccStatus = typeof WwccUpdateWwccStatus[keyof typeof WwccUpdateWwccStatus];
+
+
+export const WwccUpdateWwccStatus = {
+  valid: 'valid',
+  restricted: 'restricted',
+  expired: 'expired',
+  not_checked: 'not_checked',
+} as const;
+
+export interface WwccUpdate {
+  wwccStatus: WwccUpdateWwccStatus;
+  /**
+     * WWCC card number as printed
+     * @nullable
+     */
+  wwccNumber?: string | null;
+  /**
+     * Expiry date in YYYY-MM-DD format
+     * @nullable
+     */
+  wwccExpiresAt?: string | null;
 }
 
 export interface TermsStatus {

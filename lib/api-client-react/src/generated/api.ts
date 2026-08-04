@@ -163,7 +163,8 @@ import type {
   ViewerLinkRequest,
   ViewerStudentDashboard,
   ViewerStudentSummary,
-  WalletInfo
+  WalletInfo,
+  WwccUpdate
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -6045,6 +6046,79 @@ export const useReviewVerificationDocument = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getReviewVerificationDocumentMutationOptions(options));
+    }
+
+export const getUpdateInstructorWwccUrl = (instructorId: number,) => {
+
+
+
+
+  return `/api/admin/instructors/${instructorId}/wwcc`
+}
+
+/**
+ * Admin-managed until the live Working With Children Check API is connected. Status 'restricted' should trigger alerts and restrict student access.
+ * @summary Manually set an instructor's WWCC status and card details (admin only)
+ */
+export const updateInstructorWwcc = async (instructorId: number,
+    wwccUpdate: WwccUpdate, options?: RequestInit): Promise<Instructor> => {
+
+  return customFetch<Instructor>(getUpdateInstructorWwccUrl(instructorId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wwccUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateInstructorWwccMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstructorWwcc>>, TError,{instructorId: number;data: BodyType<WwccUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateInstructorWwcc>>, TError,{instructorId: number;data: BodyType<WwccUpdate>}, TContext> => {
+
+const mutationKey = ['updateInstructorWwcc'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateInstructorWwcc>>, {instructorId: number;data: BodyType<WwccUpdate>}> = (props) => {
+          const {instructorId,data} = props ?? {};
+
+          return  updateInstructorWwcc(instructorId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateInstructorWwccMutationResult = NonNullable<Awaited<ReturnType<typeof updateInstructorWwcc>>>
+    export type UpdateInstructorWwccMutationBody = BodyType<WwccUpdate>
+    export type UpdateInstructorWwccMutationError = ErrorType<void>
+
+    /**
+ * @summary Manually set an instructor's WWCC status and card details (admin only)
+ */
+export const useUpdateInstructorWwcc = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateInstructorWwcc>>, TError,{instructorId: number;data: BodyType<WwccUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateInstructorWwcc>>,
+        TError,
+        {instructorId: number;data: BodyType<WwccUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateInstructorWwccMutationOptions(options));
     }
 
 export const getGetTermsStatusUrl = () => {

@@ -102,6 +102,52 @@ Return ONLY valid JSON with these keys (null for any you cannot read clearly):
   "issueDate": "YYYY-MM-DD",
   "studentName": "Name on certificate"
 }`,
+
+  teaching_certificate: `Extract these fields from this teaching certificate or registration.
+Return ONLY valid JSON with these keys (null for any you cannot read clearly):
+{
+  "certificateName": "Full name/title of the certificate",
+  "certificateNumber": "Certificate or registration number",
+  "fullName": "Name on certificate",
+  "institution": "Issuing institution / RTO / authority name",
+  "issueDate": "YYYY-MM-DD",
+  "expiryDate": "YYYY-MM-DD",
+  "registrationState": "e.g. QLD, NSW, VIC"
+}`,
+
+  diploma_degree: `Extract these fields from this diploma, degree, or academic qualification document.
+Return ONLY valid JSON with these keys (null for any you cannot read clearly):
+{
+  "qualificationName": "Full name of the degree or diploma",
+  "awardLevel": "e.g. Certificate IV, Diploma, Bachelor, Graduate Certificate",
+  "fullName": "Graduate name",
+  "institution": "University or institution name",
+  "issueDate": "YYYY-MM-DD",
+  "studentId": "Student or enrolment number (if shown)"
+}`,
+
+  professional_development: `Extract these fields from this professional development certificate or training record.
+Return ONLY valid JSON with these keys (null for any you cannot read clearly):
+{
+  "courseName": "Full course or workshop title",
+  "certificateNumber": "Certificate or completion number",
+  "fullName": "Participant name",
+  "provider": "Training provider or organisation",
+  "completionDate": "YYYY-MM-DD",
+  "cpd_hours": "CPD or professional development hours (number only, if shown)"
+}`,
+
+  cert_other: `Extract all key fields you can identify from this document.
+Return ONLY valid JSON. Use descriptive camelCase keys and null for fields you cannot read clearly.
+Always include at minimum:
+{
+  "documentType": "Your best description of what this document is",
+  "fullName": "Name of the person (if shown)",
+  "issuer": "Issuing organisation or authority",
+  "referenceNumber": "Any certificate, registration, or reference number",
+  "issueDate": "YYYY-MM-DD (if shown)",
+  "expiryDate": "YYYY-MM-DD (if shown)"
+}`,
 };
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);

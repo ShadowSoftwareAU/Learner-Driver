@@ -183,6 +183,9 @@ router.get("/admin/verifications", requireAuth, requireAdmin, async (req: any, r
       instructorId: instructorVerificationsTable.instructorId,
       instructorName: instructorsTable.fullName,
       instructorEmail: instructorsTable.email,
+      wwccStatus: instructorsTable.wwccStatus,
+      wwccNumber: instructorsTable.wwccNumber,
+      wwccExpiresAt: instructorsTable.wwccExpiresAt,
     })
     .from(instructorVerificationsTable)
     .innerJoin(instructorsTable, eq(instructorVerificationsTable.instructorId, instructorsTable.id))
@@ -397,6 +400,44 @@ router.patch("/admin/verifications/:id/documents/:docId", requireAuth, requireAd
     .returning();
 
   req.log.info({ verificationId, docId, action, reviewerId: req.dbUser.id }, "Verification document reviewed");
+  res.json(updated);
+});
+
+/**
+ * PATCH /admin/instructors/:id/wwcc
+ * Manually update an instructor's WWCC status, card number, and expiry.
+ * Placeholder for future live Working With Children Check API validation.
+ */
+router.patch("/admin/instructors/:id/wwcc", requireAuth, requireAdmin, async (req: any, res): Promise<void> => {
+  const instructorId = parseInt(req.params.id, 10);
+  const { wwccStatus, wwccNumber, wwccExpiresAt } = req.body as {
+    wwccStatus: string;
+    wwccNumber?: string | null;
+    wwccExpiresAt?: string | null;
+  };
+
+  if (!["valid", "restricted", "expired", "not_checked"].includes(wwccStatus)) {
+    res.status(400).json({ error: "Invalid WWCC status. Must be one of: valid, restricted, expired, not_checked" });
+    return;
+  }
+
+  const [updated] = await db
+    .update(instructorsTable)
+    .set({
+      wwccStatus,
+      wwccNumber: wwccNumber ?? null,
+      wwccExpiresAt: wwccExpiresAt ?? null,
+      wwccCheckedAt: new Date(),
+    })
+    .where(eq(instructorsTable.id, instructorId))
+    .returning();
+
+  if (!updated) {
+    res.status(404).json({ error: "Instructor not found" });
+    return;
+  }
+
+  req.log.info({ instructorId, wwccStatus, reviewerId: req.dbUser?.id }, "WWCC status updated");
   res.json(updated);
 });
 

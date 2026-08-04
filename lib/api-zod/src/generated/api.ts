@@ -635,7 +635,11 @@ export const ListInstructorsResponseItem = zod.object({
 }),zod.null()]).optional(),
   "createdAt": zod.string().optional(),
   "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
-  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days'),
+  "wwccNumber": zod.string().nullish().describe('Working With Children Check card number'),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish().describe('Current WWCC status — admin-managed until live API validation is wired'),
+  "wwccCheckedAt": zod.string().nullish().describe('ISO timestamp of the last manual WWCC verification'),
+  "wwccExpiresAt": zod.string().nullish().describe('WWCC expiry date (YYYY-MM-DD)')
 })
 export const ListInstructorsResponse = zod.array(ListInstructorsResponseItem)
 
@@ -678,7 +682,11 @@ export const GetInstructorResponse = zod.object({
 }),zod.null()]).optional(),
   "createdAt": zod.string().optional(),
   "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
-  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days'),
+  "wwccNumber": zod.string().nullish().describe('Working With Children Check card number'),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish().describe('Current WWCC status — admin-managed until live API validation is wired'),
+  "wwccCheckedAt": zod.string().nullish().describe('ISO timestamp of the last manual WWCC verification'),
+  "wwccExpiresAt": zod.string().nullish().describe('WWCC expiry date (YYYY-MM-DD)')
 }).and(zod.object({
   "vehicles": zod.array(zod.object({
   "id": zod.number(),
@@ -764,7 +772,11 @@ export const UpdateInstructorResponse = zod.object({
 }),zod.null()]).optional(),
   "createdAt": zod.string().optional(),
   "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
-  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days'),
+  "wwccNumber": zod.string().nullish().describe('Working With Children Check card number'),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish().describe('Current WWCC status — admin-managed until live API validation is wired'),
+  "wwccCheckedAt": zod.string().nullish().describe('ISO timestamp of the last manual WWCC verification'),
+  "wwccExpiresAt": zod.string().nullish().describe('WWCC expiry date (YYYY-MM-DD)')
 })
 
 
@@ -926,6 +938,9 @@ export const ListInstructorVerificationsResponseItem = zod.object({
   "instructorId": zod.number(),
   "instructorName": zod.string(),
   "instructorEmail": zod.string(),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish(),
+  "wwccNumber": zod.string().nullish(),
+  "wwccExpiresAt": zod.string().nullish(),
   "documents": zod.array(zod.object({
   "id": zod.number(),
   "verificationId": zod.number(),
@@ -1618,7 +1633,11 @@ export const GetInstructorProfileResponse = zod.object({
 }),zod.null()]).optional(),
   "createdAt": zod.string().optional(),
   "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
-  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days')
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days'),
+  "wwccNumber": zod.string().nullish().describe('Working With Children Check card number'),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish().describe('Current WWCC status — admin-managed until live API validation is wired'),
+  "wwccCheckedAt": zod.string().nullish().describe('ISO timestamp of the last manual WWCC verification'),
+  "wwccExpiresAt": zod.string().nullish().describe('WWCC expiry date (YYYY-MM-DD)')
 })
 
 
@@ -2239,6 +2258,9 @@ export const ListVerificationsResponseItem = zod.object({
   "instructorId": zod.number(),
   "instructorName": zod.string(),
   "instructorEmail": zod.string(),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish(),
+  "wwccNumber": zod.string().nullish(),
+  "wwccExpiresAt": zod.string().nullish(),
   "documents": zod.array(zod.object({
   "id": zod.number(),
   "verificationId": zod.number(),
@@ -2332,6 +2354,59 @@ export const ReviewVerificationDocumentResponse = zod.object({
   "ocrData": zod.object({
 
 }).passthrough().nullish().describe('Structured fields extracted by AI OCR — shape varies by docType')
+})
+
+
+/**
+ * Admin-managed until the live Working With Children Check API is connected. Status 'restricted' should trigger alerts and restrict student access.
+ * @summary Manually set an instructor's WWCC status and card details (admin only)
+ */
+export const UpdateInstructorWwccParams = zod.object({
+  "instructorId": zod.coerce.number()
+})
+
+export const UpdateInstructorWwccBody = zod.object({
+  "wwccStatus": zod.enum(['valid', 'restricted', 'expired', 'not_checked']),
+  "wwccNumber": zod.string().nullish().describe('WWCC card number as printed'),
+  "wwccExpiresAt": zod.string().nullish().describe('Expiry date in YYYY-MM-DD format')
+})
+
+export const UpdateInstructorWwccResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string(),
+  "phone": zod.string().nullish(),
+  "licenseNumber": zod.string().nullish(),
+  "vehicleMake": zod.string().nullish(),
+  "vehicleModel": zod.string().nullish(),
+  "vehicleYear": zod.number().nullish(),
+  "qualifications": zod.string().nullish(),
+  "trainingCategories": zod.array(zod.string()).optional(),
+  "state": zod.string().nullish().describe('AU state\/territory where this instructor primarily operates'),
+  "adtaNumber": zod.string().nullish().describe('Australian Driver Trainers Association membership number (optional, not enforced)'),
+  "hourlyRateCents": zod.number().nullish().describe('Instructor\'s hourly rate in Australian cents (e.g. 8500 = $85.00)'),
+  "isIndependent": zod.boolean().optional(),
+  "uniqueLinkCode": zod.string().nullish().describe('6-character alphanumeric code used by school admins to invite this instructor (auto-generated)'),
+  "activeStudents": zod.number().optional(),
+  "primaryVehicle": zod.union([zod.object({
+  "id": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "isDualControl": zod.boolean().optional()
+}),zod.null()]).optional(),
+  "createdAt": zod.string().optional(),
+  "complianceStatus": zod.enum(['compliant', 'partial', 'incomplete']).optional(),
+  "hasExpiringDocs": zod.boolean().optional().describe('True if any compliance document expires within 30 days'),
+  "wwccNumber": zod.string().nullish().describe('Working With Children Check card number'),
+  "wwccStatus": zod.union([zod.literal('valid'),zod.literal('restricted'),zod.literal('expired'),zod.literal('not_checked'),zod.literal(null)]).nullish().describe('Current WWCC status — admin-managed until live API validation is wired'),
+  "wwccCheckedAt": zod.string().nullish().describe('ISO timestamp of the last manual WWCC verification'),
+  "wwccExpiresAt": zod.string().nullish().describe('WWCC expiry date (YYYY-MM-DD)')
 })
 
 

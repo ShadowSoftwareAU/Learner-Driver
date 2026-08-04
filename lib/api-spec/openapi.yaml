@@ -1742,6 +1742,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/VerificationDocument"
 
+  /admin/instructors/{instructorId}/wwcc:
+    patch:
+      operationId: updateInstructorWwcc
+      tags: [verification]
+      summary: Manually set an instructor's WWCC status and card details (admin only)
+      description: "Admin-managed until the live Working With Children Check API is connected. Status 'restricted' should trigger alerts and restrict student access."
+      parameters:
+        - in: path
+          name: instructorId
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WwccUpdate"
+      responses:
+        "200":
+          description: Updated instructor record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Instructor"
+        "404":
+          description: Instructor not found
+
   /terms/status:
     get:
       operationId: getTermsStatus
@@ -3551,6 +3579,19 @@ components:
         hasExpiringDocs:
           type: boolean
           description: "True if any compliance document expires within 30 days"
+        wwccNumber:
+          type: ["string", "null"]
+          description: "Working With Children Check card number"
+        wwccStatus:
+          type: ["string", "null"]
+          enum: [valid, restricted, expired, not_checked, null]
+          description: "Current WWCC status — admin-managed until live API validation is wired"
+        wwccCheckedAt:
+          type: ["string", "null"]
+          description: "ISO timestamp of the last manual WWCC verification"
+        wwccExpiresAt:
+          type: ["string", "null"]
+          description: "WWCC expiry date (YYYY-MM-DD)"
 
     InstructorDetail:
       allOf:
@@ -5092,10 +5133,31 @@ components:
           type: string
         instructorEmail:
           type: string
+        wwccStatus:
+          type: ["string", "null"]
+          enum: [valid, restricted, expired, not_checked, null]
+        wwccNumber:
+          type: ["string", "null"]
+        wwccExpiresAt:
+          type: ["string", "null"]
         documents:
           type: array
           items:
             $ref: "#/components/schemas/VerificationDocument"
+
+    WwccUpdate:
+      type: object
+      required: [wwccStatus]
+      properties:
+        wwccStatus:
+          type: string
+          enum: [valid, restricted, expired, not_checked]
+        wwccNumber:
+          type: ["string", "null"]
+          description: "WWCC card number as printed"
+        wwccExpiresAt:
+          type: ["string", "null"]
+          description: "Expiry date in YYYY-MM-DD format"
 
     TermsStatus:
       type: object

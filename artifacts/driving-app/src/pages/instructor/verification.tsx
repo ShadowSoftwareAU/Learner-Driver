@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Upload, CheckCircle2, Clock, XCircle, AlertTriangle,
   FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard, Award, HeartPulse, CalendarDays,
-  ScanLine, ChevronDown, ChevronUp,
+  ScanLine, ChevronDown, ChevronUp, Plus,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -88,6 +88,30 @@ type DocType =
   | "first_aid"
   | "rider_trainer_accreditation"
   | "qualification";
+
+// ── Additional qualifications ─────────────────────────────────────────────────
+
+type AdditionalDocType = "teaching_certificate" | "diploma_degree" | "professional_development" | "cert_other";
+
+const ADDITIONAL_DOC_CONFIG: Record<AdditionalDocType, { label: string; icon: React.ElementType }> = {
+  teaching_certificate: { label: "Teaching Certificate / Registration", icon: Award },
+  diploma_degree:       { label: "Diploma / Degree", icon: BookOpen },
+  professional_development: { label: "Professional Development Certificate", icon: BookOpen },
+  cert_other:           { label: "Other Certificate or Record", icon: FileText },
+};
+
+type AdditionalUpload = {
+  fileName: string;
+  fileSize: number;
+  objectPath: string;
+  expiresAt?: string;
+};
+
+type AdditionalDocSlotState = {
+  id: string;
+  docType: AdditionalDocType;
+  uploaded: AdditionalUpload | null;
+};
 
 type UploadedDoc = {
   docType: DocType;
@@ -181,6 +205,110 @@ const DOC_TYPES_WITH_EXPIRY: DocType[] = [
   "first_aid",
   "rider_trainer_accreditation",
 ];
+
+// ── Additional document slot ──────────────────────────────────────────────────
+
+function AdditionalDocSlot({
+  slot,
+  onChange,
+  onRemove,
+  disabled,
+}: {
+  slot: AdditionalDocSlotState;
+  onChange: (id: string, update: Partial<AdditionalDocSlotState>) => void;
+  onRemove: (id: string) => void;
+  disabled?: boolean;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const handleFile = async (file: File) => {
+    setUploading(true);
+    try {
+      const { objectPath } = await uploadFileToBucket(file);
+      onChange(slot.id, { uploaded: { fileName: file.name, fileSize: file.size, objectPath } });
+    } catch {
+      toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+      if (cameraInputRef.current) cameraInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="rounded-lg border p-3 space-y-2.5">
+      {/* Type selector + remove */}
+      <div className="flex items-center gap-2">
+        <Select
+          value={slot.docType}
+          onValueChange={(v) => onChange(slot.id, { docType: v as AdditionalDocType, uploaded: null })}
+          disabled={disabled}
+        >
+          <SelectTrigger className="h-8 text-xs flex-1">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.entries(ADDITIONAL_DOC_CONFIG) as [AdditionalDocType, { label: string }][]).map(([type, cfg]) => (
+              <SelectItem key={type} value={type} className="text-xs">{cfg.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {!disabled && (
+          <button type="button" onClick={() => onRemove(slot.id)} aria-label="Remove">
+            <Trash2 className="w-4 h-4 text-muted-foreground hover:text-destructive transition-colors" />
+          </button>
+        )}
+      </div>
+
+      {/* Uploaded state */}
+      {slot.uploaded ? (
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+            <span className="text-xs text-green-700 truncate flex-1">{slot.uploaded.fileName}</span>
+            {!disabled && (
+              <button type="button" onClick={() => onChange(slot.id, { uploaded: null })}>
+                <Trash2 className="w-3.5 h-3.5 text-muted-foreground hover:text-destructive transition-colors" />
+              </button>
+            )}
+          </div>
+          {!disabled && (
+            <div className="flex items-center gap-2">
+              <CalendarDays className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Expiry date</label>
+              <Input
+                type="date"
+                value={slot.uploaded.expiresAt ?? ""}
+                onChange={(e) => onChange(slot.id, { uploaded: { ...slot.uploaded!, expiresAt: e.target.value || undefined } })}
+                className="h-7 text-xs py-0 px-2 max-w-[150px]"
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <input ref={fileInputRef} type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          <input ref={cameraInputRef} type="file" className="hidden" accept="image/*" capture="environment"
+            onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])} />
+          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}
+            disabled={uploading || disabled} className="h-8 px-3 text-xs">
+            {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
+            <span className="ml-1.5">{uploading ? "Uploading…" : "Upload"}</span>
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => cameraInputRef.current?.click()}
+            disabled={uploading || disabled} className="h-8 px-3 text-xs">
+            <Camera className="w-3.5 h-3.5" />
+            <span className="ml-1.5">Camera</span>
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function UploadSlot({
   docType,
@@ -389,6 +517,7 @@ export default function InstructorVerification() {
   const [instructorState, setInstructorState] = useState("");
   const [adtaNumber, setAdtaNumber] = useState("");
   const [adtaInitialised, setAdtaInitialised] = useState(false);
+  const [additionalDocs, setAdditionalDocs] = useState<AdditionalDocSlotState[]>([]);
 
   const handleExpiryChange = (docType: DocType, expiresAt: string) => {
     setUploads((prev) => {
@@ -404,7 +533,17 @@ export default function InstructorVerification() {
   const anyUploaded = Object.values(uploads).some(Boolean);
 
   const handleSubmit = () => {
-    const docs = Object.values(uploads).filter(Boolean) as UploadedDoc[];
+    const fixedDocs = Object.values(uploads).filter(Boolean) as UploadedDoc[];
+    const extraDocs = additionalDocs
+      .filter((s) => s.uploaded !== null)
+      .map((s) => ({
+        docType: s.docType,
+        fileName: s.uploaded!.fileName,
+        fileSize: s.uploaded!.fileSize,
+        objectPath: s.uploaded!.objectPath,
+        expiresAt: s.uploaded!.expiresAt,
+      }));
+    const docs = [...fixedDocs, ...extraDocs];
     submitVerification.mutate(
       { data: { documents: docs, state: instructorState || undefined, adtaNumber: adtaNumber.trim() || undefined } as any },
       {
@@ -481,6 +620,7 @@ export default function InstructorVerification() {
         )}
 
         {canResubmit && (
+          <>
           <Card>
             <CardHeader>
               <CardTitle>Upload Your Documents</CardTitle>
@@ -586,7 +726,49 @@ export default function InstructorVerification() {
                 onUploaded={(doc) => setUploads((prev) => ({ ...prev, qualification: doc }))}
                 onRemove={() => setUploads((prev) => ({ ...prev, qualification: null }))}
               />
+            </CardContent>
+          </Card>
 
+          {/* Additional qualifications & certificates */}
+          <Card>
+            <CardHeader className="pb-3 pt-4 px-4">
+              <CardTitle className="text-sm font-medium">Additional Qualifications &amp; Certificates</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Teaching certificates, degrees, diplomas, professional development records — any documents that support your credentials.
+                These are not required but help verify your qualifications.
+              </p>
+            </CardHeader>
+            <CardContent className="px-4 pb-4 space-y-2.5">
+              {additionalDocs.map((slot) => (
+                <AdditionalDocSlot
+                  key={slot.id}
+                  slot={slot}
+                  onChange={(id, update) =>
+                    setAdditionalDocs((prev) => prev.map((s) => (s.id === id ? { ...s, ...update } : s)))
+                  }
+                  onRemove={(id) => setAdditionalDocs((prev) => prev.filter((s) => s.id !== id))}
+                />
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="w-full h-8 text-xs border-dashed"
+                onClick={() =>
+                  setAdditionalDocs((prev) => [
+                    ...prev,
+                    { id: Math.random().toString(36).slice(2), docType: "teaching_certificate", uploaded: null },
+                  ])
+                }
+              >
+                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                Add a certificate or qualification
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="px-4 pt-4 pb-4">
               <div className="pt-2">
                 <Button
                   className="w-full"
@@ -607,6 +789,7 @@ export default function InstructorVerification() {
               </div>
             </CardContent>
           </Card>
+          </>
         )}
 
         {isActive && data?.documents && data.documents.length > 0 && (
