@@ -31,10 +31,14 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // ── Google OAuth ─────────────────────────────────────────────────────────────
   const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+  // ── Apple OAuth ──────────────────────────────────────────────────────────────
+  const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: "oauth_apple" });
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
@@ -58,6 +62,31 @@ export default function SignInScreen() {
       setError(msg ?? "Google sign in failed.");
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setAppleLoading(true);
+    setError(null);
+    try {
+      const { createdSessionId, setActive } = await startAppleOAuthFlow({
+        redirectUrl: Linking.createURL("/", { scheme: "mobile-app" }),
+      });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace("/");
+      }
+    } catch (err: unknown) {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "errors" in err &&
+        Array.isArray((err as { errors: { message: string }[] }).errors)
+          ? (err as { errors: { message: string }[] }).errors[0]?.message
+          : "Apple sign in failed. Please try again.";
+      setError(msg ?? "Apple sign in failed.");
+    } finally {
+      setAppleLoading(false);
     }
   };
 
@@ -125,17 +154,32 @@ export default function SignInScreen() {
             </View>
           ) : null}
 
+          {/* Apple SSO */}
+          <Pressable
+            style={({ pressed }) => [styles.appleButton, pressed && styles.buttonPressed]}
+            onPress={handleAppleSignIn}
+            disabled={appleLoading || googleLoading || loading}
+          >
+            {appleLoading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <Feather name="smartphone" size={18} color="#FFFFFF" />
+                <Text style={styles.appleButtonText}>Continue with Apple</Text>
+              </>
+            )}
+          </Pressable>
+
           {/* Google SSO */}
           <Pressable
             style={({ pressed }) => [styles.googleButton, pressed && styles.buttonPressed]}
             onPress={handleGoogleSignIn}
-            disabled={googleLoading || loading}
+            disabled={googleLoading || appleLoading || loading}
           >
             {googleLoading ? (
               <ActivityIndicator color="#374151" size="small" />
             ) : (
               <>
-                {/* Google "G" logo rendered with coloured letters */}
                 <View style={styles.googleIconContainer}>
                   <Text style={styles.googleIconText}>G</Text>
                 </View>
@@ -249,6 +293,24 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: "#DC2626",
+  },
+
+  // Apple button
+  appleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#000000",
+    borderRadius: 12,
+    paddingVertical: 13,
+    minHeight: 50,
+    marginBottom: 10,
+  },
+  appleButtonText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#FFFFFF",
   },
 
   // Google button
