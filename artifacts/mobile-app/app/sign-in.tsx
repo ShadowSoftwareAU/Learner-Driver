@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -71,10 +72,11 @@ export default function SignInScreen() {
         bounces={false}
       >
         <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Feather name="disc" size={32} color="#2563EB" />
-          </View>
-          <Text style={styles.title}>Learner Log</Text>
+          <Image
+            source={require("../assets/images/steps2drive-logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
           <Text style={styles.subtitle}>Sign in to your account</Text>
         </View>
 
@@ -143,7 +145,7 @@ export default function SignInScreen() {
         </View>
 
         <Text style={styles.footer}>
-          Learner Log · Instructor & Student Portal
+          Steps2Drive · Instructor & Student Portal
         </Text>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -154,20 +156,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { paddingHorizontal: 24 },
   header: { alignItems: "center", marginBottom: 40 },
-  logoContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: "#EFF6FF",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: "#0F172A",
-    marginBottom: 6,
+  logo: {
+    width: 220,
+    height: 44,
+    marginBottom: 20,
   },
   subtitle: {
     fontSize: 15,
