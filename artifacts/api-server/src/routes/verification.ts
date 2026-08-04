@@ -9,6 +9,7 @@ import {
   verificationDocumentsTable,
 } from "@workspace/db";
 import { sendNotification } from "../lib/notifications/notificationService";
+import { scanVerificationDocument } from "../lib/verification-ocr";
 
 const router = Router();
 
@@ -141,6 +142,15 @@ router.post("/instructor/verification/submit", requireAuth, async (req: any, res
 
   req.log.info({ verificationId: verification.id, state }, "Verification application submitted");
   res.status(201).json({ verification, documents: docRows });
+
+  // Fire OCR scans in the background — non-blocking, non-fatal
+  setImmediate(() => {
+    Promise.allSettled(
+      docRows.map((doc) =>
+        scanVerificationDocument(doc.id, doc.objectPath, doc.docType, doc.fileName)
+      )
+    ).catch(() => {/* already handled inside scanVerificationDocument */});
+  });
 });
 
 // ──────────────────────────────────────────────────────────

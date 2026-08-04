@@ -10,10 +10,63 @@ import { Badge } from "@/components/ui/badge";
 import {
   Loader2, Upload, CheckCircle2, Clock, XCircle, AlertTriangle,
   FileText, ShieldCheck, Car, BookOpen, Trash2, Camera, CreditCard, Award, HeartPulse, CalendarDays,
+  ScanLine, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// ── OCR result panel shown on submitted documents ─────────────────────────────
+
+function humaniseKey(key: string): string {
+  return key.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim();
+}
+
+function SubmittedDocOcrPanel({ ocrStatus, ocrData }: { ocrStatus?: string | null; ocrData?: Record<string, unknown> | null }) {
+  const [open, setOpen] = useState(false);
+
+  if (!ocrStatus || ocrStatus === "processing") {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5 pl-1">
+        <Loader2 className="w-3 h-3 animate-spin" /> Scanning document
+      </div>
+    );
+  }
+  if (ocrStatus === "skipped") {
+    return <p className="text-xs text-muted-foreground mt-1.5 pl-1">PDF document, no auto-scan</p>;
+  }
+  if (ocrStatus === "failed") {
+    return <p className="text-xs text-amber-600 mt-1.5 pl-1">Scan could not read this document</p>;
+  }
+  if (ocrStatus === "done" && ocrData) {
+    const entries = Object.entries(ocrData).filter(([, v]) => v != null && v !== "");
+    if (entries.length === 0) return null;
+    return (
+      <div className="mt-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <ScanLine className="w-3 h-3" />
+          View extracted data
+          {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+        {open && (
+          <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 rounded-md bg-muted/50 border px-3 py-2">
+            {entries.map(([k, v]) => (
+              <div key={k} className="contents">
+                <dt className="text-xs text-muted-foreground truncate">{humaniseKey(k)}</dt>
+                <dd className="text-xs font-medium truncate">{String(v)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
 
 const AU_STATES = [
   { value: "QLD", label: "Queensland (QLD)" },
@@ -570,20 +623,23 @@ export default function InstructorVerification() {
                   return daysLeft <= 30;
                 })();
                 return (
-                  <div key={doc.id} className={`flex items-center gap-2 text-sm p-2 rounded-md ${isExpiringSoon ? "bg-amber-50 border border-amber-200" : ""}`}>
-                    <FileText className={`w-4 h-4 flex-shrink-0 ${isExpiringSoon ? "text-amber-500" : "text-muted-foreground"}`} />
-                    <span className="truncate">{doc.fileName}</span>
-                    <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
-                      {doc.expiresAt && (
-                        <span className={`text-xs flex items-center gap-1 ${isExpiringSoon ? "text-amber-700 font-medium" : "text-muted-foreground"}`}>
-                          {isExpiringSoon && <AlertTriangle className="w-3 h-3" />}
-                          Exp. {new Date(doc.expiresAt + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
-                        </span>
-                      )}
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {doc.docType.replace(/_/g, " ")}
-                      </Badge>
+                  <div key={doc.id} className={`text-sm p-2 rounded-md ${isExpiringSoon ? "bg-amber-50 border border-amber-200" : "border"}`}>
+                    <div className="flex items-center gap-2">
+                      <FileText className={`w-4 h-4 flex-shrink-0 ${isExpiringSoon ? "text-amber-500" : "text-muted-foreground"}`} />
+                      <span className="truncate flex-1">{doc.fileName}</span>
+                      <div className="ml-auto flex items-center gap-1.5 flex-shrink-0">
+                        {doc.expiresAt && (
+                          <span className={`text-xs flex items-center gap-1 ${isExpiringSoon ? "text-amber-700 font-medium" : "text-muted-foreground"}`}>
+                            {isExpiringSoon && <AlertTriangle className="w-3 h-3" />}
+                            Exp. {new Date(doc.expiresAt + "T00:00:00").toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}
+                          </span>
+                        )}
+                        <Badge variant="outline" className="text-xs capitalize">
+                          {doc.docType.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
                     </div>
+                    <SubmittedDocOcrPanel ocrStatus={doc.ocrStatus} ocrData={doc.ocrData} />
                   </div>
                 );
               })}

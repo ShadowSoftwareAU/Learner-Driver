@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, date, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -28,6 +28,9 @@ export const verificationDocumentsTable = pgTable("verification_documents", {
   docStatus: text("doc_status"),
   docReviewNotes: text("doc_review_notes"),
   docReviewedAt: timestamp("doc_reviewed_at", { withTimezone: true }),
+  // AI OCR — populated async after document upload
+  ocrStatus: text("ocr_status"),  // 'processing' | 'done' | 'failed' | 'skipped'
+  ocrData: jsonb("ocr_data"),     // structured fields extracted from the document image
 });
 
 export const termsAcceptancesTable = pgTable("terms_acceptances", {

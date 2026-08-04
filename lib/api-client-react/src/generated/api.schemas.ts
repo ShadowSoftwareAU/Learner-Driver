@@ -1815,6 +1815,26 @@ export const VerificationDocumentDocStatus = {
   needs_revision: 'needs_revision',
 } as const;
 
+/**
+ * Status of the AI OCR scan for this document
+ * @nullable
+ */
+export type VerificationDocumentOcrStatus = typeof VerificationDocumentOcrStatus[keyof typeof VerificationDocumentOcrStatus] | null;
+
+
+export const VerificationDocumentOcrStatus = {
+  processing: 'processing',
+  done: 'done',
+  failed: 'failed',
+  skipped: 'skipped',
+} as const;
+
+/**
+ * Structured fields extracted by AI OCR — shape varies by docType
+ * @nullable
+ */
+export type VerificationDocumentOcrData = { [key: string]: unknown } | null;
+
 export interface VerificationDocument {
   id: number;
   verificationId: number;
@@ -1835,6 +1855,16 @@ export interface VerificationDocument {
   docReviewNotes?: string | null;
   /** @nullable */
   docReviewedAt?: string | null;
+  /**
+     * Status of the AI OCR scan for this document
+     * @nullable
+     */
+  ocrStatus?: VerificationDocumentOcrStatus;
+  /**
+     * Structured fields extracted by AI OCR — shape varies by docType
+     * @nullable
+     */
+  ocrData?: VerificationDocumentOcrData;
 }
 
 export type InstructorVerificationStatus = typeof InstructorVerificationStatus[keyof typeof InstructorVerificationStatus];

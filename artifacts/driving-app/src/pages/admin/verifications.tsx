@@ -12,7 +12,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Loader2, CheckCircle2, XCircle, AlertTriangle, Clock, FileText, ExternalLink,
-  ShieldCheck,
+  ShieldCheck, ChevronDown, ChevronUp, ScanLine,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -36,8 +36,77 @@ type VerificationItem = {
   instructorId: number;
   instructorName: string;
   instructorEmail: string;
-  documents: Array<{ id: number; docType: string; fileName: string; objectPath: string; fileSize?: number | null }>;
+  documents: Array<{
+    id: number;
+    docType: string;
+    fileName: string;
+    objectPath: string;
+    fileSize?: number | null;
+    ocrStatus?: string | null;
+    ocrData?: Record<string, unknown> | null;
+  }>;
 };
+
+// ── OCR data panel ────────────────────────────────────────────────────────────
+
+function humaniseKey(key: string): string {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (s) => s.toUpperCase())
+    .trim();
+}
+
+function OcrPanel({ ocrStatus, ocrData }: { ocrStatus?: string | null; ocrData?: Record<string, unknown> | null }) {
+  const [open, setOpen] = useState(false);
+
+  if (!ocrStatus || ocrStatus === "processing") {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1.5 pl-1">
+        <Loader2 className="w-3 h-3 animate-spin" /> AI scan in progress
+      </div>
+    );
+  }
+  if (ocrStatus === "skipped") {
+    return (
+      <p className="text-xs text-muted-foreground mt-1.5 pl-1">PDF: review manually</p>
+    );
+  }
+  if (ocrStatus === "failed") {
+    return (
+      <p className="text-xs text-amber-600 mt-1.5 pl-1">Scan failed, review manually</p>
+    );
+  }
+  if (ocrStatus === "done" && ocrData) {
+    const entries = Object.entries(ocrData).filter(([, v]) => v != null && v !== "");
+    if (entries.length === 0) return null;
+    return (
+      <div className="mt-1.5">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex items-center gap-1 text-xs text-primary hover:underline"
+        >
+          <ScanLine className="w-3 h-3" />
+          AI extracted data
+          {open ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </button>
+        {open && (
+          <dl className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1 rounded-md bg-muted/50 border px-3 py-2">
+            {entries.map(([k, v]) => (
+              <div key={k} className="contents">
+                <dt className="text-xs text-muted-foreground truncate">{humaniseKey(k)}</dt>
+                <dd className="text-xs font-medium truncate">{String(v)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+// ── Review dialog ─────────────────────────────────────────────────────────────
 
 function ReviewDialog({
   verification,
@@ -73,29 +142,32 @@ function ReviewDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Review Application</DialogTitle>
-          <DialogDescription>{verification.instructorName} — {verification.instructorEmail}</DialogDescription>
+          <DialogDescription>{verification.instructorName}, {verification.instructorEmail}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
           {/* Documents */}
           <div>
             <p className="text-sm font-medium mb-2">Submitted Documents</p>
-            <div className="space-y-2">
+            <div className="space-y-3">
               {verification.documents.map((doc) => (
-                <div key={doc.id} className="flex items-center gap-2 p-2 rounded-md border text-sm">
-                  <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  <span className="flex-1 truncate">{doc.fileName}</span>
-                  <Badge variant="outline" className="text-xs capitalize flex-shrink-0">
-                    {doc.docType.replace("_", " ")}
-                  </Badge>
-                  <a
-                    href={`${BASE_URL}/api/storage${doc.objectPath}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex-shrink-0"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors" />
-                  </a>
+                <div key={doc.id} className="rounded-md border p-2.5 text-sm">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="flex-1 truncate">{doc.fileName}</span>
+                    <Badge variant="outline" className="text-xs capitalize flex-shrink-0">
+                      {doc.docType.replace(/_/g, " ")}
+                    </Badge>
+                    <a
+                      href={`${BASE_URL}/api/storage${doc.objectPath}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex-shrink-0"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-muted-foreground hover:text-primary transition-colors" />
+                    </a>
+                  </div>
+                  <OcrPanel ocrStatus={doc.ocrStatus} ocrData={doc.ocrData as Record<string, unknown> | null} />
                 </div>
               ))}
               {verification.documents.length === 0 && (
@@ -110,7 +182,7 @@ function ReviewDialog({
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Add notes for the instructor, e.g. which documents need to be corrected…"
+              placeholder="Add notes for the instructor, e.g. which documents need to be corrected."
               rows={3}
             />
           </div>

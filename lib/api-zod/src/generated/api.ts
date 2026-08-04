@@ -937,7 +937,11 @@ export const ListInstructorVerificationsResponseItem = zod.object({
   "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
   "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
   "docReviewNotes": zod.string().nullish(),
-  "docReviewedAt": zod.string().nullish()
+  "docReviewedAt": zod.string().nullish(),
+  "ocrStatus": zod.union([zod.literal('processing'),zod.literal('done'),zod.literal('failed'),zod.literal('skipped'),zod.literal(null)]).nullish().describe('Status of the AI OCR scan for this document'),
+  "ocrData": zod.object({
+
+}).passthrough().nullish().describe('Structured fields extracted by AI OCR — shape varies by docType')
 }))
 })
 export const ListInstructorVerificationsResponse = zod.array(ListInstructorVerificationsResponseItem)
@@ -2199,7 +2203,11 @@ export const GetVerificationStatusResponse = zod.object({
   "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
   "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
   "docReviewNotes": zod.string().nullish(),
-  "docReviewedAt": zod.string().nullish()
+  "docReviewedAt": zod.string().nullish(),
+  "ocrStatus": zod.union([zod.literal('processing'),zod.literal('done'),zod.literal('failed'),zod.literal('skipped'),zod.literal(null)]).nullish().describe('Status of the AI OCR scan for this document'),
+  "ocrData": zod.object({
+
+}).passthrough().nullish().describe('Structured fields extracted by AI OCR — shape varies by docType')
 }))
 })
 
@@ -2242,7 +2250,11 @@ export const ListVerificationsResponseItem = zod.object({
   "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
   "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
   "docReviewNotes": zod.string().nullish(),
-  "docReviewedAt": zod.string().nullish()
+  "docReviewedAt": zod.string().nullish(),
+  "ocrStatus": zod.union([zod.literal('processing'),zod.literal('done'),zod.literal('failed'),zod.literal('skipped'),zod.literal(null)]).nullish().describe('Status of the AI OCR scan for this document'),
+  "ocrData": zod.object({
+
+}).passthrough().nullish().describe('Structured fields extracted by AI OCR — shape varies by docType')
 }))
 })
 export const ListVerificationsResponse = zod.array(ListVerificationsResponseItem)
@@ -2315,7 +2327,11 @@ export const ReviewVerificationDocumentResponse = zod.object({
   "expiresAt": zod.string().nullish().describe('ISO date string (YYYY-MM-DD) when this document expires'),
   "docStatus": zod.union([zod.literal('approved'),zod.literal('rejected'),zod.literal('needs_revision'),zod.literal(null)]).nullish(),
   "docReviewNotes": zod.string().nullish(),
-  "docReviewedAt": zod.string().nullish()
+  "docReviewedAt": zod.string().nullish(),
+  "ocrStatus": zod.union([zod.literal('processing'),zod.literal('done'),zod.literal('failed'),zod.literal('skipped'),zod.literal(null)]).nullish().describe('Status of the AI OCR scan for this document'),
+  "ocrData": zod.object({
+
+}).passthrough().nullish().describe('Structured fields extracted by AI OCR — shape varies by docType')
 })
 
 

@@ -4984,6 +4984,13 @@ components:
           type: ["string", "null"]
         docReviewedAt:
           type: ["string", "null"]
+        ocrStatus:
+          type: ["string", "null"]
+          enum: [processing, done, failed, skipped, null]
+          description: "Status of the AI OCR scan for this document"
+        ocrData:
+          type: ["object", "null"]
+          description: "Structured fields extracted by AI OCR — shape varies by docType"
 
     InstructorVerification:
       type: object
