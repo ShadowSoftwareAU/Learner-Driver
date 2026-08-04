@@ -1,0 +1,27 @@
+I need to significantly expand the Parent/Guardian/Mentor dashboard in our driving app. Please implement the following features, creating any necessary database schema updates, API endpoints, and UI components. 
+
+Please break this down and implement it logically. Here are the core features to add to the viewer dashboard:
+
+### 1. "New Assessment" Logging (Core Feature)
+*   Create a "New Assessment" function specifically for parents/guardians to log supervised driving hours and specific maneuvers.
+*   Include a "view selector" in this interface so the user can easily toggle between different views (e.g., standard logging, advanced maneuvers, or specific environmental conditions like night driving).
+
+### 2. Visual Progress & Milestones
+*   **Hours Tracker Dashboard:** Build a visual component (like a donut chart or progress bar) showing completed supervised and professional driving hours versus state/regional requirements (e.g., Total Hours, Night Hours).
+*   **Skill Mastery Checklist:** Add a high-level overview section showing driving competencies (e.g., Parallel Parking, Highway Merging) marked as 'Not Started', 'Practicing', or 'Mastered'.
+*   **Milestone Alerts:** Add a simple gamified UI element (badges or banner alerts) that triggers when the student hits significant milestones.
+
+### 3. Instructor Collaboration
+*   **Handover/Homework View:** A dedicated UI card where parents can view actionable tasks or notes left by the professional instructor after their last lesson.
+*   **Shared Schedule:** A mini-calendar or list view showing upcoming booked professional lessons so parents can plan supervised drives around them.
+*   **Direct Notes:** A simple text input area on the student profile allowing the parent to leave a quick note for the instructor prior to the next professional lesson.
+
+### 4. Resources & Supervisor Support
+*   **Mentor Tips:** A small resource widget containing quick tips or placeholder links for how to effectively teach maneuvers.
+*   **Digital Logbook Export:** Add an "Export Logbook" button that triggers a download of the combined driving log (professional + supervised hours) into a CSV or PDF format.
+
+### 5. Administrative Features
+*   **Permit Expiry Alert:** A simple widget or banner warning the user if the learner's permit is nearing its expiration date.
+*   **Lesson Packages:** A basic UI card showing the number of prepaid professional lessons remaining.
+
+Please start by outlining the necessary database schema additions (e.g., tables for supervisor logs, mentor notes, permit expiry dates) and then proceed to build the UI components for the dashboard. Let me know your plan before executing.
