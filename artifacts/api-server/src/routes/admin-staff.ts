@@ -25,12 +25,15 @@ const router = Router();
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Master tier = admin users with adminSubRole strictly equal to "owner".
- * Managers and other sub-roles are treated as staff and governed by the
- * admin_staff_permissions table. Only 'owner' gets unconditional access.
+ * Master tier = admin users with adminSubRole "owner" or "manager".
+ * Both bypass the admin_staff_permissions table and get unconditional
+ * full access. Only 'owner' can change sub-roles (see PATCH sub-role route).
  */
 function isMasterTier(user: any): boolean {
-  return user.role === "admin" && user.adminSubRole === "owner";
+  return (
+    user.role === "admin" &&
+    (user.adminSubRole === "owner" || user.adminSubRole === "manager")
+  );
 }
 
 // ─── GET /admin/permissions/me ────────────────────────────────────────────────
@@ -238,11 +241,12 @@ router.post(
 </div>`;
 
       try {
-        const result = await sendExternalEmail({
-          to: email,
-          subject: "You've been invited to Learner Log",
+        const result = await sendExternalEmail(
+          email,
+          "You've been invited to Learner Log",
           html,
-        });
+          `${inviterName} has invited you to join Learner Log as a staff administrator. Accept at: ${inviteUrl}`,
+        );
         emailDelivered = result.delivered;
       } catch {
         // non-fatal
@@ -489,6 +493,86 @@ router.delete(
     await db
       .delete(adminStaffPermissionsTable)
       .where(eq(adminStaffPermissionsTable.userId, targetId));
+
+    res.json({ success: true });
+  }
+);
+
+// ─── PATCH /admin/staff/:id/sub-role ─────────────────────────────────────────
+
+router.patch(
+  "/admin/staff/:id/sub-role",
+  requireAuth,
+  async (req: any, res): Promise<void> => {
+    const user = await getOrCreateUser(req.clerkUserId, "");
+    // Only owners can promote/demote — managers cannot change sub-roles.
+    if (user.role !== "admin" || user.adminSubRole !== "owner") {
+      res.status(403).json({ error: "Owner access required" });
+      return;
+    }
+
+    const targetId = parseInt(
+      Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
+      10
+    );
+
+    const { subRole } = req.body as { subRole: string };
+
+    if (subRole !== "manager" && subRole !== "staff") {
+      res
+        .status(400)
+        .json({ error: "subRole must be 'manager' or 'staff'" });
+      return;
+    }
+
+    const [target] = await db
+      .select()
+      .from(usersTable)
+      .where(and(eq(usersTable.id, targetId), eq(usersTable.role, "admin")));
+
+    if (!target) {
+      res.status(404).json({ error: "Admin user not found" });
+      return;
+    }
+    if (target.adminSubRole === "owner") {
+      res.status(400).json({ error: "Cannot change the sub-role of an Owner" });
+      return;
+    }
+
+    // Prevent self-demotion through this endpoint.
+    if (target.id === user.id) {
+      res.status(400).json({ error: "Cannot change your own sub-role" });
+      return;
+    }
+
+    await db
+      .update(usersTable)
+      .set({ adminSubRole: subRole })
+      .where(eq(usersTable.id, targetId));
+
+    if (subRole === "manager") {
+      // Managers bypass the permissions table — delete any existing row.
+      await db
+        .delete(adminStaffPermissionsTable)
+        .where(eq(adminStaffPermissionsTable.userId, targetId));
+    } else {
+      // Demoted to staff — ensure a permissions row exists (all-false is safe default).
+      const [existing] = await db
+        .select()
+        .from(adminStaffPermissionsTable)
+        .where(eq(adminStaffPermissionsTable.userId, targetId));
+
+      if (!existing) {
+        await db.insert(adminStaffPermissionsTable).values({
+          userId: targetId,
+          canViewBilling: false,
+          canManageInstructors: false,
+          canManageCompliance: false,
+          canViewAuditLog: false,
+          canManageBookings: false,
+        });
+      }
+    }
 
     res.json({ success: true });
   }

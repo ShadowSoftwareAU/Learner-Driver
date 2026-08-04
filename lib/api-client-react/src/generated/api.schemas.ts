@@ -392,6 +392,7 @@ export type AssessmentStatus = typeof AssessmentStatus[keyof typeof AssessmentSt
 export const AssessmentStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
+  no_show: 'no_show',
 } as const;
 
 /**
@@ -909,6 +910,10 @@ export interface AdminPermissions {
   canManageCompliance: boolean;
   canViewAuditLog: boolean;
   canManageBookings: boolean;
+}
+
+export interface AdminStaffSubRoleUpdate {
+  subRole: 'manager' | 'staff';
 }
 
 export interface AdminPermissionsUpdate {

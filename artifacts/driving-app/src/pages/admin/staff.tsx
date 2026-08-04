@@ -8,7 +8,9 @@ import {
   useInviteAdminStaff,
   useCancelAdminStaffInvite,
   useUpdateAdminStaffPermissions,
+  useUpdateAdminStaffSubRole,
   useRemoveAdminStaff,
+  useGetMe,
 } from "@workspace/api-client-react";
 import { useAdminPermissions } from "@/hooks/useAdminPermissions";
 import { useToast } from "@/hooks/use-toast";
@@ -258,6 +260,7 @@ function InviteDialog({
 
 function EditPermissionsDialog({
   staffMember,
+  isCurrentUserOwner,
   onClose,
   onSaved,
 }: {
@@ -265,11 +268,16 @@ function EditPermissionsDialog({
     id: number;
     name: string | null;
     email: string;
+    adminSubRole: string | null;
     permissions: PermissionsFormValues & { isMasterTier: boolean };
   };
+  isCurrentUserOwner: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const initialSubRole =
+    staffMember.adminSubRole === "manager" ? "manager" : "staff";
+  const [subRole, setSubRole] = useState<"manager" | "staff">(initialSubRole);
   const [permissions, setPermissions] = useState<PermissionsFormValues>({
     canViewBilling: staffMember.permissions.canViewBilling,
     canManageInstructors: staffMember.permissions.canManageInstructors,
@@ -279,15 +287,36 @@ function EditPermissionsDialog({
   });
 
   const update = useUpdateAdminStaffPermissions();
+  const updateSubRole = useUpdateAdminStaffSubRole();
   const { toast } = useToast();
+
+  const isSaving = update.isPending || updateSubRole.isPending;
 
   const handleSave = async () => {
     try {
-      await update.mutateAsync({ id: staffMember.id, data: permissions });
-      toast({ title: "Permissions updated" });
+      const subRoleChanged = subRole !== initialSubRole;
+
+      // Update sub-role first if it changed (this deletes/creates the perms row).
+      if (subRoleChanged) {
+        await updateSubRole.mutateAsync({ id: staffMember.id, data: { subRole } });
+      }
+
+      // Update permissions only when the final state is 'staff'.
+      if (subRole === "staff") {
+        await update.mutateAsync({ id: staffMember.id, data: permissions });
+      }
+
+      toast({
+        title:
+          subRoleChanged
+            ? subRole === "manager"
+              ? "Promoted to Manager"
+              : "Demoted to Staff"
+            : "Permissions updated",
+      });
       onSaved();
     } catch {
-      toast({ title: "Failed to update permissions", variant: "destructive" });
+      toast({ title: "Failed to save changes", variant: "destructive" });
     }
   };
 
@@ -295,24 +324,76 @@ function EditPermissionsDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit Permissions</DialogTitle>
+          <DialogTitle>Edit Access</DialogTitle>
           <DialogDescription>
             Updating access for{" "}
             <strong>{staffMember.name ?? staffMember.email}</strong>.
           </DialogDescription>
         </DialogHeader>
-        <PermissionsToggles
-          value={permissions}
-          onChange={(key, checked) =>
-            setPermissions((prev) => ({ ...prev, [key]: checked }))
-          }
-        />
+
+        {/* Sub-role toggle — only shown to owners */}
+        {isCurrentUserOwner && (
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Role</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSubRole("staff")}
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  subRole === "staff"
+                    ? "border-primary bg-primary/5 ring-1 ring-primary"
+                    : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <p className="text-sm font-medium">Staff</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Scoped to the permissions below
+                </p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSubRole("manager")}
+                className={`rounded-lg border p-3 text-left transition-colors ${
+                  subRole === "manager"
+                    ? "border-amber-500 bg-amber-50 ring-1 ring-amber-500"
+                    : "border-border hover:bg-muted/50"
+                }`}
+              >
+                <p className="text-sm font-medium">Manager</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Full access, no restrictions
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Permissions toggles — hidden when role is manager */}
+        {subRole === "staff" ? (
+          <>
+            {isCurrentUserOwner && <Separator />}
+            <PermissionsToggles
+              value={permissions}
+              onChange={(key, checked) =>
+                setPermissions((prev) => ({ ...prev, [key]: checked }))
+              }
+            />
+          </>
+        ) : (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3">
+            <p className="text-sm text-amber-800">
+              Managers have full access to all admin features. Individual
+              permission toggles do not apply.
+            </p>
+          </div>
+        )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={update.isPending}>
-            {update.isPending ? "Saving…" : "Save Changes"}
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? "Saving…" : "Save Changes"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -324,11 +405,14 @@ function EditPermissionsDialog({
 
 export default function ManageStaffPage() {
   const adminPerms = useAdminPermissions();
+  const { data: currentUser } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+  const isCurrentUserOwner = currentUser?.role === "admin" && currentUser?.adminSubRole === "owner";
   const [inviteOpen, setInviteOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<null | {
     id: number;
     name: string | null;
     email: string;
+    adminSubRole: string | null;
     permissions: PermissionsFormValues & { isMasterTier: boolean };
   }>(null);
   const [removeTarget, setRemoveTarget] = useState<null | { id: number; email: string }>(null);
@@ -481,6 +565,7 @@ export default function ManageStaffPage() {
                                 id: member.id,
                                 name: member.name ?? null,
                                 email: member.email,
+                                adminSubRole: member.adminSubRole ?? null,
                                 permissions: member.permissions,
                               })
                             }
@@ -582,6 +667,7 @@ export default function ManageStaffPage() {
       {editTarget && (
         <EditPermissionsDialog
           staffMember={editTarget}
+          isCurrentUserOwner={isCurrentUserOwner}
           onClose={() => setEditTarget(null)}
           onSaved={() => { setEditTarget(null); refetch(); }}
         />

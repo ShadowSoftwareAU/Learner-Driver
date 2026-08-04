@@ -23,6 +23,7 @@ import type {
   AdminDashboard,
   AdminPermissions,
   AdminPermissionsUpdate,
+  AdminStaffSubRoleUpdate,
   AdminStaffInvitePreview,
   AdminStaffInviteRequest,
   AdminStaffListResponse,
@@ -10279,6 +10280,60 @@ export const useUpdateAdminStaffPermissions = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getUpdateAdminStaffPermissionsMutationOptions(options));
+    }
+
+export const getUpdateAdminStaffSubRoleUrl = (id: number,) => {
+  return `/api/admin/staff/${id}/sub-role`
+}
+
+/**
+ * @summary Promote or demote a staff member's sub-role (Owner only)
+ */
+export const updateAdminStaffSubRole = async (id: number,
+    adminStaffSubRoleUpdate: AdminStaffSubRoleUpdate, options?: RequestInit): Promise<void> => {
+  return customFetch<void>(getUpdateAdminStaffSubRoleUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(adminStaffSubRoleUpdate)
+  }
+);}
+
+export const getUpdateAdminStaffSubRoleMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminStaffSubRole>>, TError,{id: number;data: BodyType<AdminStaffSubRoleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminStaffSubRole>>, TError,{id: number;data: BodyType<AdminStaffSubRoleUpdate>}, TContext> => {
+
+const mutationKey = ['updateAdminStaffSubRole'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminStaffSubRole>>, {id: number;data: BodyType<AdminStaffSubRoleUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+          return  updateAdminStaffSubRole(id,data,requestOptions)
+        }
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAdminStaffSubRoleMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminStaffSubRole>>>
+    export type UpdateAdminStaffSubRoleMutationBody = BodyType<AdminStaffSubRoleUpdate>
+    export type UpdateAdminStaffSubRoleMutationError = ErrorType<void>
+
+    /**
+ * @summary Promote or demote a staff member's sub-role (Owner only)
+ */
+export const useUpdateAdminStaffSubRole = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminStaffSubRole>>, TError,{id: number;data: BodyType<AdminStaffSubRoleUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAdminStaffSubRole>>,
+        TError,
+        {id: number;data: BodyType<AdminStaffSubRoleUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAdminStaffSubRoleMutationOptions(options));
     }
 
 export const getRemoveAdminStaffUrl = (id: number,) => {

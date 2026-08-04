@@ -2967,6 +2967,31 @@ paths:
         "403":
           description: Owner or Manager access required
 
+  /admin/staff/{id}/sub-role:
+    patch:
+      operationId: updateAdminStaffSubRole
+      tags: [admin]
+      summary: Promote or demote a staff member's sub-role (Owner only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminStaffSubRoleUpdate"
+      responses:
+        "200":
+          description: Updated
+        "400":
+          description: Invalid sub-role or target is an owner
+        "403":
+          description: Owner access required
+
   /admin/staff/{id}:
     delete:
       operationId: removeAdminStaff
@@ -3886,6 +3911,14 @@ components:
         canManageBookings:
           type: boolean
 
+    AdminStaffSubRoleUpdate:
+      type: object
+      required: [subRole]
+      properties:
+        subRole:
+          type: string
+          enum: [manager, staff]
+
     AdminPermissionsUpdate:
       type: object
       properties:
@@ -4038,7 +4071,7 @@ components:
           type: integer
         status:
           type: string
-          enum: [in_progress, completed]
+          enum: [in_progress, completed, no_show]
         # Who performed the assessment
         performedByRole:
           type: string
@@ -4172,7 +4205,7 @@ components:
           type: string
         status:
           type: string
-          enum: [in_progress, completed]
+          enum: [in_progress, completed, no_show]
         durationMinutes:
           type: integer
         routePath:
@@ -4215,7 +4248,7 @@ components:
           type: integer
         status:
           type: string
-          enum: [in_progress, completed]
+          enum: [in_progress, completed, no_show]
         pedalOperator:
           type: string
           enum: [student, instructor, shared]

@@ -31,9 +31,10 @@ const NO_ACCESS: AdminPermissions = {
  * Returns the current user's admin permission profile.
  *
  * Access rules:
- *  1. adminSubRole === 'owner'  → unconditional full access. Determined
- *     purely from the user profile (no extra API call). This is the primary
- *     tenant created via the onboarding screen.
+ *  1. adminSubRole === 'owner' | 'manager'  → unconditional full access.
+ *     Determined purely from the user profile (no extra API call needed).
+ *     Owners are the primary tenant; managers are promoted staff members
+ *     whose permissions row has been deleted as they bypass the table.
  *  2. Any other admin subRole   → permissions fetched from the API and bound
  *     strictly to the admin_staff_permissions table row written at invite-claim
  *     time. Invited staff always have adminSubRole = 'staff'.
@@ -42,21 +43,24 @@ const NO_ACCESS: AdminPermissions = {
 export function useAdminPermissions(): AdminPermissions {
   const { data: user } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
-  // Owner is determined directly from the profile — no round-trip needed.
-  const isOwner = user?.role === "admin" && user?.adminSubRole === "owner";
+  // Master tier (owner or manager) is determined directly from the profile —
+  // no round-trip needed. Managers bypass the permissions table just like owners.
+  const isMasterTierLocal =
+    user?.role === "admin" &&
+    (user?.adminSubRole === "owner" || user?.adminSubRole === "manager");
 
   const { data: perms } = useGetMyAdminPermissions({
     query: {
       queryKey: ["/api/admin/permissions/me"],
-      // Owners never need the permissions fetch; skip it entirely.
-      enabled: user?.role === "admin" && !isOwner,
+      // Master-tier users never need the permissions fetch; skip it entirely.
+      enabled: user?.role === "admin" && !isMasterTierLocal,
     },
   });
 
   if (!user || user.role !== "admin") return NO_ACCESS;
 
-  // Owners get immediate full access from profile data — no loading state.
-  if (isOwner) return FULL_ACCESS;
+  // Master-tier users get immediate full access from profile data.
+  if (isMasterTierLocal) return FULL_ACCESS;
 
   // Non-owner admin staff — wait for their permissions to load.
   if (!perms) return NO_ACCESS;
