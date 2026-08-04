@@ -9,7 +9,7 @@
  *   GET  /viewer/students/:id/dashboard — viewer only (must have active link)
  */
 import { Router } from "express";
-import { eq, and, sql, gte } from "drizzle-orm";
+import { eq, and, sql, gte, desc } from "drizzle-orm";
 import { z } from "zod";
 import {
   db,
@@ -23,6 +23,9 @@ import {
   usersTable,
   auditLogsTable,
   instructorsTable,
+  handoverNotesTable,
+  studentMilestonesTable,
+  studentWalletsTable,
 } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
@@ -198,6 +201,7 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     instructorHours: studentsTable.instructorHours,
     supervisedHours: studentsTable.supervisedHours,
     state: studentsTable.state,
+    licenceExpiry: studentsTable.licenceExpiry,
     // Safe subset — NO encrypted medical data, NO private notes
   }).from(studentsTable).where(eq(studentsTable.id, studentId));
 
@@ -250,6 +254,79 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     ? Math.round((instructorHours * 3 + supervisedHours) * 10) / 10
     : Math.round((instructorHours + supervisedHours) * 10) / 10;
 
+  // ── Extra data for the expanded viewer dashboard ─────────────────────────────
+
+  // Latest handover note from instructor (approved content only)
+  const [latestHandover] = await db.select({
+    id: handoverNotesTable.id,
+    note: handoverNotesTable.note,
+    focusAreas: handoverNotesTable.focusAreas,
+    isSafetyCritical: handoverNotesTable.isSafetyCritical,
+    createdAt: handoverNotesTable.createdAt,
+  }).from(handoverNotesTable)
+    .where(and(
+      eq(handoverNotesTable.studentId, studentId),
+      eq(handoverNotesTable.contentStatus, "approved"),
+    ))
+    .orderBy(desc(handoverNotesTable.createdAt))
+    .limit(1);
+
+  // Milestones earned by this student
+  const milestones = await db.select({
+    milestoneId: studentMilestonesTable.milestoneId,
+    earnedAt: studentMilestonesTable.earnedAt,
+  }).from(studentMilestonesTable)
+    .where(eq(studentMilestonesTable.studentId, studentId))
+    .orderBy(desc(studentMilestonesTable.earnedAt));
+
+  // Student wallet balance (prepaid lesson credit)
+  const [walletRow] = await db.select({ balanceCents: studentWalletsTable.balanceCents })
+    .from(studentWalletsTable)
+    .where(eq(studentWalletsTable.studentId, studentId));
+  const walletBalanceCents = walletRow?.balanceCents ?? 0;
+
+  // Night hours — sessions with lightingCondition = 'night'
+  const nightSessions = await db.select({ durationMinutes: assessmentsTable.durationMinutes })
+    .from(assessmentsTable)
+    .where(and(
+      eq(assessmentsTable.studentId, studentId),
+      eq(assessmentsTable.lightingCondition, "night"),
+    ));
+  const nightHours = Math.round(nightSessions.reduce((s, r) => s + r.durationMinutes, 0) / 60 * 10) / 10;
+
+  // Skill summary — latest competency per maneuver across all instructor-led sessions
+  const allResults = await db.select({
+    maneuverId: maneuverResultsTable.maneuverId,
+    name: maneuversTable.name,
+    category: maneuversTable.category,
+    competencyLevel: maneuverResultsTable.competencyLevel,
+    lessonDate: assessmentsTable.lessonDate,
+  }).from(maneuverResultsTable)
+    .innerJoin(assessmentsTable, eq(maneuverResultsTable.assessmentId, assessmentsTable.id))
+    .innerJoin(maneuversTable, eq(maneuverResultsTable.maneuverId, maneuversTable.id))
+    .where(and(
+      eq(assessmentsTable.studentId, studentId),
+      eq(assessmentsTable.performedByRole, "instructor"),
+    ))
+    .orderBy(desc(assessmentsTable.lessonDate));
+
+  // Reduce to latest result per maneuver (results already ordered newest-first)
+  const latestPerManeuver = new Map<number, { name: string; category: string; competencyLevel: string }>();
+  for (const r of allResults) {
+    if (!latestPerManeuver.has(r.maneuverId)) {
+      latestPerManeuver.set(r.maneuverId, { name: r.name ?? "", category: r.category ?? "Other", competencyLevel: r.competencyLevel });
+    }
+  }
+  const byCat = new Map<string, { mastered: number; practicing: number; notAttempted: number }>();
+  for (const { category, competencyLevel } of latestPerManeuver.values()) {
+    if (!byCat.has(category)) byCat.set(category, { mastered: 0, practicing: 0, notAttempted: 0 });
+    const entry = byCat.get(category)!;
+    if (competencyLevel === "mastered") entry.mastered++;
+    else if (competencyLevel === "not_attempted" || competencyLevel === "not_started") entry.notAttempted++;
+    else entry.practicing++;
+  }
+  const skillSummary = Array.from(byCat.entries()).map(([category, counts]) => ({ category, ...counts }));
+
   res.json({
     student,
     recentAssessments,
@@ -259,7 +336,62 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     supervisedHours,
     effectiveTotalHours,
     isQLD,
+    nightHours,
+    latestHandover: latestHandover ?? null,
+    milestones,
+    skillSummary,
+    walletBalanceCents,
   });
+});
+
+// ─── Logbook CSV export ───────────────────────────────────────────────────────
+
+router.get("/viewer/students/:id/logbook/export", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const studentId = parseInt(req.params.id as string, 10);
+
+  const [link] = await db.select().from(viewerLinksTable)
+    .where(and(eq(viewerLinksTable.viewerUserId, user.id), eq(viewerLinksTable.studentId, studentId), eq(viewerLinksTable.linkStatus, "active")));
+  if (!link) { res.status(403).json({ error: "No active viewer link" }); return; }
+
+  const [student] = await db.select({ fullName: studentsTable.fullName })
+    .from(studentsTable).where(eq(studentsTable.id, studentId));
+  if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+
+  const rows = await db.select({
+    lessonDate: assessmentsTable.lessonDate,
+    durationMinutes: assessmentsTable.durationMinutes,
+    performedByRole: assessmentsTable.performedByRole,
+    weatherCondition: assessmentsTable.weatherCondition,
+    lightingCondition: assessmentsTable.lightingCondition,
+    pedalOperator: assessmentsTable.pedalOperator,
+    focusAreasNext: assessmentsTable.focusAreasNext,
+    instructorName: instructorsTable.fullName,
+  }).from(assessmentsTable)
+    .leftJoin(instructorsTable, eq(assessmentsTable.instructorId, instructorsTable.id))
+    .where(eq(assessmentsTable.studentId, studentId))
+    .orderBy(assessmentsTable.lessonDate);
+
+  const header = ["Date", "Type", "Duration (min)", "Duration (hrs)", "Lighting", "Weather", "Controls", "Instructor/Supervisor", "Focus Areas"];
+  const dataRows = rows.map(a => [
+    a.lessonDate ?? "",
+    a.performedByRole === "supervised" ? "Supervised" : "Professional",
+    String(a.durationMinutes),
+    (a.durationMinutes / 60).toFixed(2),
+    a.lightingCondition ?? "",
+    a.weatherCondition ?? "",
+    a.pedalOperator ?? "",
+    a.performedByRole === "instructor" ? (a.instructorName ?? "") : "Self-supervised",
+    a.focusAreasNext ?? "",
+  ]);
+
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const csv = [header, ...dataRows].map(row => row.map(escape).join(",")).join("\n");
+  const filename = `${student.fullName.replace(/\s+/g, "_")}_logbook.csv`;
+
+  res.setHeader("Content-Type", "text/csv; charset=utf-8");
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(csv);
 });
 
 // ─── Log a supervised session ─────────────────────────────────────────────────
