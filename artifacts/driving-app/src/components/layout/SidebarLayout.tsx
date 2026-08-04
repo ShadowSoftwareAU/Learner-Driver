@@ -61,6 +61,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "Dashboard", href: "/student/dashboard", icon: LayoutDashboard },
       { label: "Find Instructor", href: "/student/search", icon: Search },
       { label: "My Bookings", href: "/student/bookings", icon: BookOpen },
+      { label: "My Profile", href: "/student/profile", icon: User },
       { label: "Settings", href: "/settings", icon: User },
     ],
     school_admin: [

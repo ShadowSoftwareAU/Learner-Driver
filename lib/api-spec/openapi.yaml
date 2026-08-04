@@ -3191,6 +3191,9 @@ components:
       properties:
         phone:
           type: ["string", "null"]
+        address:
+          type: ["string", "null"]
+          description: "Student's street address"
 
     RoleUpdate:
       type: object

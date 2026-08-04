@@ -141,9 +141,12 @@ router.patch("/students/me", requireAuth, async (req: any, res): Promise<void> =
   const user = await getOrCreateUser(req.clerkUserId, "");
   const [s] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
   if (!s) { res.status(404).json({ error: "Student profile not found" }); return; }
-  const { phone } = req.body as { phone?: string | null };
+  const body = req.body as { phone?: string | null; address?: string | null };
+  const updates: Record<string, unknown> = {};
+  if ("phone" in body) updates.phone = body.phone ?? null;
+  if ("address" in body) updates.address = body.address ?? null;
   const [updated] = await db.update(studentsTable)
-    .set({ phone: phone ?? null })
+    .set(updates)
     .where(eq(studentsTable.id, s.id))
     .returning();
   res.json(formatStudent(updated));
@@ -548,6 +551,7 @@ function formatStudent(s: any) {
     guardianName: s.guardianName, guardianPhone: s.guardianPhone, guardianEmail: s.guardianEmail,
     pcycSchoolEmail: s.pcycSchoolEmail, licenseNumber: s.licenseNumber,
     licenceFrontPath: s.licenceFrontPath, licenceBackPath: s.licenceBackPath, headshotPath: s.headshotPath,
+    address: s.address ?? null,
     notes: s.notes, region: s.region, state: s.state ?? null, country: s.country,
     totalHours: s.totalHours,
     instructorHours: s.instructorHours ?? 0,

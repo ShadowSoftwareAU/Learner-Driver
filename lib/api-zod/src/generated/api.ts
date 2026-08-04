@@ -155,7 +155,8 @@ export const GetMyStudentProfileResponse = zod.object({
  * @summary Update the authenticated student's own profile fields
  */
 export const UpdateMyStudentProfileBody = zod.object({
-  "phone": zod.string().nullish()
+  "phone": zod.string().nullish(),
+  "address": zod.string().nullish().describe('Student\'s street address')
 })
 
 export const UpdateMyStudentProfileResponse = zod.object({

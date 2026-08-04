@@ -56,6 +56,11 @@ export interface UpdateUserProfile {
 export interface UpdateOwnStudentProfile {
   /** @nullable */
   phone?: string | null;
+  /**
+     * Student's street address
+     * @nullable
+     */
+  address?: string | null;
 }
 
 export type RoleUpdateRole = typeof RoleUpdateRole[keyof typeof RoleUpdateRole];

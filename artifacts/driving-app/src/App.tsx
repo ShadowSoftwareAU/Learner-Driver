@@ -32,6 +32,7 @@ import StudentDashboard from "@/pages/student/dashboard";
 import StudentSearch from "@/pages/student/search";
 import StudentBookings from "@/pages/student/bookings";
 import StudentBookWizard from "@/pages/student/book";
+import StudentProfilePage from "@/pages/student/profile";
 
 import AdminDashboard from "@/pages/admin/dashboard";
 import AdminStudents from "@/pages/admin/students";
@@ -485,6 +486,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/student/search" component={() => <ProtectedRoute component={StudentSearch} />} />
           <Route path="/student/bookings" component={() => <ProtectedRoute component={StudentBookings} />} />
           <Route path="/student/book/:instructorId" component={() => <ProtectedRoute component={StudentBookWizard} />} />
+          <Route path="/student/profile" component={() => <ProtectedRoute component={StudentProfilePage} />} />
           <Route path="/student/feedback/:assessmentId" component={() => <ProtectedRoute component={StudentFeedback} />} />
 
           {/* Admin routes */}
