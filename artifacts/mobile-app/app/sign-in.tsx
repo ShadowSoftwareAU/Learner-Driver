@@ -1,6 +1,8 @@
-import { useClerk } from "@clerk/expo";
+import { useClerk, useOAuth } from "@clerk/expo";
 import { Feather } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
@@ -16,6 +18,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// Required so the OAuth session is marked complete when the app is resumed
+WebBrowser.maybeCompleteAuthSession();
+
 export default function SignInScreen() {
   const clerk = useClerk();
   const router = useRouter();
@@ -25,8 +30,38 @@ export default function SignInScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // ── Google OAuth ─────────────────────────────────────────────────────────────
+  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      const { createdSessionId, setActive } = await startOAuthFlow({
+        redirectUrl: Linking.createURL("/", { scheme: "mobile-app" }),
+      });
+      if (createdSessionId && setActive) {
+        await setActive({ session: createdSessionId });
+        router.replace("/");
+      }
+    } catch (err: unknown) {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "errors" in err &&
+        Array.isArray((err as { errors: { message: string }[] }).errors)
+          ? (err as { errors: { message: string }[] }).errors[0]?.message
+          : "Google sign in failed. Please try again.";
+      setError(msg ?? "Google sign in failed.");
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // ── Email / password ─────────────────────────────────────────────────────────
   const handleSignIn = async () => {
     if (!email || !password) return;
     if (!clerk.loaded || !clerk.client) {
@@ -71,6 +106,7 @@ export default function SignInScreen() {
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
+        {/* Header */}
         <View style={styles.header}>
           <Image
             source={require("../assets/images/steps2drive-logo.png")}
@@ -81,6 +117,7 @@ export default function SignInScreen() {
         </View>
 
         <View style={styles.form}>
+          {/* Error banner */}
           {error ? (
             <View style={styles.errorBox}>
               <Feather name="alert-circle" size={16} color="#EF4444" />
@@ -88,6 +125,33 @@ export default function SignInScreen() {
             </View>
           ) : null}
 
+          {/* Google SSO */}
+          <Pressable
+            style={({ pressed }) => [styles.googleButton, pressed && styles.buttonPressed]}
+            onPress={handleGoogleSignIn}
+            disabled={googleLoading || loading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color="#374151" size="small" />
+            ) : (
+              <>
+                {/* Google "G" logo rendered with coloured letters */}
+                <View style={styles.googleIconContainer}>
+                  <Text style={styles.googleIconText}>G</Text>
+                </View>
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </>
+            )}
+          </Pressable>
+
+          {/* Divider */}
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerLabel}>or</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          {/* Email */}
           <View style={styles.field}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -103,6 +167,7 @@ export default function SignInScreen() {
             />
           </View>
 
+          {/* Password */}
           <View style={styles.field}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.passwordRow}>
@@ -131,10 +196,11 @@ export default function SignInScreen() {
             </View>
           </View>
 
+          {/* Sign in button */}
           <Pressable
             style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
             onPress={handleSignIn}
-            disabled={loading || !email || !password}
+            disabled={loading || googleLoading || !email || !password}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
@@ -155,7 +221,7 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { paddingHorizontal: 24 },
-  header: { alignItems: "center", marginBottom: 40 },
+  header: { alignItems: "center", marginBottom: 36 },
   logo: {
     width: 220,
     height: 44,
@@ -184,6 +250,58 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#DC2626",
   },
+
+  // Google button
+  googleButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#E2E8F0",
+    borderRadius: 12,
+    paddingVertical: 13,
+    minHeight: 50,
+    marginBottom: 4,
+  },
+  googleIconContainer: {
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleIconText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    // Standard Google blue
+    color: "#4285F4",
+  },
+  googleButtonText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#374151",
+  },
+
+  // Divider
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 16,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "#E2E8F0",
+  },
+  dividerLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#94A3B8",
+  },
+
+  // Fields
   field: { marginBottom: 16 },
   label: {
     fontSize: 13,
@@ -214,6 +332,8 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   eyeButton: { padding: 8 },
+
+  // Sign in button
   button: {
     backgroundColor: "#2563EB",
     borderRadius: 12,
@@ -229,6 +349,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
   },
+
   footer: {
     marginTop: 40,
     textAlign: "center",
