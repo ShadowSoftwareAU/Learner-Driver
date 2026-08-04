@@ -134,69 +134,38 @@ const clerkAppearance = {
   },
 };
 
-const AUTH_FEATURES = [
-  "Tap-friendly lesson logging designed for the passenger seat",
-  "Students track their own progress toward their test day",
-  "Multi-instructor school management with full audit trails",
-];
-
 function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-[100dvh] flex">
-      {/* Branded left panel — desktop only */}
-      <div className="hidden lg:flex lg:w-[460px] xl:w-[520px] flex-shrink-0 flex-col justify-between p-12 bg-[#0a1628]">
+    <div
+      className="relative min-h-[100dvh] overflow-hidden flex flex-col"
+      style={{ backgroundColor: "#0a1628" }}
+    >
+      {/* Large logo watermark — centred behind the card */}
+      <div
+        className="pointer-events-none select-none absolute inset-0 flex items-center justify-center"
+        aria-hidden="true"
+      >
+        <img
+          src={`${window.location.origin}${basePath}/steps2drive-logo.png`}
+          alt=""
+          style={{ width: "680px", maxWidth: "88vw", opacity: 0.18 }}
+        />
+      </div>
+
+      {/* Header */}
+      <div className="relative z-10 px-6 pt-6 pb-2 flex items-center">
         <a href={basePath || "/"}>
           <img
             src={`${window.location.origin}${basePath}/steps2drive-logo.png`}
             alt="Steps2Drive"
-            className="h-10 w-auto"
+            style={{ height: "38px", width: "auto" }}
           />
         </a>
-
-        <div className="space-y-8">
-          <div className="space-y-3">
-            <h2 className="text-4xl xl:text-5xl font-bold text-white leading-tight tracking-tight">
-              Learn. Track.<br />Drive Confident.
-            </h2>
-            <p className="text-2xl xl:text-3xl font-bold text-red-500 leading-tight">
-              Be Safe.
-            </p>
-          </div>
-          <p className="text-white/60 text-base leading-relaxed max-w-sm">
-            The digital platform for professional driving instructors and learner drivers across Australia.
-          </p>
-          <div className="space-y-4">
-            {AUTH_FEATURES.map((feat) => (
-              <div key={feat} className="flex items-start gap-3">
-                <div className="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-400/30 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <div className="w-2 h-2 rounded-full bg-blue-400" />
-                </div>
-                <p className="text-white/75 text-sm leading-relaxed">{feat}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="text-white/30 text-xs">
-          © {new Date().getFullYear()} Steps2Drive. All rights reserved.
-        </p>
       </div>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex flex-col min-h-[100dvh] bg-gray-50">
-        {/* Mobile-only branded header */}
-        <div className="lg:hidden bg-[#0a1628] px-5 py-4 flex items-center">
-          <a href={basePath || "/"}>
-            <img
-              src={`${window.location.origin}${basePath}/steps2drive-logo.png`}
-              alt="Steps2Drive"
-              className="h-8 w-auto"
-            />
-          </a>
-        </div>
-        <div className="flex-1 flex items-center justify-center px-4 py-10">
-          {children}
-        </div>
+      {/* Form — centred in remaining space */}
+      <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-10">
+        {children}
       </div>
     </div>
   );
