@@ -6,6 +6,7 @@
  * OpenAI vision.
  */
 import { Router } from "express";
+import express from "express";
 import { z } from "zod";
 import { requireAuth } from "./users";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -34,7 +35,10 @@ export interface ParsedLicenceData {
   cardNumber?: string;        // Card number from rear
 }
 
-router.post("/students/parse-licence", requireAuth, async (req: any, res): Promise<void> => {
+// Base64 images can be several MB — override the default 100 KB JSON limit for this route only
+const largeJson = express.json({ limit: "20mb" });
+
+router.post("/students/parse-licence", largeJson, requireAuth, async (req: any, res): Promise<void> => {
   const parse = bodySchema.safeParse(req.body);
   if (!parse.success) {
     res.status(400).json({ error: "frontBase64 is required" });
