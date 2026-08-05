@@ -184,9 +184,18 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
   const user = await getOrCreateUser(req.clerkUserId, "");
   const studentId = parseInt(req.params.id as string, 10);
 
+  // Pagination — page is 1-based, limit is fixed at 10
+  const PAGE_LIMIT = 10;
+  const page = Math.max(1, parseInt((req.query as any).page as string ?? "1", 10) || 1);
+  const offset = (page - 1) * PAGE_LIMIT;
+
   // Verify viewer has active link to this student
   const [link] = await db.select().from(viewerLinksTable)
-    .where(and(eq(viewerLinksTable.viewerUserId, user.id), eq(viewerLinksTable.studentId, studentId), eq(viewerLinksTable.linkStatus, "active")));
+    .where(and(
+      eq(viewerLinksTable.viewerUserId, user.id),
+      eq(viewerLinksTable.studentId, studentId),
+      eq(viewerLinksTable.linkStatus, "active"),
+    ));
 
   if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
 
@@ -201,11 +210,16 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     instructorHours: studentsTable.instructorHours,
     supervisedHours: studentsTable.supervisedHours,
     state: studentsTable.state,
-    licenceExpiry: studentsTable.licenceExpiry,
+    licenceExpiry: (studentsTable as any).licenceExpiry,
     // Safe subset — NO encrypted medical data, NO private notes
   }).from(studentsTable).where(eq(studentsTable.id, studentId));
 
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
+
+  // Total assessment count for pagination metadata
+  const [{ count: totalAssessments }] = await db.select({ count: sql<number>`count(*)::int` })
+    .from(assessmentsTable)
+    .where(eq(assessmentsTable.studentId, studentId));
 
   // Recent assessments — summary only, no private notes; include instructor name
   const recentAssessments = await db.select({
@@ -217,11 +231,17 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     totalHoursThisLesson: assessmentsTable.durationMinutes,
     performedByRole: assessmentsTable.performedByRole,
     instructorName: instructorsTable.fullName,
+    weatherCondition: assessmentsTable.weatherCondition,
+    lightingCondition: assessmentsTable.lightingCondition,
+    confidenceNote: assessmentsTable.confidenceNote,
   }).from(assessmentsTable)
     .leftJoin(instructorsTable, eq(assessmentsTable.instructorId, instructorsTable.id))
     .where(eq(assessmentsTable.studentId, studentId))
     .orderBy(assessmentsTable.lessonDate)
-    .limit(10);
+    .limit(PAGE_LIMIT)
+    .offset(offset);
+
+  const hasMore = offset + recentAssessments.length < Number(totalAssessments);
 
   // Upcoming bookings
   const upcomingBookings = await db.select({
@@ -230,7 +250,9 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     durationMinutes: bookingsTable.durationMinutes,
     status: bookingsTable.status,
     pickupAddress: bookingsTable.suburb,
+    instructorName: instructorsTable.fullName,
   }).from(bookingsTable)
+    .leftJoin(instructorsTable, eq(bookingsTable.instructorId, instructorsTable.id))
     .where(and(eq(bookingsTable.studentId, studentId)))
     .limit(5);
 
@@ -336,6 +358,9 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
     supervisedHours,
     effectiveTotalHours,
     isQLD,
+    page,
+    hasMore,
+    totalAssessments: Number(totalAssessments),
     nightHours,
     latestHandover: latestHandover ?? null,
     milestones,
@@ -350,11 +375,17 @@ router.get("/viewer/students/:id/logbook/export", requireAuth, async (req: any, 
   const user = await getOrCreateUser(req.clerkUserId, "");
   const studentId = parseInt(req.params.id as string, 10);
 
-  const [link] = await db.select().from(viewerLinksTable)
-    .where(and(eq(viewerLinksTable.viewerUserId, user.id), eq(viewerLinksTable.studentId, studentId), eq(viewerLinksTable.linkStatus, "active")));
-  if (!link) { res.status(403).json({ error: "No active viewer link" }); return; }
+  // Verify viewer has an active link to this student
+  const [link] = await db.select().from(viewerLinksTable).where(
+    and(
+      eq(viewerLinksTable.viewerUserId, user.id),
+      eq(viewerLinksTable.studentId, studentId),
+      eq(viewerLinksTable.linkStatus, "active"),
+    )
+  );
+  if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
 
-  const [student] = await db.select({ fullName: studentsTable.fullName })
+  const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName })
     .from(studentsTable).where(eq(studentsTable.id, studentId));
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
 

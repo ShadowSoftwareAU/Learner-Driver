@@ -7,6 +7,7 @@ import {
   useDeleteSupervisedSession,
   getGetViewerStudentDashboardQueryKey,
   getGetViewerStudentsQueryKey,
+  getGetViewerStudentDashboardQueryOptions,
 } from "@workspace/api-client-react";
 import { useAuth } from "@clerk/clerk-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
@@ -59,7 +60,7 @@ import { useLocation, useParams } from "wouter";
 import { format, differenceInDays, parseISO } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const WALLET_QK = "/api/wallet";
 const VIEWER_STUDENTS_QK = getGetViewerStudentsQueryKey();
@@ -651,14 +652,54 @@ export default function ViewerStudentDetail() {
   const [deletingSession, setDeletingSession] = useState<any | null>(null);
   const [exporting, setExporting] = useState(false);
 
+  // Pagination state — accumulated across pages
+  const [allAssessments, setAllAssessments] = useState<any[] | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMorePages, setHasMorePages] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const studentId = Number(id);
   const dashboardQK = ["/api/viewer/students", id];
 
-  const { data, isLoading } = useGetViewerStudentDashboard(studentId, {
+  const { data, isLoading } = useGetViewerStudentDashboard(studentId, undefined, {
     query: { queryKey: dashboardQK },
   });
 
   const { data: wallet } = useGetMyWallet({ query: { queryKey: [WALLET_QK] } });
+
+  // Initialise accumulated assessments from the first page load
+  useEffect(() => {
+    if (data && allAssessments === null) {
+      setAllAssessments((data as any).recentAssessments ?? []);
+      setHasMorePages(!!(data as any).hasMore);
+    }
+  }, [data, allAssessments]);
+
+  // Reset accumulated list when sessions change (log / edit / delete)
+  function resetAssessments() {
+    setAllAssessments(null);
+    setCurrentPage(1);
+    setHasMorePages(false);
+  }
+
+  async function loadMoreLessons() {
+    if (isLoadingMore || !hasMorePages) return;
+    setIsLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const result = await qc.fetchQuery({
+        ...getGetViewerStudentDashboardQueryOptions(studentId, { page: nextPage }),
+        staleTime: 0,
+      });
+      setAllAssessments((prev) => [...(prev ?? []), ...((result as any).recentAssessments ?? [])]);
+      setCurrentPage(nextPage);
+      setHasMorePages(!!(result as any).hasMore);
+    } catch {
+      toast({ title: "Could not load older lessons.", variant: "destructive" });
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
 
   const { mutate: payWithCredits } = usePayBookingWithCredits({
     mutation: {
@@ -682,6 +723,7 @@ export default function ViewerStudentDetail() {
         toast({ title: "Session logged", description: "The supervised driving session has been recorded." });
         setShowLogSession(false);
         setForm(DEFAULT_FORM);
+        resetAssessments();
         qc.invalidateQueries({ queryKey: dashboardQK });
         qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
       },
@@ -707,6 +749,7 @@ export default function ViewerStudentDetail() {
       onSuccess: () => {
         toast({ title: "Session updated" });
         setEditingSession(null);
+        resetAssessments();
         qc.invalidateQueries({ queryKey: dashboardQK });
         qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
       },
@@ -721,6 +764,7 @@ export default function ViewerStudentDetail() {
       onSuccess: () => {
         toast({ title: "Session deleted" });
         setDeletingSession(null);
+        resetAssessments();
         qc.invalidateQueries({ queryKey: dashboardQK });
         qc.invalidateQueries({ queryKey: VIEWER_STUDENTS_QK });
       },
@@ -816,13 +860,28 @@ export default function ViewerStudentDetail() {
   }
 
   const {
-    student, recentAssessments, upcomingBookings, link,
+    student, upcomingBookings, link,
     instructorHours, supervisedHours, effectiveTotalHours, isQLD,
     nightHours, latestHandover, milestones, skillSummary,
   } = data as any;
 
-  const supervisedSessions = (recentAssessments ?? []).filter((a: any) => a.performedByRole === "supervised");
-  const instructorLessons = (recentAssessments ?? []).filter((a: any) => a.performedByRole === "instructor");
+  // Use accumulated assessments (populated by useEffect) or fall back to page-1 data while effect runs
+  const displayedAssessments: any[] = allAssessments ?? (data as any).recentAssessments ?? [];
+  const supervisedSessions = displayedAssessments.filter((a: any) => a.performedByRole === "supervised");
+  const instructorLessons = displayedAssessments.filter((a: any) => a.performedByRole === "instructor");
+
+  // Load-more footer — appears at the bottom of Logbook and Lessons tabs
+  const LoadMoreButton = () => hasMorePages ? (
+    <div className="mt-4 flex justify-center">
+      <Button variant="outline" size="sm" onClick={loadMoreLessons} disabled={isLoadingMore} className="w-full sm:w-auto">
+        {isLoadingMore ? (
+          <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Loading older sessions…</>
+        ) : (
+          "Load older sessions"
+        )}
+      </Button>
+    </div>
+  ) : null;
 
   return (
     <SidebarLayout>
@@ -892,7 +951,7 @@ export default function ViewerStudentDetail() {
             <MentorTips />
           </TabsContent>
 
-          {/* ── Logbook tab (supervised sessions / new assessment) ────────── */}
+          {/* ── Logbook tab (supervised sessions) ────────────────────────── */}
           <TabsContent value="logbook" className="space-y-4 pt-2">
             {/* Log new session CTA */}
             <Card className="border-dashed">
@@ -957,6 +1016,7 @@ export default function ViewerStudentDetail() {
                       </li>
                     ))}
                   </ul>
+                  <LoadMoreButton />
                 </CardContent>
               </Card>
             ) : (
@@ -985,7 +1045,7 @@ export default function ViewerStudentDetail() {
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">Professional lessons</CardTitle>
                   <CardDescription className="text-xs">
-                    Recent instructor-led sessions. Tap a lesson to view the full assessment.
+                    Instructor-led sessions. Tap a lesson to view the full assessment.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -1024,6 +1084,7 @@ export default function ViewerStudentDetail() {
                       </li>
                     ))}
                   </ul>
+                  <LoadMoreButton />
                 </CardContent>
               </Card>
             ) : (
