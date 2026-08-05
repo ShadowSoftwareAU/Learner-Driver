@@ -324,6 +324,49 @@ router.patch("/students/:id/medical", requireAuth, async (req: any, res): Promis
 
 // ─── Viewer code ───────────────────────────────────────────────────────────────
 
+// Shared code-generation helpers
+const VIEWER_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+function genViewerCode(): string {
+  const chars = Array.from({ length: 7 }, () => VIEWER_CODE_ALPHABET[Math.floor(Math.random() * VIEWER_CODE_ALPHABET.length)]).join("");
+  return `DRV-${chars}`;
+}
+async function generateUniqueViewerCode(): Promise<string> {
+  let code = genViewerCode();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const [existing] = await db.select({ id: studentsTable.id }).from(studentsTable).where(eq(studentsTable.viewerCode, code)).limit(1);
+    if (!existing) break;
+    code = genViewerCode();
+  }
+  return code;
+}
+
+/**
+ * POST /students/me/viewer-code
+ * Generates or regenerates the authenticated student's own viewer code.
+ */
+router.post("/students/me/viewer-code", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  const [s] = await db.select().from(studentsTable).where(eq(studentsTable.userId, user.id));
+  if (!s) { res.status(404).json({ error: "Student profile not found" }); return; }
+
+  const code = await generateUniqueViewerCode();
+  const [updated] = await db.update(studentsTable)
+    .set({ viewerCode: code, viewerCodeIssuedAt: new Date() })
+    .where(eq(studentsTable.id, s.id))
+    .returning({ viewerCode: studentsTable.viewerCode, viewerCodeIssuedAt: studentsTable.viewerCodeIssuedAt });
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "generate_viewer_code",
+    resourceType: "student",
+    resourceId: s.id,
+    studentId: s.id,
+  }, req);
+
+  res.json({ viewerCode: updated.viewerCode, viewerCodeIssuedAt: updated.viewerCodeIssuedAt });
+});
+
 /**
  * POST /students/:id/viewer-code
  * Generates or regenerates a unique viewer linking code (DRV-XXXXXXX).
@@ -340,20 +383,7 @@ router.post("/students/:id/viewer-code", requireAuth, async (req: any, res): Pro
     if (!(await instructorHasStudent(instructor.id, id))) { res.status(403).json({ error: "Access denied" }); return; }
   }
 
-  // Generate DRV-XXXXXXX — 7 chars, no ambiguous characters (0/O, 1/I/l)
-  const ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
-  function genCode(): string {
-    const chars = Array.from({ length: 7 }, () => ALPHABET[Math.floor(Math.random() * ALPHABET.length)]).join("");
-    return `DRV-${chars}`;
-  }
-
-  // Collision-free generation (up to 5 retries)
-  let code = genCode();
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const [existing] = await db.select({ id: studentsTable.id }).from(studentsTable).where(eq(studentsTable.viewerCode, code)).limit(1);
-    if (!existing) break;
-    code = genCode();
-  }
+  const code = await generateUniqueViewerCode();
 
   const [updated] = await db.update(studentsTable)
     .set({ viewerCode: code, viewerCodeIssuedAt: new Date() })

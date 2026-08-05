@@ -341,6 +341,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/StudentMedical"
 
+  /students/me/viewer-code:
+    post:
+      operationId: generateMyViewerCode
+      tags: [students]
+      summary: Generate (or regenerate) the authenticated student's own viewer link code
+      responses:
+        "200":
+          description: Viewer code issued
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [viewerCode, viewerCodeIssuedAt]
+                properties:
+                  viewerCode:
+                    type: string
+                  viewerCodeIssuedAt:
+                    type: string
+
   /students/{id}/viewer-code:
     post:
       operationId: generateViewerCode

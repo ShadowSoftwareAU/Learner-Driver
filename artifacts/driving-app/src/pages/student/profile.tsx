@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useGetMyStudentProfile, useUpdateMyStudentProfile } from "@workspace/api-client-react";
+import { useGetMyStudentProfile, useUpdateMyStudentProfile, useGenerateMyViewerCode } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import {
@@ -68,9 +68,24 @@ export default function StudentProfilePage() {
     query: { queryKey: ["/api/students/me"] },
   });
   const updateProfile = useUpdateMyStudentProfile();
+  const generateViewerCode = useGenerateMyViewerCode();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [codeCopied, setCodeCopied] = useState(false);
+
+  async function handleGenerateCode() {
+    try {
+      await generateViewerCode.mutateAsync();
+      await queryClient.invalidateQueries({ queryKey: ["/api/students/me"] });
+      toast({ title: "Viewer code generated", description: "Share this code with a parent or guardian so they can link to your profile." });
+    } catch {
+      toast({
+        title: "Failed to generate code",
+        description: "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }
 
   function copyCode(code: string) {
     navigator.clipboard.writeText(code).then(() => {
@@ -240,11 +255,40 @@ export default function StudentProfilePage() {
                   {codeCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
                   {codeCopied ? "Copied!" : "Copy code"}
                 </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-violet-700 hover:text-violet-900 hover:bg-violet-100"
+                  onClick={handleGenerateCode}
+                  disabled={generateViewerCode.isPending}
+                >
+                  {generateViewerCode.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Users className="w-3.5 h-3.5" />
+                  )}
+                  Regenerate
+                </Button>
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                No viewer code yet. Ask your instructor to generate one from your student profile.
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  No viewer code yet. Generate one to share with a parent or guardian.
+                </p>
+                <Button
+                  size="sm"
+                  className="gap-1.5 bg-violet-700 hover:bg-violet-800 text-white"
+                  onClick={handleGenerateCode}
+                  disabled={generateViewerCode.isPending}
+                >
+                  {generateViewerCode.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Users className="w-3.5 h-3.5" />
+                  )}
+                  Generate code
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

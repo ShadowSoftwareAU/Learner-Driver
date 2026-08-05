@@ -1119,6 +1119,64 @@ export const useUpdateStudentMedical = <TError = ErrorType<unknown>,
       return useMutation(getUpdateStudentMedicalMutationOptions(options));
     }
 
+export const getGenerateMyViewerCodeUrl = () => {
+
+
+  return `/api/students/me/viewer-code`
+}
+
+/**
+ * @summary Generate (or regenerate) the authenticated student's own viewer link code
+ */
+export const generateMyViewerCode = async (options?: Parameters<typeof customFetch>[1]): Promise<GenerateViewerCode200> => {
+
+  return customFetch<GenerateViewerCode200>(getGenerateMyViewerCodeUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+export const getGenerateMyViewerCodeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateMyViewerCode>>, TError, void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateMyViewerCode>>, TError, void, TContext> => {
+
+const mutationKey = ['generateMyViewerCode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateMyViewerCode>>, void> = (_vars) => {
+          return  generateMyViewerCode(requestOptions)
+        }
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateMyViewerCodeMutationResult = NonNullable<Awaited<ReturnType<typeof generateMyViewerCode>>>
+
+    export type GenerateMyViewerCodeMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Generate (or regenerate) the authenticated student's own viewer link code
+ */
+export const useGenerateMyViewerCode = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateMyViewerCode>>, TError, void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateMyViewerCode>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getGenerateMyViewerCodeMutationOptions(options));
+    }
+
 export const getGenerateViewerCodeUrl = (id: number,) => {
 
 
