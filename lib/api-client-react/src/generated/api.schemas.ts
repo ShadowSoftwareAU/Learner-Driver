@@ -917,8 +917,9 @@ export interface AdminPermissions {
   canManageBookings: boolean;
 }
 
+export type AdminStaffSubRoleUpdateSubRole = typeof AdminStaffSubRoleUpdateSubRole[keyof typeof AdminStaffSubRoleUpdateSubRole];
 export interface AdminStaffSubRoleUpdate {
-  subRole: 'manager' | 'staff';
+  subRole: AdminStaffSubRoleUpdateSubRole;
 }
 
 export interface AdminPermissionsUpdate {
@@ -1082,6 +1083,7 @@ export type AssessmentUpdateStatus = typeof AssessmentUpdateStatus[keyof typeof 
 export const AssessmentUpdateStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
+  no_show: 'no_show',
 } as const;
 
 export type AssessmentUpdateRoutePathItem = {
@@ -1109,6 +1111,7 @@ export type AssessmentDetailStatus = typeof AssessmentDetailStatus[keyof typeof 
 export const AssessmentDetailStatus = {
   in_progress: 'in_progress',
   completed: 'completed',
+  no_show: 'no_show',
 } as const;
 
 export type AssessmentDetailPedalOperator = typeof AssessmentDetailPedalOperator[keyof typeof AssessmentDetailPedalOperator];
@@ -2582,6 +2585,8 @@ export type ViewerStudentDashboardUpcomingBookingsItem = {
   status?: string;
   /** @nullable */
   pickupAddress?: string | null;
+  /** @nullable */
+  instructorName?: string | null;
 };
 
 export type ViewerStudentDashboardLink = {
@@ -3377,3 +3382,8 @@ export type InviteInstructorByEmailBody = {
   /** Frontend base URL used to construct the invite link */
   joinBaseUrl?: string;
 };
+
+export const AdminStaffSubRoleUpdateSubRole = {
+  manager: 'manager',
+  staff: 'staff',
+} as const;

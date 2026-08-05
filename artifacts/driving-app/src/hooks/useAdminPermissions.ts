@@ -31,36 +31,34 @@ const NO_ACCESS: AdminPermissions = {
  * Returns the current user's admin permission profile.
  *
  * Access rules:
- *  1. adminSubRole === 'owner' | 'manager'  → unconditional full access.
- *     Determined purely from the user profile (no extra API call needed).
- *     Owners are the primary tenant; managers are promoted staff members
- *     whose permissions row has been deleted as they bypass the table.
- *  2. Any other admin subRole   → permissions fetched from the API and bound
- *     strictly to the admin_staff_permissions table row written at invite-claim
- *     time. Invited staff always have adminSubRole = 'staff'.
- *  3. Non-admin role            → all-false (no-op).
+ *  1. adminSubRole === 'owner'  → unconditional full access determined from
+ *     the user profile (no extra API call needed). Owners are the primary tenant.
+ *  2. adminSubRole === 'manager' | 'staff'  → permissions fetched from the API
+ *     and bound to the admin_staff_permissions table row. Managers start with
+ *     full permissions when promoted but can be individually adjusted.
+ *     isMasterTier is always false for managers.
+ *  3. Non-admin role  → all-false (no-op).
  */
 export function useAdminPermissions(): AdminPermissions {
   const { data: user } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
 
-  // Master tier (owner or manager) is determined directly from the profile —
-  // no round-trip needed. Managers bypass the permissions table just like owners.
-  const isMasterTierLocal =
-    user?.role === "admin" &&
-    (user?.adminSubRole === "owner" || user?.adminSubRole === "manager");
+  // Only owners are master tier — determined directly from the profile,
+  // no round-trip needed.
+  const isOwner = user?.role === "admin" && user?.adminSubRole === "owner";
 
   const { data: perms } = useGetMyAdminPermissions({
     query: {
       queryKey: ["/api/admin/permissions/me"],
-      // Master-tier users never need the permissions fetch; skip it entirely.
-      enabled: user?.role === "admin" && !isMasterTierLocal,
+      // Owners skip the permissions fetch; all other admin roles (manager,
+      // staff) must go through the DB-backed permissions endpoint.
+      enabled: user?.role === "admin" && !isOwner,
     },
   });
 
   if (!user || user.role !== "admin") return NO_ACCESS;
 
-  // Master-tier users get immediate full access from profile data.
-  if (isMasterTierLocal) return FULL_ACCESS;
+  // Owners get immediate full access from profile data.
+  if (isOwner) return FULL_ACCESS;
 
   // Non-owner admin staff — wait for their permissions to load.
   if (!perms) return NO_ACCESS;

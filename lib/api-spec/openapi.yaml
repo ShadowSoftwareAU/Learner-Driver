@@ -5810,6 +5810,8 @@ components:
                 type: string
               pickupAddress:
                 type: ["string", "null"]
+              instructorName:
+                type: ["string", "null"]
         link:
           type: object
           properties:

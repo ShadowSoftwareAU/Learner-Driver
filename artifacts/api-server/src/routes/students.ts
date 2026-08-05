@@ -117,12 +117,13 @@ router.post("/students", requireAuth, async (req: any, res): Promise<void> => {
   // Optionally send a welcome / login invitation email to the student
   if (sendInvite && email) {
     const appUrl = process.env.APP_URL ?? `https://${process.env.REPLIT_DEV_DOMAIN ?? "steps2drive.app"}`;
-    await sendExternalEmail({
-      to: email,
-      subject: `Welcome to Steps2Drive — ${fullName}`,
-      title: `Welcome to Steps2Drive, ${fullName.split(" ")[0]}!`,
-      body: `Your instructor has created a learner profile for you on Steps2Drive.\n\nYou can sign in to review your lesson assessments, track your progress, and manage bookings at:\n\n${appUrl}\n\nUse this email address (${email}) to create your account or sign in.\n\nIf you have any questions, contact your instructor directly.`,
-    }).catch(() => {/* non-fatal */});
+    const welcomeText = `Your instructor has created a learner profile for you on Steps2Drive.\n\nYou can sign in to review your lesson assessments, track your progress, and manage bookings at:\n\n${appUrl}\n\nUse this email address (${email}) to create your account or sign in.\n\nIf you have any questions, contact your instructor directly.`;
+    await sendExternalEmail(
+      email,
+      `Welcome to Steps2Drive — ${fullName}`,
+      `<p>Welcome to Steps2Drive, ${fullName.split(" ")[0]}!</p><p>${welcomeText.replace(/\n\n/g, "</p><p>")}</p>`,
+      welcomeText,
+    ).catch(() => {/* non-fatal */});
   }
 
   res.status(201).json(formatStudent(s));

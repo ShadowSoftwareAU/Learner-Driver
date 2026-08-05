@@ -2,9 +2,11 @@
  * Admin staff management routes.
  *
  * Permission model:
- *   Master tier  = admin users with adminSubRole: "owner" | "manager"
- *                  → full access to everything, can manage staff
- *   Staff        = admin users with no subRole or "coordinator"
+ *   Master tier  = admin users with adminSubRole: "owner"
+ *                  → full access to everything; bypasses adminStaffPermissionsTable
+ *   Manager      = admin users with adminSubRole: "manager"
+ *                  → can manage staff and invites; permissions stored in DB
+ *   Staff        = admin users with adminSubRole: "staff"
  *                  → access gated by adminStaffPermissionsTable flags
  */
 import { Router } from "express";
@@ -25,11 +27,20 @@ const router = Router();
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 /**
- * Master tier = admin users with adminSubRole "owner" or "manager".
- * Both bypass the admin_staff_permissions table and get unconditional
- * full access. Only 'owner' can change sub-roles (see PATCH sub-role route).
+ * Master tier = admin users with adminSubRole "owner" only.
+ * Owners bypass the admin_staff_permissions table entirely.
+ * Only 'owner' can change sub-roles (see PATCH sub-role route).
  */
 function isMasterTier(user: any): boolean {
+  return user.role === "admin" && user.adminSubRole === "owner";
+}
+
+/**
+ * Returns true for owners AND managers — both can perform staff management
+ * actions (view staff list, send invites, update permissions, delete invites).
+ * Managers' own permissions are still stored in adminStaffPermissionsTable.
+ */
+function isOwnerOrManager(user: any): boolean {
   return (
     user.role === "admin" &&
     (user.adminSubRole === "owner" || user.adminSubRole === "manager")
@@ -102,7 +113,7 @@ router.get(
   requireAuth,
   async (req: any, res): Promise<void> => {
     const user = await getOrCreateUser(req.clerkUserId, "");
-    if (!isMasterTier(user)) {
+    if (!isOwnerOrManager(user)) {
       res.status(403).json({ error: "Owner or Manager access required" });
       return;
     }
@@ -161,7 +172,7 @@ router.post(
   requireAuth,
   async (req: any, res): Promise<void> => {
     const user = await getOrCreateUser(req.clerkUserId, "");
-    if (!isMasterTier(user)) {
+    if (!isOwnerOrManager(user)) {
       res.status(403).json({ error: "Owner or Manager access required" });
       return;
     }
@@ -392,7 +403,7 @@ router.patch(
   requireAuth,
   async (req: any, res): Promise<void> => {
     const user = await getOrCreateUser(req.clerkUserId, "");
-    if (!isMasterTier(user)) {
+    if (!isOwnerOrManager(user)) {
       res.status(403).json({ error: "Owner or Manager access required" });
       return;
     }
@@ -463,7 +474,7 @@ router.delete(
   requireAuth,
   async (req: any, res): Promise<void> => {
     const user = await getOrCreateUser(req.clerkUserId, "");
-    if (!isMasterTier(user)) {
+    if (!isOwnerOrManager(user)) {
       res.status(403).json({ error: "Owner or Manager access required" });
       return;
     }
@@ -551,10 +562,33 @@ router.patch(
       .where(eq(usersTable.id, targetId));
 
     if (subRole === "manager") {
-      // Managers bypass the permissions table — delete any existing row.
-      await db
-        .delete(adminStaffPermissionsTable)
+      // Managers have explicit permissions stored in DB (full access by default when promoted).
+      // Upsert a full-access row so their permissions can be individually adjusted later.
+      const [existingManagerPerms] = await db
+        .select()
+        .from(adminStaffPermissionsTable)
         .where(eq(adminStaffPermissionsTable.userId, targetId));
+      if (existingManagerPerms) {
+        await db
+          .update(adminStaffPermissionsTable)
+          .set({
+            canViewBilling: true,
+            canManageInstructors: true,
+            canManageCompliance: true,
+            canViewAuditLog: true,
+            canManageBookings: true,
+          })
+          .where(eq(adminStaffPermissionsTable.userId, targetId));
+      } else {
+        await db.insert(adminStaffPermissionsTable).values({
+          userId: targetId,
+          canViewBilling: true,
+          canManageInstructors: true,
+          canManageCompliance: true,
+          canViewAuditLog: true,
+          canManageBookings: true,
+        });
+      }
     } else {
       // Demoted to staff — ensure a permissions row exists (all-false is safe default).
       const [existing] = await db
@@ -585,7 +619,7 @@ router.delete(
   requireAuth,
   async (req: any, res): Promise<void> => {
     const user = await getOrCreateUser(req.clerkUserId, "");
-    if (!isMasterTier(user)) {
+    if (!isOwnerOrManager(user)) {
       res.status(403).json({ error: "Owner or Manager access required" });
       return;
     }

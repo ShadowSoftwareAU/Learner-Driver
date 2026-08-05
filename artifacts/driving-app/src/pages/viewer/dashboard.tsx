@@ -1,4 +1,4 @@
-import { useGetViewerStudents, useRequestViewerLink, useGetMyWallet, useCreateWalletCheckout } from "@workspace/api-client-react";
+import { useGetViewerStudents, useRequestViewerLink, useGetMyWallet, useCreateWalletCheckout, ViewerStudentSummary } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ function StudentSelector({
   students,
   onNavigate,
 }: {
-  students: ViewerStudent[];
+  students: ViewerStudentSummary[];
   onNavigate: (id: number) => void;
 }) {
   const [selectedId, setSelectedId] = useState<number>(students[0]?.id ?? 0);
@@ -207,20 +207,6 @@ const RELATIONSHIP_OPTIONS = [
   { value: "other", label: "Other" },
 ];
 
-interface ViewerStudent {
-  id: number;
-  fullName: string;
-  totalHours?: number | null;
-  headshotPath?: string | null;
-  noShowCount: number;
-  attendanceReliabilityScore?: number | null;
-  relationshipType?: string | null;
-  linkedAt: string;
-  instructorHours?: number | null;
-  supervisedHours?: number | null;
-  effectiveTotalHours?: number | null;
-  isQLD?: boolean | null;
-}
 
 export default function ViewerDashboard() {
   const [, navigate] = useLocation();
