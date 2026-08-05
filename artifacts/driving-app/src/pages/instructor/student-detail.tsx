@@ -1,8 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, useGetHandover, useListBookings, getGetStudentQueryKey, getGetStudentProgressQueryKey, useUpdateStudent } from "@workspace/api-client-react";
+import { useGetStudent, useGetStudentProgress, useListAssessments, useGetStudentLessonPlan, useGetHandover, useListBookings, getGetStudentQueryKey, getGetStudentProgressQueryKey, useUpdateStudent, useGenerateViewerCode } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock, Pencil, Car, GraduationCap, Users } from "lucide-react";
+import { Loader2, Calendar, Clock, Award, ChevronLeft, ExternalLink, MapPin, TrendingUp, AlertCircle, MessageSquare, Target, CalendarClock, Pencil, Car, GraduationCap, Users, Copy, Check, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
@@ -65,7 +65,25 @@ export default function InstructorStudentDetail() {
   const [editHeadshotPath, setEditHeadshotPath] = useState<string | null>(null);
   const [editLicenceFrontPath, setEditLicenceFrontPath] = useState<string | null>(null);
   const [editLicenceBackPath, setEditLicenceBackPath] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
   const updateStudent = useUpdateStudent();
+
+  const generateCode = useGenerateViewerCode({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetStudentQueryKey(id) });
+        toast({ title: "Viewer code generated", description: "Share it with the parent or guardian." });
+      },
+      onError: () => toast({ title: "Failed to generate code", variant: "destructive" }),
+    },
+  });
+
+  function copyCode(code: string) {
+    navigator.clipboard.writeText(code).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    });
+  }
 
   const { data: student, isLoading: isStudentLoading } = useGetStudent(id, { query: { enabled: !!id, queryKey: getGetStudentQueryKey(id) } });
   const { data: progress, isLoading: isProgressLoading } = useGetStudentProgress(id, { query: { enabled: !!id, queryKey: getGetStudentProgressQueryKey(id) } });
@@ -301,6 +319,61 @@ export default function InstructorStudentDetail() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Viewer code — share with parents/guardians */}
+        <Card className="border-violet-200 bg-violet-50/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2 text-violet-900">
+              <Users className="w-4 h-4" />
+              Parent / Guardian Access Code
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {(student as any).viewerCode ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <code className="text-lg font-mono font-semibold tracking-widest text-violet-800 bg-violet-100 px-3 py-1 rounded-md">
+                  {(student as any).viewerCode}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => copyCode((student as any).viewerCode)}
+                >
+                  {codeCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {codeCopied ? "Copied!" : "Copy"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-muted-foreground"
+                  disabled={generateCode.isPending}
+                  onClick={() => generateCode.mutate({ id })}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${generateCode.isPending ? "animate-spin" : ""}`} />
+                  Regenerate
+                </Button>
+                {(student as any).viewerCodeIssuedAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Issued {format(new Date((student as any).viewerCodeIssuedAt), "d MMM yyyy")}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground">No code generated yet. Share one with this student's parent or guardian.</p>
+                <Button
+                  size="sm"
+                  disabled={generateCode.isPending}
+                  onClick={() => generateCode.mutate({ id })}
+                >
+                  {generateCode.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+                  Generate Code
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Tabs defaultValue="progress" className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">

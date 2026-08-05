@@ -23,7 +23,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, User, Lock } from "lucide-react";
+import { Loader2, User, Lock, Copy, Check, Users } from "lucide-react";
+import { useState } from "react";
 import { format } from "date-fns";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
@@ -69,6 +70,14 @@ export default function StudentProfilePage() {
   const updateProfile = useUpdateMyStudentProfile();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  function copyCode(code: string) {
+    navigator.clipboard.writeText(code).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    });
+  }
 
   const form = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -202,6 +211,41 @@ export default function StudentProfilePage() {
                 </Button>
               </form>
             </Form>
+          </CardContent>
+        </Card>
+
+        {/* Viewer code — share with parents/guardians */}
+        <Card className="border-violet-200 bg-violet-50/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-violet-900">
+              <Users className="w-4 h-4" />
+              Share with a Parent or Guardian
+            </CardTitle>
+            <CardDescription>
+              Give this code to a parent, guardian, or mentor so they can link to your profile and track your progress.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {(profile as any)?.viewerCode ? (
+              <div className="flex items-center gap-3 flex-wrap">
+                <code className="text-lg font-mono font-semibold tracking-widest text-violet-800 bg-violet-100 px-3 py-1.5 rounded-md">
+                  {(profile as any).viewerCode}
+                </code>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => copyCode((profile as any).viewerCode)}
+                >
+                  {codeCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                  {codeCopied ? "Copied!" : "Copy code"}
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No viewer code yet. Ask your instructor to generate one from your student profile.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
