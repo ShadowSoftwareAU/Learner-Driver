@@ -13,9 +13,15 @@ export const instructorVehiclesTable = pgTable("instructor_vehicles", {
   rego: text("rego"),
   regoState: text("rego_state").default("QLD"),
   regoExpiry: date("rego_expiry"),
+  // 'manual' | 'auto' — what transmission this vehicle has
+  transmissionType: text("transmission_type").notNull().default("auto"),
+  // 'dual_control' = professionally fitted dual controls; 'factory' = standard factory pedals
+  controlType: text("control_type").notNull().default("dual_control"),
   isDualControl: boolean("is_dual_control").notNull().default(false),
   isOwnerOperator: boolean("is_owner_operator").notNull().default(true),
   isPrimary: boolean("is_primary").notNull().default(false),
+  // Object storage path for the vehicle photo
+  photoStorageKey: text("photo_storage_key"),
   insuranceProvider: text("insurance_provider"),
   insurancePolicyNumber: text("insurance_policy_number"),
   insuranceType: text("insurance_type"),

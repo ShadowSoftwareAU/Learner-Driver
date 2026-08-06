@@ -161,7 +161,7 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
     [student] = await db.insert(studentsTable).values({ userId: user.id, fullName: user.name ?? "Student", email: user.email ?? "" }).returning();
   }
 
-  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory, instructorId: directInstructorId, paymentMethod } = req.body;
+  const { requestedDate, requestedTime, durationMinutes, transmissionType, suburb, postcode, studentNotes, carType, trainingCategory, instructorId: directInstructorId, paymentMethod, vehicleId } = req.body;
   if (!requestedDate || !requestedTime || !suburb || !postcode) {
     res.status(400).json({ error: "requestedDate, requestedTime, suburb, postcode are required" }); return;
   }
@@ -226,7 +226,8 @@ router.post("/bookings", requireAuth, async (req: any, res): Promise<void> => {
       paymentStatus: bookingPaymentStatus,
       broadcastCount: 1,
       claimedAt: null,
-    }).returning();
+      vehicleId: vehicleId ? Number(vehicleId) : null,
+    } as any).returning();
 
     // Notify instructor of the direct request
     if (directInstructor.userId) {

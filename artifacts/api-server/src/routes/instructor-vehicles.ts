@@ -16,9 +16,15 @@ const vehicleBody = z.object({
   rego: z.string().max(20).optional(),
   regoState: z.string().max(10).optional(),
   regoExpiry: z.string().optional(),
+  // 'auto' | 'manual'
+  transmissionType: z.enum(["auto", "manual"]).default("auto"),
+  // 'dual_control' = professionally fitted pedals; 'factory' = standard factory
+  controlType: z.enum(["dual_control", "factory"]).default("dual_control"),
   isDualControl: z.boolean().default(false),
   isOwnerOperator: z.boolean().default(true),
   isPrimary: z.boolean().default(false),
+  // Object-storage path for the vehicle photo
+  photoStorageKey: z.string().max(500).optional(),
   insuranceProvider: z.string().max(200).optional(),
   insurancePolicyNumber: z.string().max(100).optional(),
   insuranceType: z.string().max(100).optional(),
@@ -42,7 +48,94 @@ async function resolveInstructorAccess(user: any, instructorId: number): Promise
   return { ok: false, reason: "Access denied" };
 }
 
-// ─── List vehicles for an instructor ─────────────────────────────────────────
+// ─── Self-resolving routes (no instructorId needed) ───────────────────────────
+// Must be registered before /:id routes to avoid shadowing.
+
+router.get("/instructor/my-vehicles", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (user.role !== "instructor") { res.status(403).json({ error: "Instructor role required" }); return; }
+
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) { res.status(404).json({ error: "Instructor profile not found" }); return; }
+
+  const vehicles = await db.select().from(instructorVehiclesTable)
+    .where(eq(instructorVehiclesTable.instructorId, instructor.id))
+    .orderBy(desc(instructorVehiclesTable.isPrimary), instructorVehiclesTable.createdAt);
+
+  res.json(vehicles.map(formatVehicle));
+});
+
+router.post("/instructor/my-vehicles", requireAuth, async (req: any, res): Promise<void> => {
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (user.role !== "instructor") { res.status(403).json({ error: "Instructor role required" }); return; }
+
+  let [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) {
+    [instructor] = await db.insert(instructorsTable)
+      .values({ userId: user.id, fullName: user.name ?? "Instructor", email: user.email ?? "" })
+      .returning();
+  }
+
+  const body = vehicleBody.safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "Invalid body", issues: body.error.issues }); return; }
+
+  if (body.data.isPrimary) {
+    await db.update(instructorVehiclesTable).set({ isPrimary: false })
+      .where(eq(instructorVehiclesTable.instructorId, instructor.id));
+  }
+
+  const [created] = await db.insert(instructorVehiclesTable).values({
+    instructorId: instructor.id,
+    ...body.data,
+  }).returning();
+
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "create", resourceType: "instructor_vehicle", resourceId: created.id }, req);
+  res.status(201).json(formatVehicle(created));
+});
+
+router.patch("/instructor/my-vehicles/:vehicleId", requireAuth, async (req: any, res): Promise<void> => {
+  const vehicleId = parseInt(req.params.vehicleId as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (user.role !== "instructor") { res.status(403).json({ error: "Instructor role required" }); return; }
+
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) { res.status(404).json({ error: "Instructor profile not found" }); return; }
+
+  const [existing] = await db.select().from(instructorVehiclesTable)
+    .where(and(eq(instructorVehiclesTable.id, vehicleId), eq(instructorVehiclesTable.instructorId, instructor.id)));
+  if (!existing) { res.status(404).json({ error: "Vehicle not found" }); return; }
+
+  const body = vehicleBody.partial().safeParse(req.body);
+  if (!body.success) { res.status(400).json({ error: "Invalid body", issues: body.error.issues }); return; }
+
+  if (body.data.isPrimary) {
+    await db.update(instructorVehiclesTable).set({ isPrimary: false })
+      .where(eq(instructorVehiclesTable.instructorId, instructor.id));
+  }
+
+  const [updated] = await db.update(instructorVehiclesTable).set(body.data)
+    .where(eq(instructorVehiclesTable.id, vehicleId)).returning();
+
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "update", resourceType: "instructor_vehicle", resourceId: vehicleId }, req);
+  res.json(formatVehicle(updated));
+});
+
+router.delete("/instructor/my-vehicles/:vehicleId", requireAuth, async (req: any, res): Promise<void> => {
+  const vehicleId = parseInt(req.params.vehicleId as string, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+  if (user.role !== "instructor") { res.status(403).json({ error: "Instructor role required" }); return; }
+
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
+  if (!instructor) { res.status(404).json({ error: "Instructor profile not found" }); return; }
+
+  await db.delete(instructorVehiclesTable)
+    .where(and(eq(instructorVehiclesTable.id, vehicleId), eq(instructorVehiclesTable.instructorId, instructor.id)));
+
+  await logAudit({ actorId: user.id, actorRole: user.role, action: "delete", resourceType: "instructor_vehicle", resourceId: vehicleId }, req);
+  res.json({ ok: true });
+});
+
+// ─── Admin/school routes (by instructorId) ───────────────────────────────────
 
 router.get("/instructors/:id/vehicles", requireAuth, async (req: any, res): Promise<void> => {
   const instructorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -59,8 +152,6 @@ router.get("/instructors/:id/vehicles", requireAuth, async (req: any, res): Prom
   res.json(vehicles.map(formatVehicle));
 });
 
-// ─── Add a vehicle ────────────────────────────────────────────────────────────
-
 router.post("/instructors/:id/vehicles", requireAuth, async (req: any, res): Promise<void> => {
   const instructorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const user = await getOrCreateUser(req.clerkUserId, "");
@@ -72,10 +163,8 @@ router.post("/instructors/:id/vehicles", requireAuth, async (req: any, res): Pro
   const body = vehicleBody.safeParse(req.body);
   if (!body.success) { res.status(400).json({ error: "Invalid body", issues: body.error.issues }); return; }
 
-  // If marking as primary, unset any existing primary
   if (body.data.isPrimary) {
-    await db.update(instructorVehiclesTable)
-      .set({ isPrimary: false })
+    await db.update(instructorVehiclesTable).set({ isPrimary: false })
       .where(eq(instructorVehiclesTable.instructorId, instructorId));
   }
 
@@ -87,8 +176,6 @@ router.post("/instructors/:id/vehicles", requireAuth, async (req: any, res): Pro
   await logAudit({ actorId: user.id, actorRole: user.role, action: "create", resourceType: "instructor_vehicle", resourceId: created.id }, req);
   res.status(201).json(formatVehicle(created));
 });
-
-// ─── Update a vehicle ─────────────────────────────────────────────────────────
 
 router.patch("/instructors/:id/vehicles/:vehicleId", requireAuth, async (req: any, res): Promise<void> => {
   const instructorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -106,21 +193,16 @@ router.patch("/instructors/:id/vehicles/:vehicleId", requireAuth, async (req: an
   if (!body.success) { res.status(400).json({ error: "Invalid body", issues: body.error.issues }); return; }
 
   if (body.data.isPrimary) {
-    await db.update(instructorVehiclesTable)
-      .set({ isPrimary: false })
+    await db.update(instructorVehiclesTable).set({ isPrimary: false })
       .where(eq(instructorVehiclesTable.instructorId, instructorId));
   }
 
-  const [updated] = await db.update(instructorVehiclesTable)
-    .set(body.data)
-    .where(eq(instructorVehiclesTable.id, vehicleId))
-    .returning();
+  const [updated] = await db.update(instructorVehiclesTable).set(body.data)
+    .where(eq(instructorVehiclesTable.id, vehicleId)).returning();
 
   await logAudit({ actorId: user.id, actorRole: user.role, action: "update", resourceType: "instructor_vehicle", resourceId: vehicleId }, req);
   res.json(formatVehicle(updated));
 });
-
-// ─── Delete a vehicle ─────────────────────────────────────────────────────────
 
 router.delete("/instructors/:id/vehicles/:vehicleId", requireAuth, async (req: any, res): Promise<void> => {
   const instructorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -165,7 +247,9 @@ router.patch("/instructors/:id/training-categories", requireAuth, async (req: an
   res.json({ trainingCategories: updated.trainingCategories });
 });
 
-function formatVehicle(v: any) {
+// ─── Shared formatter ─────────────────────────────────────────────────────────
+
+export function formatVehicle(v: any) {
   return {
     id: v.id,
     instructorId: v.instructorId,
@@ -177,9 +261,12 @@ function formatVehicle(v: any) {
     rego: v.rego ?? null,
     regoState: v.regoState ?? "QLD",
     regoExpiry: v.regoExpiry ?? null,
+    transmissionType: v.transmissionType ?? "auto",
+    controlType: v.controlType ?? "dual_control",
     isDualControl: v.isDualControl,
     isOwnerOperator: v.isOwnerOperator,
     isPrimary: v.isPrimary,
+    photoStorageKey: v.photoStorageKey ?? null,
     insuranceProvider: v.insuranceProvider ?? null,
     insurancePolicyNumber: v.insurancePolicyNumber ?? null,
     insuranceType: v.insuranceType ?? null,

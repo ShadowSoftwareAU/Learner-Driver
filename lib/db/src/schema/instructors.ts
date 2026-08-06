@@ -34,6 +34,8 @@ export const instructorsTable = pgTable("instructors", {
   // Hourly rate in Australian cents (e.g. 8500 = $85.00)
   hourlyRateCents: integer("hourly_rate_cents"),
   // ADTA membership number — optional, not enforced; future integration with ADTA database
+  // Profile photo — object storage key (served via /storage/objects/:path)
+  profilePhotoPath: text("profile_photo_path"),
   adtaNumber: text("adta_number"),
   // Safeguarding notes — classification: restricted
   safeguardingNotes: text("safeguarding_notes"),

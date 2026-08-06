@@ -427,6 +427,81 @@ paths:
                 items:
                   $ref: "#/components/schemas/ManeuverStat"
 
+  # ─── Instructor self-service vehicle routes ───────────────────────────────────
+  /instructor/my-vehicles:
+    get:
+      operationId: getMyVehicles
+      tags: [instructors]
+      summary: List the authenticated instructor's own vehicles
+      responses:
+        "200":
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InstructorVehicle"
+    post:
+      operationId: addMyVehicle
+      tags: [instructors]
+      summary: Add a vehicle to the authenticated instructor's fleet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstructorVehicleInput"
+      responses:
+        "201":
+          description: Created vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorVehicle"
+
+  /instructor/my-vehicles/{vehicleId}:
+    patch:
+      operationId: updateMyVehicle
+      tags: [instructors]
+      summary: Update one of the authenticated instructor's vehicles
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InstructorVehicleInput"
+      responses:
+        "200":
+          description: Updated vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InstructorVehicle"
+    delete:
+      operationId: deleteMyVehicle
+      tags: [instructors]
+      summary: Remove one of the authenticated instructor's vehicles
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+
   # ─── Instructors ─────────────────────────────────────────────────────────────
   /instructors:
     get:
@@ -3722,12 +3797,23 @@ components:
           type: ["string", "null"]
         regoExpiry:
           type: ["string", "null"]
+        transmissionType:
+          type: string
+          enum: [auto, manual]
+          description: "Transmission type of this vehicle"
+        controlType:
+          type: string
+          enum: [dual_control, factory]
+          description: "dual_control = professionally fitted dual controls; factory = standard factory pedals"
         isDualControl:
           type: boolean
         isOwnerOperator:
           type: boolean
         isPrimary:
           type: boolean
+        photoStorageKey:
+          type: ["string", "null"]
+          description: "Object storage path for the vehicle photo"
         insuranceProvider:
           type: ["string", "null"]
         insurancePolicyNumber:
@@ -3765,12 +3851,20 @@ components:
           type: string
         regoExpiry:
           type: string
+        transmissionType:
+          type: string
+          enum: [auto, manual]
+        controlType:
+          type: string
+          enum: [dual_control, factory]
         isDualControl:
           type: boolean
         isOwnerOperator:
           type: boolean
         isPrimary:
           type: boolean
+        photoStorageKey:
+          type: string
         insuranceProvider:
           type: string
         insurancePolicyNumber:
@@ -4932,6 +5026,9 @@ components:
           type: string
           enum: [wallet, invoice]
           description: "wallet deducts student credit; invoice creates a pending_invoice record (NDIS/post-pay students only)"
+        vehicleId:
+          type: integer
+          description: "ID of the instructor vehicle the student selected for this lesson"
 
     AvailableInstructor:
       type: object

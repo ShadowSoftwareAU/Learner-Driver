@@ -550,6 +550,15 @@ export const UpdateStudentMedicalResponse = zod.object({
 
 
 /**
+ * @summary Generate (or regenerate) the authenticated student's own viewer link code
+ */
+export const GenerateMyViewerCodeResponse = zod.object({
+  "viewerCode": zod.string(),
+  "viewerCodeIssuedAt": zod.string()
+})
+
+
+/**
  * @summary Generate (or regenerate) a viewer link code for a student
  */
 export const GenerateViewerCodeParams = zod.object({
@@ -596,6 +605,133 @@ export const GetStudentManeuverStatsResponseItem = zod.object({
   "bestCompetencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered'])
 })
 export const GetStudentManeuverStatsResponse = zod.array(GetStudentManeuverStatsResponseItem)
+
+
+/**
+ * @summary List the authenticated instructor's own vehicles
+ */
+export const GetMyVehiclesResponseItem = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "regoExpiry": zod.string().nullish(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional().describe('Transmission type of this vehicle'),
+  "controlType": zod.enum(['dual_control', 'factory']).optional().describe('dual_control = professionally fitted dual controls; factory = standard factory pedals'),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().nullish().describe('Object storage path for the vehicle photo'),
+  "insuranceProvider": zod.string().nullish(),
+  "insurancePolicyNumber": zod.string().nullish(),
+  "insuranceType": zod.string().nullish(),
+  "insuranceExpiry": zod.string().nullish(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+export const GetMyVehiclesResponse = zod.array(GetMyVehiclesResponseItem)
+
+
+/**
+ * @summary Add a vehicle to the authenticated instructor's fleet
+ */
+export const AddMyVehicleBody = zod.object({
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']).optional(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().optional(),
+  "colour": zod.string().optional(),
+  "rego": zod.string().optional(),
+  "regoState": zod.string().optional(),
+  "regoExpiry": zod.string().optional(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional(),
+  "controlType": zod.enum(['dual_control', 'factory']).optional(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().optional(),
+  "insuranceProvider": zod.string().optional(),
+  "insurancePolicyNumber": zod.string().optional(),
+  "insuranceType": zod.string().optional(),
+  "insuranceExpiry": zod.string().optional(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().optional()
+})
+
+
+/**
+ * @summary Update one of the authenticated instructor's vehicles
+ */
+export const UpdateMyVehicleParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const UpdateMyVehicleBody = zod.object({
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']).optional(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().optional(),
+  "colour": zod.string().optional(),
+  "rego": zod.string().optional(),
+  "regoState": zod.string().optional(),
+  "regoExpiry": zod.string().optional(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional(),
+  "controlType": zod.enum(['dual_control', 'factory']).optional(),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().optional(),
+  "insuranceProvider": zod.string().optional(),
+  "insurancePolicyNumber": zod.string().optional(),
+  "insuranceType": zod.string().optional(),
+  "insuranceExpiry": zod.string().optional(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().optional()
+})
+
+export const UpdateMyVehicleResponse = zod.object({
+  "id": zod.number(),
+  "instructorId": zod.number(),
+  "vehicleType": zod.enum(['car', 'motorbike', 'mr_truck', 'hr_truck', 'hc_truck', 'mc_truck']),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "colour": zod.string().nullish(),
+  "rego": zod.string().nullish(),
+  "regoState": zod.string().nullish(),
+  "regoExpiry": zod.string().nullish(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional().describe('Transmission type of this vehicle'),
+  "controlType": zod.enum(['dual_control', 'factory']).optional().describe('dual_control = professionally fitted dual controls; factory = standard factory pedals'),
+  "isDualControl": zod.boolean().optional(),
+  "isOwnerOperator": zod.boolean().optional(),
+  "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().nullish().describe('Object storage path for the vehicle photo'),
+  "insuranceProvider": zod.string().nullish(),
+  "insurancePolicyNumber": zod.string().nullish(),
+  "insuranceType": zod.string().nullish(),
+  "insuranceExpiry": zod.string().nullish(),
+  "status": zod.enum(['active', 'inactive']).optional(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
+ * @summary Remove one of the authenticated instructor's vehicles
+ */
+export const DeleteMyVehicleParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const DeleteMyVehicleResponse = zod.object({
+  "ok": zod.boolean().optional()
+})
 
 
 /**
@@ -700,9 +836,12 @@ export const GetInstructorResponse = zod.object({
   "rego": zod.string().nullish(),
   "regoState": zod.string().nullish(),
   "regoExpiry": zod.string().nullish(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional().describe('Transmission type of this vehicle'),
+  "controlType": zod.enum(['dual_control', 'factory']).optional().describe('dual_control = professionally fitted dual controls; factory = standard factory pedals'),
   "isDualControl": zod.boolean().optional(),
   "isOwnerOperator": zod.boolean().optional(),
   "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().nullish().describe('Object storage path for the vehicle photo'),
   "insuranceProvider": zod.string().nullish(),
   "insurancePolicyNumber": zod.string().nullish(),
   "insuranceType": zod.string().nullish(),
@@ -799,9 +938,12 @@ export const ListInstructorVehiclesResponseItem = zod.object({
   "rego": zod.string().nullish(),
   "regoState": zod.string().nullish(),
   "regoExpiry": zod.string().nullish(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional().describe('Transmission type of this vehicle'),
+  "controlType": zod.enum(['dual_control', 'factory']).optional().describe('dual_control = professionally fitted dual controls; factory = standard factory pedals'),
   "isDualControl": zod.boolean().optional(),
   "isOwnerOperator": zod.boolean().optional(),
   "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().nullish().describe('Object storage path for the vehicle photo'),
   "insuranceProvider": zod.string().nullish(),
   "insurancePolicyNumber": zod.string().nullish(),
   "insuranceType": zod.string().nullish(),
@@ -829,9 +971,12 @@ export const AddInstructorVehicleBody = zod.object({
   "rego": zod.string().optional(),
   "regoState": zod.string().optional(),
   "regoExpiry": zod.string().optional(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional(),
+  "controlType": zod.enum(['dual_control', 'factory']).optional(),
   "isDualControl": zod.boolean().optional(),
   "isOwnerOperator": zod.boolean().optional(),
   "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().optional(),
   "insuranceProvider": zod.string().optional(),
   "insurancePolicyNumber": zod.string().optional(),
   "insuranceType": zod.string().optional(),
@@ -858,9 +1003,12 @@ export const UpdateInstructorVehicleBody = zod.object({
   "rego": zod.string().optional(),
   "regoState": zod.string().optional(),
   "regoExpiry": zod.string().optional(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional(),
+  "controlType": zod.enum(['dual_control', 'factory']).optional(),
   "isDualControl": zod.boolean().optional(),
   "isOwnerOperator": zod.boolean().optional(),
   "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().optional(),
   "insuranceProvider": zod.string().optional(),
   "insurancePolicyNumber": zod.string().optional(),
   "insuranceType": zod.string().optional(),
@@ -880,9 +1028,12 @@ export const UpdateInstructorVehicleResponse = zod.object({
   "rego": zod.string().nullish(),
   "regoState": zod.string().nullish(),
   "regoExpiry": zod.string().nullish(),
+  "transmissionType": zod.enum(['auto', 'manual']).optional().describe('Transmission type of this vehicle'),
+  "controlType": zod.enum(['dual_control', 'factory']).optional().describe('dual_control = professionally fitted dual controls; factory = standard factory pedals'),
   "isDualControl": zod.boolean().optional(),
   "isOwnerOperator": zod.boolean().optional(),
   "isPrimary": zod.boolean().optional(),
+  "photoStorageKey": zod.string().nullish().describe('Object storage path for the vehicle photo'),
   "insuranceProvider": zod.string().nullish(),
   "insurancePolicyNumber": zod.string().nullish(),
   "insuranceType": zod.string().nullish(),
@@ -1900,7 +2051,8 @@ export const CreateBookingBody = zod.object({
   "carType": zod.enum(['learner_car', 'trainer_car']).optional(),
   "trainingCategory": zod.enum(['car_learner', 'car_probationary', 'q_ride_re', 'q_ride_r', 'q_ride_re_to_r', 'mr', 'hr', 'hc', 'mc']).optional().describe('The licence class category this lesson targets'),
   "studentNotes": zod.string().optional(),
-  "paymentMethod": zod.enum(['wallet', 'invoice']).optional().describe('wallet deducts student credit; invoice creates a pending_invoice record (NDIS\/post-pay students only)')
+  "paymentMethod": zod.enum(['wallet', 'invoice']).optional().describe('wallet deducts student credit; invoice creates a pending_invoice record (NDIS\/post-pay students only)'),
+  "vehicleId": zod.number().optional().describe('ID of the instructor vehicle the student selected for this lesson')
 })
 
 
@@ -2675,6 +2827,14 @@ export const GetViewerStudentDashboardParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const getViewerStudentDashboardQueryPageDefault = 1;
+
+
+
+export const GetViewerStudentDashboardQueryParams = zod.object({
+  "page": zod.coerce.number().min(1).default(getViewerStudentDashboardQueryPageDefault).describe('Page number for lesson history (1-based, 10 results per page)')
+})
+
 export const GetViewerStudentDashboardResponse = zod.object({
   "student": zod.object({
   "id": zod.number(),
@@ -2694,6 +2854,9 @@ export const GetViewerStudentDashboardResponse = zod.object({
   "supervisedHours": zod.number().optional().describe('Hours logged under parent\/guardian supervision'),
   "effectiveTotalHours": zod.number().optional().describe('Effective total counting QLD 3x multiplier on instructor hours (same as totalHours for non-QLD)'),
   "isQLD": zod.boolean().optional().describe('Whether the student is in QLD (3x multiplier applies)'),
+  "page": zod.number().optional().describe('Current page number (1-based)'),
+  "hasMore": zod.boolean().optional().describe('Whether more lesson history pages exist beyond this page'),
+  "totalAssessments": zod.number().optional().describe('Total number of assessments for this student'),
   "recentAssessments": zod.array(zod.object({
   "id": zod.number().optional(),
   "lessonDate": zod.string().optional(),
@@ -2701,7 +2864,8 @@ export const GetViewerStudentDashboardResponse = zod.object({
   "pedalOperator": zod.string().optional(),
   "performedByRole": zod.enum(['instructor', 'supervised']).optional(),
   "focusAreasNext": zod.string().nullish(),
-  "totalHoursThisLesson": zod.number().nullish()
+  "totalHoursThisLesson": zod.number().nullish(),
+  "instructorName": zod.string().nullish()
 })),
   "upcomingBookings": zod.array(zod.object({
   "id": zod.number().optional(),

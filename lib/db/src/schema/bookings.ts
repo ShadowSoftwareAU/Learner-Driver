@@ -38,6 +38,8 @@ export const bookingsTable = pgTable("bookings", {
   changeRequestedByUserId: integer("change_requested_by_user_id"),
   changeRequestStatus: text("change_request_status"), // pending | approved | denied | none
   requiresSchoolApproval: boolean("requires_school_approval").notNull().default(false),
+  // Which instructor vehicle the student selected (references instructor_vehicles.id)
+  vehicleId: integer("vehicle_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

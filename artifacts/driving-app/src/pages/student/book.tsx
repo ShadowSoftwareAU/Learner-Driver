@@ -249,6 +249,7 @@ export default function StudentBookWizard() {
   const [transmissionType, setTransmissionType] = useState<"auto" | "manual">("auto");
   const [trainingCategory, setTrainingCategory] = useState("car_learner");
   const [carType, setCarType] = useState<"trainer_car" | "learner_car">("trainer_car");
+  const [vehicleId, setVehicleId] = useState<number | null>(null);
   const [suburb, setSuburb] = useState("");
   const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
@@ -277,6 +278,16 @@ export default function StudentBookWizard() {
 
   const instructor = (calendarData as any)?.instructor;
   const days: any[] = (calendarData as any)?.days ?? [];
+
+  // Vehicles available in the selected time slot's window (populated by calendar API)
+  const availableVehicles: any[] = (() => {
+    if (!selectedDate || !selectedTime) return [];
+    const dayData = days.find((d: any) => d.date === selectedDate);
+    const window = (dayData?.windows ?? []).find(
+      (w: any) => selectedTime >= w.startTime && selectedTime < w.endTime,
+    );
+    return window?.vehicles ?? [];
+  })();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -329,6 +340,7 @@ export default function StudentBookWizard() {
           postcode: postcode.trim(),
           studentNotes: notes.trim() || undefined,
           paymentMethod: paymentMethod as any,
+          ...(vehicleId ? { vehicleId } : {}),
         } as any,
       });
       toast({
@@ -357,20 +369,33 @@ export default function StudentBookWizard() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Book a Lesson</h1>
           {instructor && (
-            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <User className="w-3.5 h-3.5" />
-                <span className="font-medium text-foreground">{instructor.fullName}</span>
+            <div className="flex items-center gap-3 mt-2 flex-wrap">
+              {/* Instructor avatar / profile photo */}
+              {instructor.profilePhotoPath ? (
+                <img
+                  src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/storage/objects/${instructor.profilePhotoPath}`}
+                  alt={instructor.fullName}
+                  className="w-10 h-10 rounded-full object-cover bg-muted border shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-muted border flex items-center justify-center shrink-0">
+                  <User className="w-5 h-5 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex flex-col gap-0.5">
+                <span className="font-semibold text-foreground leading-tight">{instructor.fullName}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {instructor.hourlyRateCents && (
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      <DollarSign className="w-3 h-3" />
+                      From {formatRate(instructor.hourlyRateCents)}
+                    </Badge>
+                  )}
+                  {instructor.qualifications && (
+                    <span className="text-xs text-muted-foreground">{instructor.qualifications}</span>
+                  )}
+                </div>
               </div>
-              {instructor.hourlyRateCents && (
-                <Badge variant="secondary" className="gap-1">
-                  <DollarSign className="w-3 h-3" />
-                  From {formatRate(instructor.hourlyRateCents)}
-                </Badge>
-              )}
-              {instructor.qualifications && (
-                <span className="text-sm text-muted-foreground">{instructor.qualifications}</span>
-              )}
             </div>
           )}
         </div>
@@ -556,7 +581,7 @@ export default function StudentBookWizard() {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setCarType(value)}
+                    onClick={() => { setCarType(value); setVehicleId(null); }}
                     className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 text-sm transition-colors ${
                       carType === value
                         ? "border-primary bg-primary/5 text-primary font-semibold"
@@ -569,6 +594,69 @@ export default function StudentBookWizard() {
                 ))}
               </div>
             </div>
+
+            {/* Vehicle picker — shown when trainer_car is selected and instructor has registered vehicles */}
+            {carType === "trainer_car" && availableVehicles.length > 0 && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Car className="w-4 h-4 text-muted-foreground" />
+                  Which trainer vehicle?
+                </Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {availableVehicles.map((v: any) => {
+                    const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+                    const selected = vehicleId === v.id;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setVehicleId(selected ? null : v.id)}
+                        className={`flex items-start gap-3 rounded-lg border-2 p-3 text-left transition-all ${
+                          selected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-muted-foreground"
+                        }`}
+                      >
+                        {/* Vehicle thumbnail */}
+                        {v.photoStorageKey ? (
+                          <img
+                            src={`${BASE}/api/storage/objects/${v.photoStorageKey}`}
+                            alt={`${v.make} ${v.model}`}
+                            className="w-16 h-12 rounded-md object-cover bg-muted shrink-0"
+                          />
+                        ) : (
+                          <div className="w-16 h-12 rounded-md bg-muted flex items-center justify-center shrink-0">
+                            <Car className="w-6 h-6 text-muted-foreground opacity-50" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium leading-tight truncate">
+                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                          </p>
+                          {v.colour && <p className="text-xs text-muted-foreground">{v.colour}</p>}
+                          <div className="flex gap-1.5 mt-1 flex-wrap">
+                            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                              {v.transmissionType === "auto" ? "Auto" : "Manual"}
+                            </span>
+                            {v.controlType === "dual_control" && (
+                              <span className="text-xs px-1.5 py-0.5 rounded bg-green-100 text-green-700">
+                                Dual controls
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {selected && (
+                          <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {vehicleId === null && (
+                  <p className="text-xs text-muted-foreground">No preference selected — instructor will choose</p>
+                )}
+              </div>
+            )}
 
             {/* Transmission */}
             <div className="space-y-2">

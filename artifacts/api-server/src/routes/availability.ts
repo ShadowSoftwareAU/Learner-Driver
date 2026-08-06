@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { eq, and, asc, gte, lte, inArray } from "drizzle-orm";
-import { db, instructorAvailabilityTable, instructorsTable, bookingsTable, schoolInstructorLinksTable, usersTable } from "@workspace/db";
+import {
+  db, instructorAvailabilityTable, instructorsTable, bookingsTable,
+  schoolInstructorLinksTable, usersTable, instructorVehiclesTable,
+} from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 
 const router = Router();
@@ -10,11 +13,15 @@ const timeLte = (a: string, b: string) => a <= b;
 const overlaps = (aStart: string, aEnd: string, bStart: string, bEnd: string) =>
   aStart < bEnd && bStart < aEnd;
 
+// Parse a vehicleIds CSV string to a sorted array of ints
+function parseVehicleIds(raw: string | null | undefined): number[] {
+  if (!raw) return [];
+  return raw.split(",").map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+}
+
 /**
  * GET /availability/my-contexts
- * Returns the set of contexts the authenticated instructor can assign to slots:
- * - 'independent' if isIndependent is true
- * - one entry per actively-linked school admin in school_instructor_links
+ * Returns the set of contexts the authenticated instructor can assign to slots.
  */
 router.get("/availability/my-contexts", requireAuth, async (req: any, res): Promise<void> => {
   const user = await getOrCreateUser(req.clerkUserId, "");
@@ -57,7 +64,11 @@ router.get("/availability/me", requireAuth, async (req: any, res): Promise<void>
   const slots = await db.select().from(instructorAvailabilityTable)
     .where(eq(instructorAvailabilityTable.instructorId, instructor.id))
     .orderBy(asc(instructorAvailabilityTable.dayOfWeek), asc(instructorAvailabilityTable.startTime));
-  res.json(slots);
+
+  res.json(slots.map(s => ({
+    ...s,
+    vehicleIds: parseVehicleIds(s.vehicleIds),
+  })));
 });
 
 // Get availability for a specific instructor (public-ish, used by student search)
@@ -65,13 +76,13 @@ router.get("/availability/instructor/:instructorId", requireAuth, async (req: an
   const instructorId = parseInt(req.params.instructorId as string, 10);
   const slots = await db.select().from(instructorAvailabilityTable)
     .where(and(eq(instructorAvailabilityTable.instructorId, instructorId), eq(instructorAvailabilityTable.isActive, true)));
-  res.json(slots);
+  res.json(slots.map(s => ({ ...s, vehicleIds: parseVehicleIds(s.vehicleIds) })));
 });
 
 /**
  * GET /availability/instructor/:instructorId/calendar?from=YYYY-MM-DD&to=YYYY-MM-DD
  * Returns the instructor's availability windows + existing bookings for a date range.
- * Used by the student booking wizard to render the interactive calendar.
+ * Includes vehicle summaries for each window so the student can select a vehicle.
  */
 router.get("/availability/instructor/:instructorId/calendar", requireAuth, async (req: any, res): Promise<void> => {
   const instructorId = parseInt(req.params.instructorId as string, 10);
@@ -99,6 +110,15 @@ router.get("/availability/instructor/:instructorId/calendar", requireAuth, async
     ))
     .orderBy(asc(instructorAvailabilityTable.dayOfWeek), asc(instructorAvailabilityTable.startTime));
 
+  // All active vehicles for this instructor (for photo display on booking form)
+  const allVehicles = await db.select().from(instructorVehiclesTable)
+    .where(and(
+      eq(instructorVehiclesTable.instructorId, instructorId),
+      eq(instructorVehiclesTable.status, "active"),
+    ));
+
+  const vehicleMap = new Map(allVehicles.map(v => [v.id, v]));
+
   // Existing bookings claimed by / confirmed for this instructor in the range
   const bookings = await db.select({
     requestedDate: bookingsTable.requestedDate,
@@ -117,7 +137,21 @@ router.get("/availability/instructor/:instructorId/calendar", requireAuth, async
   const days: Array<{
     date: string;
     dayOfWeek: number;
-    windows: Array<{ startTime: string; endTime: string; transmissionTypes: string[] }>;
+    windows: Array<{
+      startTime: string;
+      endTime: string;
+      transmissionTypes: string[];
+      vehicles: Array<{
+        id: number;
+        make: string;
+        model: string;
+        colour: string | null;
+        transmissionType: string;
+        controlType: string;
+        isDualControl: boolean;
+        photoStorageKey: string | null;
+      }>;
+    }>;
     bookedSlots: Array<{ startTime: string; durationMinutes: number | null; status: string }>;
   }> = [];
 
@@ -129,11 +163,29 @@ router.get("/availability/instructor/:instructorId/calendar", requireAuth, async
 
     const windows = slots
       .filter((s) => s.dayOfWeek === dow)
-      .map((s) => ({
-        startTime: s.startTime,
-        endTime: s.endTime,
-        transmissionTypes: String(s.transmissionTypes).split(",").map((t) => t.trim()).filter(Boolean),
-      }));
+      .map((s) => {
+        const vIds = parseVehicleIds(s.vehicleIds);
+        // If no vehicleIds set, all active vehicles are available
+        const availableVehicles = vIds.length > 0
+          ? vIds.map(id => vehicleMap.get(id)).filter(Boolean) as typeof allVehicles
+          : allVehicles;
+
+        return {
+          startTime: s.startTime,
+          endTime: s.endTime,
+          transmissionTypes: String(s.transmissionTypes).split(",").map((t) => t.trim()).filter(Boolean),
+          vehicles: availableVehicles.map(v => ({
+            id: v.id,
+            make: v.make,
+            model: v.model,
+            colour: v.colour ?? null,
+            transmissionType: v.transmissionType ?? "auto",
+            controlType: v.controlType ?? "dual_control",
+            isDualControl: v.isDualControl,
+            photoStorageKey: v.photoStorageKey ?? null,
+          })),
+        };
+      });
 
     const bookedSlots = bookings
       .filter((b) => b.requestedDate === dateStr)
@@ -155,6 +207,7 @@ router.get("/availability/instructor/:instructorId/calendar", requireAuth, async
       phone: instructor.phone ?? null,
       qualifications: instructor.qualifications ?? null,
       hourlyRateCents: instructor.hourlyRateCents ?? null,
+      profilePhotoPath: (instructor as any).profilePhotoPath ?? null,
     },
     days,
   });
@@ -168,7 +221,7 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     [instructor] = await db.insert(instructorsTable).values({ userId: user.id, fullName: user.name ?? "Instructor", email: user.email ?? "" }).returning();
   }
 
-  const { dayOfWeek, startTime, endTime, transmissionTypes, contextType, schoolAdminId } = req.body;
+  const { dayOfWeek, startTime, endTime, transmissionTypes, contextType, schoolAdminId, vehicleIds } = req.body;
   if (dayOfWeek === undefined || !startTime || !endTime) {
     res.status(400).json({ error: "Day, start time and end time are required" }); return;
   }
@@ -191,7 +244,6 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     if (!resolvedSchoolAdminId) {
       res.status(400).json({ error: "schoolAdminId is required when contextType is 'school'" }); return;
     }
-    // Verify this instructor has an active link to this school admin
     const [link] = await db.select().from(schoolInstructorLinksTable)
       .where(and(
         eq(schoolInstructorLinksTable.instructorId, instructor.id),
@@ -203,7 +255,12 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     }
   }
 
-  // Check overlap with existing slots on the same day for the same context
+  // Normalise vehicleIds to CSV string (null = all vehicles)
+  const resolvedVehicleIds: string | null = Array.isArray(vehicleIds) && vehicleIds.length > 0
+    ? vehicleIds.map(Number).filter(n => !isNaN(n)).join(",")
+    : null;
+
+  // Check overlap
   const sameDay = await db.select().from(instructorAvailabilityTable)
     .where(and(
       eq(instructorAvailabilityTable.instructorId, instructor.id),
@@ -221,8 +278,9 @@ router.post("/availability", requireAuth, async (req: any, res): Promise<void> =
     isActive: true,
     contextType: resolvedContextType,
     schoolAdminId: resolvedSchoolAdminId,
-  }).returning();
-  res.status(201).json(slot);
+    vehicleIds: resolvedVehicleIds,
+  } as any).returning();
+  res.status(201).json({ ...slot, vehicleIds: parseVehicleIds(slot.vehicleIds) });
 });
 
 // Update availability slot
@@ -232,7 +290,7 @@ router.patch("/availability/:id", requireAuth, async (req: any, res): Promise<vo
   const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id));
   if (!instructor) { res.status(403).json({ error: "Not an instructor" }); return; }
 
-  const { dayOfWeek, startTime, endTime, transmissionTypes, isActive, contextType, schoolAdminId } = req.body;
+  const { dayOfWeek, startTime, endTime, transmissionTypes, isActive, contextType, schoolAdminId, vehicleIds } = req.body;
   const updates: any = {};
   if (dayOfWeek !== undefined) updates.dayOfWeek = dayOfWeek;
   if (startTime) updates.startTime = startTime;
@@ -241,12 +299,17 @@ router.patch("/availability/:id", requireAuth, async (req: any, res): Promise<vo
   if (isActive !== undefined) updates.isActive = isActive;
   if (contextType !== undefined) updates.contextType = contextType;
   if (schoolAdminId !== undefined) updates.schoolAdminId = schoolAdminId ?? null;
+  if (vehicleIds !== undefined) {
+    updates.vehicleIds = Array.isArray(vehicleIds) && vehicleIds.length > 0
+      ? vehicleIds.map(Number).filter((n: number) => !isNaN(n)).join(",")
+      : null;
+  }
 
   const [updated] = await db.update(instructorAvailabilityTable).set(updates)
     .where(and(eq(instructorAvailabilityTable.id, id), eq(instructorAvailabilityTable.instructorId, instructor.id)))
     .returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
-  res.json(updated);
+  res.json({ ...updated, vehicleIds: parseVehicleIds(updated.vehicleIds) });
 });
 
 // Delete availability slot

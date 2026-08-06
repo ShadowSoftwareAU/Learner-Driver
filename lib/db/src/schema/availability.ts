@@ -16,6 +16,8 @@ export const instructorAvailabilityTable = pgTable("instructor_availability", {
   contextType: text("context_type").notNull().default("independent"), // 'independent' | 'school'
   // Set when contextType = 'school' — references users.id of the school admin who owns this slot
   schoolAdminId: integer("school_admin_id"),
+  // CSV of instructorVehicles.id values available in this slot — null means any/all active vehicles
+  vehicleIds: text("vehicle_ids"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

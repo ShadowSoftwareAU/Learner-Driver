@@ -51,6 +51,7 @@ import StudentFeedback from "@/pages/student/feedback";
 import InstructorDetail from "@/pages/admin/instructor-detail";
 
 import InstructorAvailability from "@/pages/instructor/availability";
+import InstructorVehicles from "@/pages/instructor/vehicles";
 import InstructorZones from "@/pages/instructor/zones";
 import InstructorBookings from "@/pages/instructor/bookings";
 import HeatmapPage from "@/pages/instructor/heatmap";
@@ -477,6 +478,7 @@ function ClerkProviderWithRoutes() {
           <Route path="/instructor/assessments/:id" component={() => <ProtectedRoute component={ViewAssessment} gateInstructors />} />
           <Route path="/instructor/handover/:studentId" component={() => <ProtectedRoute component={HandoverView} gateInstructors />} />
           <Route path="/instructor/availability" component={() => <ProtectedRoute component={InstructorAvailability} gateInstructors />} />
+          <Route path="/instructor/vehicles" component={() => <ProtectedRoute component={InstructorVehicles} gateInstructors />} />
           <Route path="/instructor/zones" component={() => <ProtectedRoute component={InstructorZones} gateInstructors />} />
           <Route path="/instructor/bookings" component={() => <ProtectedRoute component={InstructorBookings} gateInstructors />} />
           <Route path="/instructor/heatmap" component={() => <ProtectedRoute component={HeatmapPage} gateInstructors />} />

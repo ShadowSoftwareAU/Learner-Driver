@@ -52,6 +52,7 @@ export function SidebarLayout({ children }: { children: React.ReactNode }) {
       { label: "New Assessment",  href: "/instructor/assessments/new",   icon: ClipboardList },
       { label: "Bookings",        href: "/instructor/bookings",          icon: CalendarCheck },
       { label: "Availability",    href: "/instructor/availability",      icon: Calendar },
+      { label: "My Vehicles",     href: "/instructor/vehicles",          icon: Car },
       { label: "Teaching Zones",  href: "/instructor/zones",             icon: MapPin },
       { label: "My Verification", href: "/instructor/verification",      icon: ShieldCheck },
       { label: "Heatmap",         href: "/instructor/heatmap",           icon: MapPin },

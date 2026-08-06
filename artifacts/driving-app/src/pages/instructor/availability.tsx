@@ -7,6 +7,8 @@ import {
   useCreateAvailabilitySlot,
   useDeleteAvailabilitySlot,
 } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@clerk/clerk-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +18,12 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Loader2, Plus, Trash2, Calendar, DollarSign, Save,
-  User, Building2, AlertCircle, ChevronDown,
+  User, Building2, AlertCircle, ChevronDown, Car,
 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { DAY_NAMES } from "@/lib/enums";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const TRANSMISSION_OPTIONS: { value: string; label: string }[] = [
   { value: "auto", label: "Automatic" },
@@ -184,12 +188,28 @@ export default function InstructorAvailability() {
   const createSlot = useCreateAvailabilitySlot();
   const deleteSlot = useDeleteAvailabilitySlot();
 
+  // Fetch own vehicles so instructor can link them to slots
+  const { getToken } = useAuth();
+  const { data: myVehicles = [] } = useQuery<any[]>({
+    queryKey: ["/api/instructor/my-vehicles"],
+    queryFn: async () => {
+      const token = await getToken();
+      const res = await fetch(`${BASE}/api/instructor/my-vehicles`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+  const activeVehicles = myVehicles.filter((v: any) => v.status === "active");
+
   const [form, setForm] = useState({
     selectedDays: [1] as number[], // default to Monday
     startTime: "09:00",
     endTime: "17:00",
     transmissionTypes: ["auto", "manual"] as string[],
     contextValue: "independent",
+    vehicleIds: [] as number[], // empty = all active vehicles available
   });
 
   const [adding, setAdding] = useState(false);
@@ -264,6 +284,7 @@ export default function InstructorAvailability() {
               transmissionTypes: form.transmissionTypes,
               contextType,
               ...(schoolAdminId !== undefined ? { schoolAdminId } : {}),
+              vehicleIds: form.vehicleIds.length > 0 ? form.vehicleIds : [],
             } as any,
           });
           succeeded.push(DAY_SHORT[day]);
@@ -525,6 +546,62 @@ export default function InstructorAvailability() {
                 ))}
               </div>
             </div>
+
+            {/* ── Vehicle assignment ─────────────────────────────────── */}
+            {activeVehicles.length > 0 && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Car className="w-4 h-4 text-muted-foreground" />
+                  Vehicles for this slot
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Leave all unchecked to make every active vehicle available. Tick specific ones to restrict choice.
+                </p>
+                <div className="flex flex-col gap-2">
+                  {activeVehicles.map((v: any) => {
+                    const checked = form.vehicleIds.includes(v.id);
+                    return (
+                      <label key={v.id} className="flex items-center gap-3 cursor-pointer rounded-md border px-3 py-2 hover:bg-accent transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setForm((f) => ({
+                              ...f,
+                              vehicleIds: checked
+                                ? f.vehicleIds.filter((id) => id !== v.id)
+                                : [...f.vehicleIds, v.id],
+                            }))
+                          }
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {[v.year, v.make, v.model].filter(Boolean).join(" ")}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {v.transmissionType === "auto" ? "Automatic" : "Manual"}
+                            {v.controlType === "dual_control" ? " · Dual controls" : ""}
+                            {v.rego ? ` · ${v.rego}` : ""}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                {form.vehicleIds.length === 0 && (
+                  <p className="text-xs text-primary/70">All {activeVehicles.length} active vehicles will be available</p>
+                )}
+              </div>
+            )}
+            {activeVehicles.length === 0 && (
+              <div className="rounded-md border border-dashed px-3 py-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <Car className="w-4 h-4 shrink-0" />
+                <span>
+                  No active vehicles. <a href="/instructor/vehicles" className="underline hover:text-foreground">Add vehicles</a> to link them to slots.
+                </span>
+              </div>
+            )}
 
             <Button
               onClick={handleAdd}
