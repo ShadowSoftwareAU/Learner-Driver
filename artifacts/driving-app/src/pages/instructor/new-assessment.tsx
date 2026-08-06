@@ -1,4 +1,4 @@
-import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents, useUpdateAssessment, useGetAssessment, getGetAssessmentQueryKey } from "@workspace/api-client-react";
+import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents, useUpdateAssessment, useGetAssessment, getGetAssessmentQueryKey, useGetMyVehicles } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -134,6 +134,13 @@ export default function NewAssessment() {
   const [lightingCondition, setLightingCondition] = useState<LightingCondition | "">(
     () => (initialDraft?.lightingCondition as LightingCondition | "") ?? ""
   );
+  const [vehicleId, setVehicleId] = useState<number | null>(
+    () => (initialDraft as any)?.vehicleId ?? null
+  );
+
+  // Fetch instructor's own active vehicles for the vehicle selector
+  const { data: myVehiclesRaw } = useGetMyVehicles();
+  const myVehicles = ((myVehiclesRaw as any[]) ?? []).filter((v: any) => v.status === "active");
 
   // ── Assessment state ──────────────────────────────────────────────────────
   const [results, setResults] = useState<Record<number, ManeuverResultItemCompetencyLevel>>(
@@ -181,6 +188,7 @@ export default function NewAssessment() {
     setConfidenceNote(a.confidenceNote ?? "");
     setFocusAreas(a.focusAreasNext ?? "");
     setFitnessConfirmed(true); // already confirmed when the assessment was originally created
+    setVehicleId((a as any).vehicleId ?? null);
     setSetupDone(true);
     setSetupOpen(false);
     // Rebuild maneuver result maps from saved results
@@ -213,13 +221,14 @@ export default function NewAssessment() {
       saveAssessmentDraft({
         assessmentType, studentId, date, duration, pedalOperator,
         fitnessConfirmed, weatherCondition, lightingCondition,
+        vehicleId,
         results, maneuverNotes, maneuverLocations, confidenceNote, focusAreas, setupDone,
-      });
+      } as any);
     }, 400);
     return () => clearTimeout(timer);
   }, [
     assessmentType, studentId, date, duration, pedalOperator,
-    fitnessConfirmed, weatherCondition, lightingCondition,
+    fitnessConfirmed, weatherCondition, lightingCondition, vehicleId,
     results, maneuverNotes, confidenceNote, focusAreas, setupDone,
   ]);
 
@@ -334,6 +343,7 @@ export default function NewAssessment() {
             acknowledgeFitness: true,
             weatherCondition: weatherCondition || undefined,
             lightingCondition: lightingCondition || undefined,
+            vehicleId: vehicleId ?? undefined,
           } as any,
         });
         if (maneuverResultsArray.length > 0) {
@@ -460,6 +470,51 @@ export default function NewAssessment() {
               </div>
 
               <Separator />
+
+              {/* Vehicle */}
+              {myVehicles.length > 0 && (
+                <>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-semibold text-base">Vehicle</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Which vehicle is being used for this lesson?</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      {myVehicles.map((v: any) => {
+                        const selected = vehicleId === v.id;
+                        const label = [v.year, v.make, v.model].filter(Boolean).join(" ");
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => setVehicleId(selected ? null : v.id)}
+                            className={`flex items-center gap-3 rounded-lg border-2 px-3 py-2.5 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                              selected
+                                ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                                : "border-border hover:border-primary/40 hover:bg-muted/40"
+                            }`}
+                          >
+                            <Car className={`w-5 h-5 shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                            <div className="flex-1 min-w-0">
+                              <p className={`text-sm font-medium leading-tight ${selected ? "text-primary" : ""}`}>{label}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {v.transmissionType === "auto" ? "Automatic" : "Manual"}
+                                {v.controlType === "dual_control" ? " · Dual controls" : ""}
+                                {v.rego ? ` · ${v.rego}` : ""}
+                              </p>
+                            </div>
+                            {selected && <Check className="w-4 h-4 text-primary shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {vehicleId === null && (
+                      <p className="text-xs text-muted-foreground">No vehicle selected — leave blank if not applicable.</p>
+                    )}
+                  </div>
+                  <Separator />
+                </>
+              )}
 
               {/* Pedal Control */}
               <div className="space-y-3">
@@ -623,6 +678,17 @@ export default function NewAssessment() {
                     <p className="text-xs text-muted-foreground">Pedal Control</p>
                     <p className="font-medium">{pedalOperator ? PedalOperatorLabel[pedalOperator as PedalOperator] : "—"}</p>
                   </div>
+                  {vehicleId && myVehicles.length > 0 && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Vehicle</p>
+                      <p className="font-medium">
+                        {(() => {
+                          const v = myVehicles.find((v: any) => v.id === vehicleId);
+                          return v ? [v.year, v.make, v.model].filter(Boolean).join(" ") : "—";
+                        })()}
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-xs text-muted-foreground">Conditions</p>
                     <p className="font-medium">

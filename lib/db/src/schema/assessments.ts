@@ -32,6 +32,8 @@ export const assessmentsTable = pgTable("assessments", {
   performedByRole: text("performed_by_role").notNull().default("instructor"), // instructor | supervised
   // Assessment program type — determines which checklist/regulations apply
   assessmentType: text("assessment_type").notNull().default("qsafe"), // qsafe | qride | heavy_vehicle
+  // Vehicle used for this lesson (links to instructor_vehicles table)
+  vehicleId: integer("vehicle_id"),
   // Lesson conditions — recorded at session start for regulatory and safety records
   weatherCondition: text("weather_condition"), // clear | partly_cloudy | overcast | light_rain | heavy_rain | foggy | windy
   lightingCondition: text("lighting_condition"), // daylight | dawn | dusk | night

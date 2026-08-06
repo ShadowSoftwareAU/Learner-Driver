@@ -33,6 +33,7 @@ const createAssessmentBody = z.object({
   acknowledgeFitness: z.boolean().optional(),
   weatherCondition: z.enum(["clear", "partly_cloudy", "overcast", "light_rain", "heavy_rain", "foggy", "windy"]).optional().nullable(),
   lightingCondition: z.enum(["daylight", "dawn", "dusk", "night"]).optional().nullable(),
+  vehicleId: z.number().int().positive().optional().nullable(),
 });
 
 const patchAssessmentBody = z.object({
@@ -48,6 +49,7 @@ const patchAssessmentBody = z.object({
   pedalOperator: z.enum(["student", "instructor", "shared"]).optional(),
   acknowledgeBriefing: z.boolean().optional(),
   acknowledgeFitness: z.boolean().optional(),
+  vehicleId: z.number().int().positive().optional().nullable(),
 });
 
 const maneuverResultItemSchema = z.object({
@@ -135,7 +137,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     res.status(400).json({ error: "Invalid request body", issues: parsed.error.issues });
     return;
   }
-  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, startCoordinates, endCoordinates, routeData, pedalOperator, acknowledgeFitness, weatherCondition, lightingCondition } = parsed.data;
+  const { studentId, lessonDate, durationMinutes, assessmentType, confidenceNote, focusAreasNext, routePath, startCoordinates, endCoordinates, routeData, pedalOperator, acknowledgeFitness, weatherCondition, lightingCondition, vehicleId } = parsed.data;
 
   let instructor = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
   if (!instructor) {
@@ -173,6 +175,7 @@ router.post("/assessments", requireAuth, async (req: any, res): Promise<void> =>
     routeData: routeData ?? null,
     weatherCondition: weatherCondition ?? null,
     lightingCondition: lightingCondition ?? null,
+    vehicleId: vehicleId ?? null,
     status: "in_progress",
     ...(acknowledgeFitness === true ? { preDriveFitnessConfirmedAt: now, preDriveFitnessConfirmedByUserId: user.id } : {}),
   }).returning();
@@ -291,7 +294,7 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
     res.status(400).json({ error: "Invalid request body", issues: bodyParsed.error.issues });
     return;
   }
-  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, startCoordinates, endCoordinates, routeData, pedalOperator, acknowledgeBriefing, acknowledgeFitness } = bodyParsed.data;
+  const { confidenceNote, focusAreasNext, status, durationMinutes, routePath, startCoordinates, endCoordinates, routeData, pedalOperator, acknowledgeBriefing, acknowledgeFitness, vehicleId } = bodyParsed.data;
 
   // Scan any updated free-text fields
   const textsToScan = [confidenceNote, focusAreasNext].filter(Boolean).join(" ");
@@ -330,6 +333,7 @@ router.patch("/assessments/:id", requireAuth, async (req: any, res): Promise<voi
     updates.preDriveFitnessConfirmedAt = new Date();
     updates.preDriveFitnessConfirmedByUserId = user.id;
   }
+  if (vehicleId !== undefined) updates.vehicleId = vehicleId ?? null;
 
   const [updated] = await db.update(assessmentsTable).set(updates).where(eq(assessmentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
@@ -638,6 +642,7 @@ function formatAssessment(a: any) {
     reportDispatchedTo: a.reportDispatchedTo ?? null,
     weatherCondition: a.weatherCondition ?? null,
     lightingCondition: a.lightingCondition ?? null,
+    vehicleId: a.vehicleId ?? null,
     createdAt: a.createdAt,
   };
 }
