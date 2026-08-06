@@ -26,6 +26,9 @@ const TRANSMISSION_OPTIONS: { value: string; label: string }[] = [
   { value: "manual", label: "Manual" },
 ];
 
+// Short labels for the day chips
+const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 // ── Context helpers ───────────────────────────────────────────────────────────
 
 function contextKey(type: string, schoolAdminId?: number | null): string {
@@ -38,6 +41,94 @@ function parseContextKey(val: string): { contextType: "independent" | "school"; 
     if (!isNaN(id)) return { contextType: "school", schoolAdminId: id };
   }
   return { contextType: "independent" };
+}
+
+// ── Day chip picker ───────────────────────────────────────────────────────────
+
+interface DayPickerProps {
+  selected: number[];
+  onChange: (days: number[]) => void;
+}
+
+function DayPicker({ selected, onChange }: DayPickerProps) {
+  const toggle = (day: number) => {
+    onChange(
+      selected.includes(day) ? selected.filter((d) => d !== day) : [...selected, day],
+    );
+  };
+
+  const setPreset = (days: number[]) => onChange(days);
+
+  return (
+    <div className="space-y-2">
+      {/* Quick-select shortcuts */}
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => setPreset([1, 2, 3, 4, 5])}
+          className="text-xs px-2.5 py-1 rounded-full border border-input bg-background hover:bg-accent transition-colors"
+        >
+          Weekdays
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreset([0, 6])}
+          className="text-xs px-2.5 py-1 rounded-full border border-input bg-background hover:bg-accent transition-colors"
+        >
+          Weekends
+        </button>
+        <button
+          type="button"
+          onClick={() => setPreset([0, 1, 2, 3, 4, 5, 6])}
+          className="text-xs px-2.5 py-1 rounded-full border border-input bg-background hover:bg-accent transition-colors"
+        >
+          Every day
+        </button>
+        {selected.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setPreset([])}
+            className="text-xs px-2.5 py-1 rounded-full border border-input bg-background hover:bg-accent text-muted-foreground transition-colors"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Day chips */}
+      <div className="flex gap-2 flex-wrap">
+        {DAY_SHORT.map((label, idx) => {
+          const active = selected.includes(idx);
+          return (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => toggle(idx)}
+              aria-pressed={active}
+              className={[
+                "h-9 w-11 rounded-md text-sm font-medium border transition-colors select-none",
+                active
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-input text-foreground hover:bg-accent",
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {selected.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          {selected
+            .slice()
+            .sort((a, b) => a - b)
+            .map((d) => DAY_NAMES[d])
+            .join(", ")}
+        </p>
+      )}
+    </div>
+  );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -94,12 +185,14 @@ export default function InstructorAvailability() {
   const deleteSlot = useDeleteAvailabilitySlot();
 
   const [form, setForm] = useState({
-    dayOfWeek: "1",
+    selectedDays: [1] as number[], // default to Monday
     startTime: "09:00",
     endTime: "17:00",
     transmissionTypes: ["auto", "manual"] as string[],
     contextValue: "independent",
   });
+
+  const [adding, setAdding] = useState(false);
 
   // Auto-select first context when contexts load
   useEffect(() => {
@@ -132,6 +225,10 @@ export default function InstructorAvailability() {
   };
 
   const handleAdd = async () => {
+    if (form.selectedDays.length === 0) {
+      toast({ title: "Select at least one day", variant: "destructive" });
+      return;
+    }
     if (!form.transmissionTypes.length) {
       toast({ title: "Select at least one transmission type", variant: "destructive" });
       return;
@@ -150,30 +247,62 @@ export default function InstructorAvailability() {
       contextKey(c.type, c.schoolAdminId) === form.contextValue,
     )?.label ?? contextType;
 
+    const sortedDays = form.selectedDays.slice().sort((a, b) => a - b);
+    const succeeded: string[] = [];
+    const conflicts: string[] = [];
+    const errors: string[] = [];
+
+    setAdding(true);
     try {
-      await createSlot.mutateAsync({
-        data: {
-          dayOfWeek: Number(form.dayOfWeek),
-          startTime: form.startTime,
-          endTime: form.endTime,
-          transmissionTypes: form.transmissionTypes,
-          contextType,
-          ...(schoolAdminId !== undefined ? { schoolAdminId } : {}),
-        } as any,
-      });
-      await qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
-      toast({
-        title: "Availability slot added",
-        description: `${DAY_NAMES[Number(form.dayOfWeek)]} ${form.startTime}–${form.endTime} · ${contextLabel}`,
-      });
-    } catch (err: any) {
-      const status = err?.status ?? err?.response?.status;
-      const serverMsg = err?.body?.error ?? err?.response?.data?.error;
-      if (status === 409) {
-        toast({ title: "Time conflict", description: serverMsg ?? "This slot overlaps an existing one.", variant: "destructive" });
-      } else {
-        toast({ title: "Failed to add slot", description: serverMsg ?? "Please try again.", variant: "destructive" });
+      for (const day of sortedDays) {
+        try {
+          await createSlot.mutateAsync({
+            data: {
+              dayOfWeek: day,
+              startTime: form.startTime,
+              endTime: form.endTime,
+              transmissionTypes: form.transmissionTypes,
+              contextType,
+              ...(schoolAdminId !== undefined ? { schoolAdminId } : {}),
+            } as any,
+          });
+          succeeded.push(DAY_SHORT[day]);
+        } catch (err: any) {
+          const status = err?.status ?? err?.response?.status;
+          if (status === 409) {
+            conflicts.push(DAY_SHORT[day]);
+          } else {
+            errors.push(DAY_SHORT[day]);
+          }
+        }
       }
+
+      await qc.invalidateQueries({ queryKey: ["/api/availability/me"] });
+
+      if (succeeded.length > 0) {
+        toast({
+          title: succeeded.length === 1
+            ? "Availability slot added"
+            : `${succeeded.length} slots added`,
+          description: `${succeeded.join(", ")} · ${form.startTime}–${form.endTime} · ${contextLabel}`,
+        });
+      }
+      if (conflicts.length > 0) {
+        toast({
+          title: `${conflicts.length === 1 ? "Conflict" : "Conflicts"} skipped`,
+          description: `${conflicts.join(", ")} already ha${conflicts.length === 1 ? "s" : "ve"} an overlapping slot.`,
+          variant: "destructive",
+        });
+      }
+      if (errors.length > 0) {
+        toast({
+          title: "Some slots failed",
+          description: `Could not add: ${errors.join(", ")}`,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -203,6 +332,13 @@ export default function InstructorAvailability() {
       return { label: match?.label ?? "School", isSchool: true };
     }
     return { label: "Independent", isSchool: false };
+  };
+
+  const addButtonLabel = () => {
+    const n = form.selectedDays.length;
+    if (n === 0) return "Add Slot";
+    if (n === 1) return `Add Slot — ${DAY_NAMES[form.selectedDays[0]]}`;
+    return `Add ${n} Slots`;
   };
 
   return (
@@ -276,8 +412,11 @@ export default function InstructorAvailability() {
             <CardTitle className="flex items-center gap-2 text-base">
               <Plus className="w-4 h-4" /> Add Time Slot
             </CardTitle>
+            <CardDescription>
+              Select one or more days, then set your hours. Use the shortcuts to quickly pick weekdays or weekends.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
 
             {/* ── Driving For ──────────────────────────────────────────── */}
             <div className="space-y-1.5">
@@ -292,7 +431,6 @@ export default function InstructorAvailability() {
                   Loading contexts…
                 </div>
               ) : contextList.length === 1 ? (
-                // Single context — show as a read-only info badge, still sets the value
                 <div className="flex items-center gap-2 h-9">
                   {contextList[0].type === "school" ? (
                     <Building2 className="w-4 h-4 text-amber-600" />
@@ -312,7 +450,6 @@ export default function InstructorAvailability() {
                   </Badge>
                 </div>
               ) : contextList.length > 1 ? (
-                // Multiple contexts — show a styled dropdown
                 <div className="relative">
                   <select
                     id="context-select"
@@ -340,22 +477,19 @@ export default function InstructorAvailability() {
               )}
             </div>
 
-            {/* ── Day / times / transmission ─────────────────────────── */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label>Day of Week</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={form.dayOfWeek}
-                  onChange={(e) => setForm((f) => ({ ...f, dayOfWeek: e.target.value }))}
-                >
-                  {DAY_NAMES.map((d, i) => (
-                    <option key={i} value={i}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {/* ── Day picker ─────────────────────────────────────────── */}
+            <div className="space-y-1.5">
+              <Label>
+                Days <span className="text-destructive">*</span>
+              </Label>
+              <DayPicker
+                selected={form.selectedDays}
+                onChange={(days) => setForm((f) => ({ ...f, selectedDays: days }))}
+              />
+            </div>
+
+            {/* ── Times ─────────────────────────────────────────────── */}
+            <div className="grid grid-cols-2 gap-4 max-w-xs">
               <div className="space-y-1.5">
                 <Label>Start Time</Label>
                 <Input
@@ -374,6 +508,7 @@ export default function InstructorAvailability() {
               </div>
             </div>
 
+            {/* ── Transmission ──────────────────────────────────────── */}
             <div className="space-y-1.5">
               <Label>Transmission Types</Label>
               <div className="flex gap-4">
@@ -393,14 +528,14 @@ export default function InstructorAvailability() {
 
             <Button
               onClick={handleAdd}
-              disabled={createSlot.isPending || hasNoContexts || contextsLoading}
+              disabled={adding || hasNoContexts || contextsLoading || form.selectedDays.length === 0}
             >
-              {createSlot.isPending ? (
+              {adding ? (
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              Add Slot
+              {addButtonLabel()}
             </Button>
           </CardContent>
         </Card>
@@ -470,7 +605,6 @@ export default function InstructorAvailability() {
                                 {labelFor(t)}
                               </Badge>
                             ))}
-                            {/* Context badge — only show when there are multiple contexts or it's a school slot */}
                             {(multipleContexts || isSchool) && (
                               <Badge
                                 variant="outline"
