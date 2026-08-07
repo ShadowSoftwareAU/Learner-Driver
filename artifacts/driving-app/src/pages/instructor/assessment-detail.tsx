@@ -1,14 +1,15 @@
 import { useState, useMemo } from "react";
-import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment } from "@workspace/api-client-react";
+import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine } from "lucide-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil } from "lucide-react";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { getManeuverImage } from "@/lib/maneuver-images";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Link, useParams } from "wouter";
 import { format } from "date-fns";
@@ -89,8 +90,22 @@ export default function ViewAssessment() {
     },
   });
 
+  const updateAssessment = useUpdateAssessment({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetAssessmentQueryKey(id) });
+        setNotesEditOpen(false);
+        toast({ title: "Notes updated", description: "Lesson notes have been saved." });
+      },
+      onError: () => toast({ title: "Failed to update notes", variant: "destructive" }),
+    },
+  });
+
   const [previewOpen, setPreviewOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [notesEditOpen, setNotesEditOpen] = useState(false);
+  const [editConfidenceNote, setEditConfidenceNote] = useState("");
+  const [editFocusAreasNext, setEditFocusAreasNext] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [emails, setEmails] = useState<string[]>([]);
   const [viewMode, setViewMode] = useViewMode();
@@ -267,7 +282,23 @@ export default function ViewAssessment() {
           {/* Lesson Notes */}
           <Card className="col-span-full">
             <CardHeader className="bg-gray-50 border-b">
-              <CardTitle>Lesson Notes</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Lesson Notes</CardTitle>
+                {finStatus === "draft" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      setEditConfidenceNote((assessment as any).confidenceNote ?? "");
+                      setEditFocusAreasNext((assessment as any).focusAreasNext ?? "");
+                      setNotesEditOpen(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div>
@@ -383,6 +414,55 @@ export default function ViewAssessment() {
           )}
         </div>
       </div>
+
+      {/* ── Edit Lesson Notes Dialog ────────────────────────────────────────── */}
+      <Dialog open={notesEditOpen} onOpenChange={setNotesEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Lesson Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="edit-confidence-note">Confidence &amp; Overall Notes</Label>
+              <Textarea
+                id="edit-confidence-note"
+                rows={5}
+                placeholder="How did the student go overall? Any observations on confidence?"
+                value={editConfidenceNote}
+                onChange={e => setEditConfidenceNote(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-focus-areas">Focus Areas for Next Lesson</Label>
+              <Textarea
+                id="edit-focus-areas"
+                rows={3}
+                placeholder="What should the student focus on next time?"
+                value={editFocusAreasNext}
+                onChange={e => setEditFocusAreasNext(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNotesEditOpen(false)}>Cancel</Button>
+            <Button
+              disabled={updateAssessment.isPending}
+              onClick={() => {
+                updateAssessment.mutate({
+                  id,
+                  data: {
+                    confidenceNote: editConfidenceNote,
+                    focusAreasNext: editFocusAreasNext,
+                  } as any,
+                });
+              }}
+            >
+              {updateAssessment.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Notes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Report Preview Sheet ────────────────────────────────────────────── */}
       <Sheet open={previewOpen} onOpenChange={setPreviewOpen}>
