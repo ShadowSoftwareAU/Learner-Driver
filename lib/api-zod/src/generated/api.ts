@@ -1382,6 +1382,53 @@ export const ApproveAssessmentResponse = zod.object({
 
 
 /**
+ * @summary Admin override to edit lesson notes on a submitted assessment without resetting finalization status
+ */
+export const EditAssessmentNotesOverrideParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const EditAssessmentNotesOverrideBody = zod.object({
+  "confidenceNote": zod.string().optional().describe('Confidence and overall notes'),
+  "focusAreasNext": zod.string().optional().describe('Focus areas for next lesson')
+})
+
+export const editAssessmentNotesOverrideResponsePerformedByRoleDefault = `instructor`;
+export const editAssessmentNotesOverrideResponseAssessmentTypeDefault = `qsafe`;
+
+export const EditAssessmentNotesOverrideResponse = zod.object({
+  "id": zod.number(),
+  "studentId": zod.number(),
+  "instructorId": zod.number(),
+  "studentName": zod.string().nullish(),
+  "instructorName": zod.string().nullish(),
+  "lessonDate": zod.string(),
+  "durationMinutes": zod.number(),
+  "status": zod.enum(['in_progress', 'completed', 'no_show']),
+  "performedByRole": zod.enum(['instructor', 'supervised']).default(editAssessmentNotesOverrideResponsePerformedByRoleDefault).describe('\'instructor\' = licensed driving instructor (counts toward lesson plan); \'supervised\' = parent\/guardian\/mentor (hours only, does not update lesson plan)'),
+  "assessmentType": zod.enum(['qsafe', 'qride', 'heavy_vehicle']).default(editAssessmentNotesOverrideResponseAssessmentTypeDefault).describe('Assessment program: qsafe (Driver Licensing Reg 2021, Ch.3), qride (Accreditation Reg 2015, s.33–41), heavy_vehicle (Driver Licensing Reg 2021, s.57–60)'),
+  "pedalOperator": zod.enum(['student', 'instructor', 'shared']).describe('Who controls the pedals — student, instructor (dual control), or shared'),
+  "confidenceNote": zod.string().nullish(),
+  "focusAreasNext": zod.string().nullish(),
+  "routePath": zod.array(zod.object({
+  "lat": zod.number(),
+  "lng": zod.number(),
+  "ts": zod.number()
+})).nullish(),
+  "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
+  "preDriveFitnessConfirmedAt": zod.string().nullish().describe('Timestamp when the pre-drive fitness and sobriety check was confirmed'),
+  "finalizationStatus": zod.enum(['draft', 'pending_approval', 'approved', 'dispatched']).optional(),
+  "approvedAt": zod.string().nullish(),
+  "approvedByUserId": zod.number().nullish(),
+  "reportDispatchedAt": zod.string().nullish(),
+  "reportDispatchedTo": zod.string().nullish().describe('JSON array of email addresses the report was dispatched to'),
+  "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish().describe('Weather at lesson start'),
+  "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish().describe('Lighting condition at lesson start'),
+  "createdAt": zod.string().optional()
+})
+
+
+/**
  * @summary Save maneuver competency ratings for an assessment
  */
 export const SaveManeuverResultsParams = zod.object({

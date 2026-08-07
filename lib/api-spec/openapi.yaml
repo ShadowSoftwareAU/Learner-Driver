@@ -869,6 +869,37 @@ paths:
         "409":
           description: Assessment not in pending_approval state
 
+  /assessments/{id}/edit-notes-override:
+    post:
+      operationId: editAssessmentNotesOverride
+      tags: [assessments]
+      summary: Admin override to edit lesson notes on a submitted assessment without resetting finalization status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssessmentNotesOverrideInput"
+      responses:
+        "200":
+          description: Notes updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+        "403":
+          description: Admin role required
+        "404":
+          description: Not found
+        "409":
+          description: Assessment is still in draft — use the standard edit instead
+
   /assessments/{id}/results:
     post:
       operationId: saveManeuverResults
@@ -4259,6 +4290,16 @@ components:
           description: "Lighting condition at lesson start"
         createdAt:
           type: string
+
+    AssessmentNotesOverrideInput:
+      type: object
+      properties:
+        confidenceNote:
+          type: string
+          description: Confidence and overall notes
+        focusAreasNext:
+          type: string
+          description: Focus areas for next lesson
 
     ApproveAssessmentInput:
       type: object

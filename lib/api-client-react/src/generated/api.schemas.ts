@@ -1057,6 +1057,13 @@ export interface Maneuver {
   masteryDefinition?: string | null;
 }
 
+export interface AssessmentNotesOverrideInput {
+  /** Confidence and overall notes */
+  confidenceNote?: string;
+  /** Focus areas for next lesson */
+  focusAreasNext?: string;
+}
+
 export interface ApproveAssessmentInput {
   /** Email addresses to record as dispatch recipients */
   dispatchEmails?: string[];

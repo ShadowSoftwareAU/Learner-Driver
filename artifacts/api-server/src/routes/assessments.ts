@@ -612,6 +612,80 @@ router.post("/assessments/:id/approve", requireAuth, async (req: any, res): Prom
   res.json(formatAssessment(updated));
 });
 
+// ─── Admin override: edit notes on submitted assessments ──────────────────────
+
+router.post("/assessments/:id/edit-notes-override", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  // Only admins and super_admins may use this override
+  if (user.role !== "admin" && user.role !== "school_admin" && user.role !== "super_admin") {
+    res.status(403).json({ error: "Only admin users can use the notes override" });
+    return;
+  }
+
+  const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, id));
+  if (!a) { res.status(404).json({ error: "Not found" }); return; }
+
+  // This override is specifically for submitted assessments — draft should use the normal PATCH
+  if (a.finalizationStatus === "draft") {
+    res.status(409).json({ error: "Assessment is still in draft — use the standard edit instead" });
+    return;
+  }
+
+  const bodyParsed = z.object({
+    confidenceNote: z.string().max(5000).optional(),
+    focusAreasNext: z.string().max(2000).optional(),
+  }).safeParse(req.body);
+
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: bodyParsed.error.issues });
+    return;
+  }
+
+  const { confidenceNote, focusAreasNext } = bodyParsed.data;
+
+  // Content scan — same policy as the normal notes path
+  const textsToScan = [confidenceNote, focusAreasNext].filter(Boolean).join(" ");
+  if (textsToScan) {
+    const scan = await scanContent({
+      text: textsToScan,
+      contentType: "assessment_note",
+      contentId: id,
+      actorUserId: user.id,
+      studentId: a.studentId,
+      route: req.originalUrl,
+    });
+    if (scan.shouldBlock) {
+      res.status(451).json({ error: "Content blocked by moderation policy", moderationCaseId: scan.moderationCaseId });
+      return;
+    }
+  }
+
+  const updates: any = {};
+  if (confidenceNote !== undefined) updates.confidenceNote = confidenceNote;
+  if (focusAreasNext !== undefined) updates.focusAreasNext = focusAreasNext;
+
+  const [updated] = await db.update(assessmentsTable).set(updates).where(eq(assessmentsTable.id, id)).returning();
+  if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "edit_assessment_notes_override",
+    resourceType: "assessment",
+    resourceId: id,
+    studentId: a.studentId,
+    metadataJson: {
+      previousConfidenceNote: a.confidenceNote,
+      previousFocusAreasNext: a.focusAreasNext,
+      finalizationStatus: a.finalizationStatus,
+    },
+  }, req);
+
+  res.json(formatAssessment(updated));
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAssessment(a: any) {

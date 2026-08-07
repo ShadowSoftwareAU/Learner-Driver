@@ -32,6 +32,7 @@ import type {
   Assessment,
   AssessmentDetail,
   AssessmentInput,
+  AssessmentNotesOverrideInput,
   AssessmentUpdate,
   AssignSchoolAdminBody,
   AuditLog,
@@ -3080,6 +3081,78 @@ export const useApproveAssessment = <TError = ErrorType<void>,
         TContext
       > => {
       return useMutation(getApproveAssessmentMutationOptions(options));
+    }
+
+export const getEditAssessmentNotesOverrideUrl = (id: number,) => {
+
+
+
+
+  return `/api/assessments/${id}/edit-notes-override`
+}
+
+/**
+ * @summary Admin override to edit lesson notes on a submitted assessment without resetting finalization status
+ */
+export const editAssessmentNotesOverride = async (id: number,
+    assessmentNotesOverrideInput: AssessmentNotesOverrideInput, options?: RequestInit): Promise<Assessment> => {
+
+  return customFetch<Assessment>(getEditAssessmentNotesOverrideUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      assessmentNotesOverrideInput,)
+  }
+);}
+
+
+
+
+export const getEditAssessmentNotesOverrideMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof editAssessmentNotesOverride>>, TError,{id: number;data: BodyType<AssessmentNotesOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof editAssessmentNotesOverride>>, TError,{id: number;data: BodyType<AssessmentNotesOverrideInput>}, TContext> => {
+
+const mutationKey = ['editAssessmentNotesOverride'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof editAssessmentNotesOverride>>, {id: number;data: BodyType<AssessmentNotesOverrideInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  editAssessmentNotesOverride(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type EditAssessmentNotesOverrideMutationResult = NonNullable<Awaited<ReturnType<typeof editAssessmentNotesOverride>>>
+    export type EditAssessmentNotesOverrideMutationBody = BodyType<AssessmentNotesOverrideInput>
+    export type EditAssessmentNotesOverrideMutationError = ErrorType<void>
+
+    /**
+ * @summary Admin override to edit lesson notes on a submitted assessment without resetting finalization status
+ */
+export const useEditAssessmentNotesOverride = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof editAssessmentNotesOverride>>, TError,{id: number;data: BodyType<AssessmentNotesOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof editAssessmentNotesOverride>>,
+        TError,
+        {id: number;data: BodyType<AssessmentNotesOverrideInput>},
+        TContext
+      > => {
+      return useMutation(getEditAssessmentNotesOverrideMutationOptions(options));
     }
 
 export const getSaveManeuverResultsUrl = (id: number,) => {

@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
-import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment } from "@workspace/api-client-react";
+import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment, useEditAssessmentNotesOverride, useGetMe } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil } from "lucide-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil, ShieldAlert } from "lucide-react";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { getManeuverImage } from "@/lib/maneuver-images";
@@ -111,9 +111,24 @@ export default function ViewAssessment() {
     },
   });
 
+  const overrideNotes = useEditAssessmentNotesOverride({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetAssessmentQueryKey(id) });
+        setNotesEditOpen(false);
+        toast({ title: "Notes updated", description: "Lesson notes updated via admin override. The approval trail has been preserved." });
+      },
+      onError: () => toast({ title: "Failed to update notes", variant: "destructive" }),
+    },
+  });
+
+  const { data: me } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
+  const isAdmin = me?.role === "admin" || me?.role === "school_admin" || me?.role === "super_admin";
+
   const [previewOpen, setPreviewOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
   const [notesEditOpen, setNotesEditOpen] = useState(false);
+  const [notesOverrideMode, setNotesOverrideMode] = useState(false);
   const [editConfidenceNote, setEditConfidenceNote] = useState("");
   const [editFocusAreasNext, setEditFocusAreasNext] = useState("");
   const [emailInput, setEmailInput] = useState("");
@@ -300,12 +315,28 @@ export default function ViewAssessment() {
                     size="sm"
                     className="gap-1.5"
                     onClick={() => {
+                      setNotesOverrideMode(false);
                       setEditConfidenceNote((assessment as any).confidenceNote ?? "");
                       setEditFocusAreasNext((assessment as any).focusAreasNext ?? "");
                       setNotesEditOpen(true);
                     }}
                   >
                     <Pencil className="w-3.5 h-3.5" /> Edit
+                  </Button>
+                )}
+                {finStatus !== "draft" && isAdmin && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-amber-700 border-amber-300 hover:bg-amber-50"
+                    onClick={() => {
+                      setNotesOverrideMode(true);
+                      setEditConfidenceNote((assessment as any).confidenceNote ?? "");
+                      setEditFocusAreasNext((assessment as any).focusAreasNext ?? "");
+                      setNotesEditOpen(true);
+                    }}
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5" /> Edit Notes (Admin Override)
                   </Button>
                 )}
               </div>
@@ -429,8 +460,19 @@ export default function ViewAssessment() {
       <Dialog open={notesEditOpen} onOpenChange={setNotesEditOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Lesson Notes</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {notesOverrideMode && <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />}
+              {notesOverrideMode ? "Edit Notes (Admin Override)" : "Edit Lesson Notes"}
+            </DialogTitle>
           </DialogHeader>
+          {notesOverrideMode && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+              <p>
+                This assessment has already been submitted. Saving will update the notes only — the approval status and audit trail will not be changed. The override will be logged.
+              </p>
+            </div>
+          )}
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="edit-confidence-note">Confidence &amp; Overall Notes</Label>
@@ -456,19 +498,32 @@ export default function ViewAssessment() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setNotesEditOpen(false)}>Cancel</Button>
             <Button
-              disabled={updateAssessment.isPending}
+              disabled={updateAssessment.isPending || overrideNotes.isPending}
+              className={notesOverrideMode ? "bg-amber-600 hover:bg-amber-700 text-white" : undefined}
               onClick={() => {
-                updateAssessment.mutate({
-                  id,
-                  data: {
-                    confidenceNote: editConfidenceNote,
-                    focusAreasNext: editFocusAreasNext,
-                  } as any,
-                });
+                if (notesOverrideMode) {
+                  overrideNotes.mutate({
+                    id,
+                    data: {
+                      confidenceNote: editConfidenceNote,
+                      focusAreasNext: editFocusAreasNext,
+                    },
+                  });
+                } else {
+                  updateAssessment.mutate({
+                    id,
+                    data: {
+                      confidenceNote: editConfidenceNote,
+                      focusAreasNext: editFocusAreasNext,
+                    } as any,
+                  });
+                }
               }}
             >
-              {updateAssessment.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              Save Notes
+              {(updateAssessment.isPending || overrideNotes.isPending)
+                ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                : null}
+              {notesOverrideMode ? "Save Override" : "Save Notes"}
             </Button>
           </DialogFooter>
         </DialogContent>
