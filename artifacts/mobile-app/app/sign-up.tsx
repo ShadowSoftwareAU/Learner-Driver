@@ -3,7 +3,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -18,33 +18,47 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// Required so the OAuth session is marked complete when the app is resumed
 WebBrowser.maybeCompleteAuthSession();
 
-export default function SignInScreen() {
+// ── Step: "register" | "verify" ───────────────────────────────────────────────
+
+export default function SignUpScreen() {
   const clerk = useClerk();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  // Form state
+  const [firstName, setFirstName]   = useState("");
+  const [lastName, setLastName]     = useState("");
+  const [email, setEmail]           = useState("");
+  const [password, setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // Verification step
+  const [step, setStep]             = useState<"register" | "verify">("register");
+  const [code, setCode]             = useState("");
+
+  // Loading / error
+  const [loading, setLoading]           = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [appleLoading, setAppleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [appleLoading, setAppleLoading]   = useState(false);
+  const [error, setError]               = useState<string | null>(null);
 
-  // ── Google OAuth ─────────────────────────────────────────────────────────────
-  const { startOAuthFlow } = useOAuth({ strategy: "oauth_google" });
+  const codeRef = useRef<TextInput>(null);
 
-  // ── Apple OAuth ──────────────────────────────────────────────────────────────
-  const { startOAuthFlow: startAppleOAuthFlow } = useOAuth({ strategy: "oauth_apple" });
+  // ── OAuth ──────────────────────────────────────────────────────────────────
+  const { startOAuthFlow: startGoogleFlow } = useOAuth({ strategy: "oauth_google" });
+  const { startOAuthFlow: startAppleFlow  } = useOAuth({ strategy: "oauth_apple" });
 
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
+  const handleOAuth = async (
+    startFlow: typeof startGoogleFlow,
+    setOAuthLoading: (v: boolean) => void,
+    label: string,
+  ) => {
+    setOAuthLoading(true);
     setError(null);
     try {
-      const { createdSessionId, setActive } = await startOAuthFlow({
+      const { createdSessionId, setActive } = await startFlow({
         redirectUrl: Linking.createURL("/", { scheme: "mobile-app" }),
       });
       if (createdSessionId && setActive) {
@@ -58,41 +72,16 @@ export default function SignInScreen() {
         "errors" in err &&
         Array.isArray((err as { errors: { message: string }[] }).errors)
           ? (err as { errors: { message: string }[] }).errors[0]?.message
-          : "Google sign in failed. Please try again.";
-      setError(msg ?? "Google sign in failed.");
+          : `${label} sign in failed. Please try again.`;
+      setError(msg ?? `${label} sign in failed.`);
     } finally {
-      setGoogleLoading(false);
+      setOAuthLoading(false);
     }
   };
 
-  const handleAppleSignIn = async () => {
-    setAppleLoading(true);
-    setError(null);
-    try {
-      const { createdSessionId, setActive } = await startAppleOAuthFlow({
-        redirectUrl: Linking.createURL("/", { scheme: "mobile-app" }),
-      });
-      if (createdSessionId && setActive) {
-        await setActive({ session: createdSessionId });
-        router.replace("/");
-      }
-    } catch (err: unknown) {
-      const msg =
-        err &&
-        typeof err === "object" &&
-        "errors" in err &&
-        Array.isArray((err as { errors: { message: string }[] }).errors)
-          ? (err as { errors: { message: string }[] }).errors[0]?.message
-          : "Apple sign in failed. Please try again.";
-      setError(msg ?? "Apple sign in failed.");
-    } finally {
-      setAppleLoading(false);
-    }
-  };
-
-  // ── Email / password ─────────────────────────────────────────────────────────
-  const handleSignIn = async () => {
-    if (!email || !password) return;
+  // ── Email / password sign-up ───────────────────────────────────────────────
+  const handleSignUp = async () => {
+    if (!firstName || !email || !password) return;
     if (!clerk.loaded || !clerk.client) {
       setError("Still loading — please try again in a moment.");
       return;
@@ -100,12 +89,46 @@ export default function SignInScreen() {
     setLoading(true);
     setError(null);
     try {
-      const result = await clerk.client.signIn.create({ identifier: email, password });
-      if (result.status === "complete") {
+      const signUp = await clerk.client.signUp.create({
+        firstName: firstName.trim(),
+        lastName: lastName.trim() || undefined,
+        emailAddress: email.trim(),
+        password,
+      });
+      // Trigger email OTP
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      setStep("verify");
+      setTimeout(() => codeRef.current?.focus(), 300);
+    } catch (err: unknown) {
+      const msg =
+        err &&
+        typeof err === "object" &&
+        "errors" in err &&
+        Array.isArray((err as { errors: { message: string }[] }).errors)
+          ? (err as { errors: { message: string }[] }).errors[0]?.message
+          : "Sign up failed. Please try again.";
+      setError(msg ?? "Sign up failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ── Verify OTP ────────────────────────────────────────────────────────────
+  const handleVerify = async () => {
+    if (!code || code.length < 6) return;
+    if (!clerk.loaded || !clerk.client) {
+      setError("Still loading — please try again in a moment.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await clerk.client.signUp.attemptEmailAddressVerification({ code });
+      if (result.status === "complete" && result.createdSessionId) {
         await clerk.setActive({ session: result.createdSessionId });
         router.replace("/");
       } else {
-        setError("Sign in could not be completed. Please try again.");
+        setError("Verification could not be completed. Please try again.");
       }
     } catch (err: unknown) {
       const msg =
@@ -114,13 +137,99 @@ export default function SignInScreen() {
         "errors" in err &&
         Array.isArray((err as { errors: { message: string }[] }).errors)
           ? (err as { errors: { message: string }[] }).errors[0]?.message
-          : "Something went wrong. Please try again.";
-      setError(msg ?? "Something went wrong.");
+          : "Invalid code. Please try again.";
+      setError(msg ?? "Invalid code.");
     } finally {
       setLoading(false);
     }
   };
 
+  // ── Render: verify step ───────────────────────────────────────────────────
+  if (step === "verify") {
+    return (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[
+            styles.content,
+            { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 },
+          ]}
+          keyboardShouldPersistTaps="handled"
+          bounces={false}
+        >
+          <View style={styles.header}>
+            <Image
+              source={require("../assets/images/steps2drive-logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.subtitle}>Check your email</Text>
+            <Text style={styles.verifyHint}>
+              We sent a 6-digit code to {email}. Enter it below to confirm your account.
+            </Text>
+          </View>
+
+          <View style={styles.form}>
+            {error ? (
+              <View style={styles.errorBox}>
+                <Feather name="alert-circle" size={16} color="#EF4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.field}>
+              <Text style={styles.label}>Verification code</Text>
+              <TextInput
+                ref={codeRef}
+                style={[styles.input, styles.codeInput]}
+                value={code}
+                onChangeText={setCode}
+                placeholder="000000"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                autoComplete="one-time-code"
+                maxLength={6}
+                textContentType="oneTimeCode"
+              />
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                pressed && styles.buttonPressed,
+                (!code || code.length < 6) && styles.buttonDisabled,
+              ]}
+              onPress={handleVerify}
+              disabled={loading || !code || code.length < 6}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.buttonText}>Confirm account</Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              style={styles.switchRow}
+              onPress={() => { setStep("register"); setError(null); setCode(""); }}
+            >
+              <Text style={styles.switchText}>
+                Wrong email?{" "}
+                <Text style={styles.switchLink}>Go back</Text>
+              </Text>
+            </Pressable>
+          </View>
+
+          <Text style={styles.footer}>Steps2Drive · Instructor & Student Portal</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Render: register step ─────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -130,23 +239,21 @@ export default function SignInScreen() {
         style={styles.scroll}
         contentContainerStyle={[
           styles.content,
-          { paddingTop: insets.top + 60, paddingBottom: insets.bottom + 32 },
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 32 },
         ]}
         keyboardShouldPersistTaps="handled"
         bounces={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Image
             source={require("../assets/images/steps2drive-logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={styles.subtitle}>Sign in to your account</Text>
+          <Text style={styles.subtitle}>Create an account</Text>
         </View>
 
         <View style={styles.form}>
-          {/* Error banner */}
           {error ? (
             <View style={styles.errorBox}>
               <Feather name="alert-circle" size={16} color="#EF4444" />
@@ -157,7 +264,7 @@ export default function SignInScreen() {
           {/* Apple SSO */}
           <Pressable
             style={({ pressed }) => [styles.appleButton, pressed && styles.buttonPressed]}
-            onPress={handleAppleSignIn}
+            onPress={() => handleOAuth(startAppleFlow, setAppleLoading, "Apple")}
             disabled={appleLoading || googleLoading || loading}
           >
             {appleLoading ? (
@@ -173,7 +280,7 @@ export default function SignInScreen() {
           {/* Google SSO */}
           <Pressable
             style={({ pressed }) => [styles.googleButton, pressed && styles.buttonPressed]}
-            onPress={handleGoogleSignIn}
+            onPress={() => handleOAuth(startGoogleFlow, setGoogleLoading, "Google")}
             disabled={googleLoading || appleLoading || loading}
           >
             {googleLoading ? (
@@ -193,6 +300,36 @@ export default function SignInScreen() {
             <View style={styles.dividerLine} />
             <Text style={styles.dividerLabel}>or</Text>
             <View style={styles.dividerLine} />
+          </View>
+
+          {/* Name row */}
+          <View style={styles.nameRow}>
+            <View style={[styles.field, { flex: 1 }]}>
+              <Text style={styles.label}>First name</Text>
+              <TextInput
+                style={styles.input}
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Jane"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="given-name"
+              />
+            </View>
+            <View style={[styles.field, { flex: 1 }]}>
+              <Text style={styles.label}>Last name</Text>
+              <TextInput
+                style={styles.input}
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Smith"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="family-name"
+              />
+            </View>
           </View>
 
           {/* Email */}
@@ -224,7 +361,7 @@ export default function SignInScreen() {
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 autoCorrect={false}
-                autoComplete="password"
+                autoComplete="new-password"
               />
               <Pressable
                 style={styles.eyeButton}
@@ -240,31 +377,33 @@ export default function SignInScreen() {
             </View>
           </View>
 
-          {/* Sign in button */}
+          {/* Sign up button */}
           <Pressable
-            style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
-            onPress={handleSignIn}
-            disabled={loading || googleLoading || !email || !password}
+            style={({ pressed }) => [
+              styles.button,
+              pressed && styles.buttonPressed,
+              (!firstName || !email || !password) && styles.buttonDisabled,
+            ]}
+            onPress={handleSignUp}
+            disabled={loading || googleLoading || appleLoading || !firstName || !email || !password}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.buttonText}>Sign in</Text>
+              <Text style={styles.buttonText}>Create account</Text>
             )}
+          </Pressable>
+
+          {/* Switch to sign-in */}
+          <Pressable style={styles.switchRow} onPress={() => router.replace("/sign-in")}>
+            <Text style={styles.switchText}>
+              Already have an account?{" "}
+              <Text style={styles.switchLink}>Sign in</Text>
+            </Text>
           </Pressable>
         </View>
 
-        {/* Switch to sign-up */}
-        <Pressable style={styles.switchRow} onPress={() => router.replace("/sign-up")}>
-          <Text style={styles.switchText}>
-            Don't have an account?{" "}
-            <Text style={styles.switchLink}>Sign up</Text>
-          </Text>
-        </Pressable>
-
-        <Text style={styles.footer}>
-          Steps2Drive · Instructor & Student Portal
-        </Text>
+        <Text style={styles.footer}>Steps2Drive · Instructor & Student Portal</Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -273,16 +412,20 @@ export default function SignInScreen() {
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: "#F8FAFC" },
   content: { paddingHorizontal: 24 },
-  header: { alignItems: "center", marginBottom: 36 },
-  logo: {
-    width: 220,
-    height: 44,
-    marginBottom: 20,
-  },
+  header: { alignItems: "center", marginBottom: 28 },
+  logo: { width: 220, height: 44, marginBottom: 20 },
   subtitle: {
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     color: "#64748B",
+  },
+  verifyHint: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: "#94A3B8",
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
   },
   form: { gap: 0 },
   errorBox: {
@@ -344,7 +487,6 @@ const styles = StyleSheet.create({
   googleIconText: {
     fontSize: 16,
     fontFamily: "Inter_700Bold",
-    // Standard Google blue
     color: "#4285F4",
   },
   googleButtonText: {
@@ -360,16 +502,15 @@ const styles = StyleSheet.create({
     gap: 10,
     marginVertical: 16,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: "#E2E8F0",
-  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: "#E2E8F0" },
   dividerLabel: {
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: "#94A3B8",
   },
+
+  // Name row
+  nameRow: { flexDirection: "row", gap: 12 },
 
   // Fields
   field: { marginBottom: 16 },
@@ -389,7 +530,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     color: "#0F172A",
-    marginBottom: 0,
+  },
+  codeInput: {
+    textAlign: "center",
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 8,
   },
   passwordRow: {
     flexDirection: "row",
@@ -399,11 +545,10 @@ const styles = StyleSheet.create({
     borderColor: "#E2E8F0",
     borderRadius: 10,
     paddingRight: 12,
-    gap: 0,
   },
   eyeButton: { padding: 8 },
 
-  // Sign in button
+  // Buttons
   button: {
     backgroundColor: "#2563EB",
     borderRadius: 12,
@@ -414,13 +559,14 @@ const styles = StyleSheet.create({
     minHeight: 50,
   },
   buttonPressed: { opacity: 0.85 },
+  buttonDisabled: { opacity: 0.45 },
   buttonText: {
     fontSize: 16,
     fontFamily: "Inter_600SemiBold",
     color: "#FFFFFF",
   },
 
-  // Switch to sign-up
+  // Switch row
   switchRow: { marginTop: 20, alignItems: "center" },
   switchText: {
     fontSize: 13,
@@ -433,7 +579,7 @@ const styles = StyleSheet.create({
   },
 
   footer: {
-    marginTop: 24,
+    marginTop: 40,
     textAlign: "center",
     fontSize: 12,
     fontFamily: "Inter_400Regular",
