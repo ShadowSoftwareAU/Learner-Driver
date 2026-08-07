@@ -683,7 +683,12 @@ router.post("/assessments/:id/edit-notes-override", requireAuth, async (req: any
     },
   }, req);
 
-  res.json(formatAssessment(updated));
+  res.json({
+    ...formatAssessment(updated),
+    // wasDispatched tells the UI that the student may have already received
+    // the original notes by email, so it can show a stronger warning.
+    wasDispatched: a.finalizationStatus === "dispatched",
+  });
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

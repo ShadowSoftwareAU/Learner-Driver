@@ -473,6 +473,14 @@ export default function ViewAssessment() {
               </p>
             </div>
           )}
+          {notesOverrideMode && finStatus === "dispatched" && (
+            <div className="flex items-start gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+              <Mail className="w-4 h-4 mt-0.5 shrink-0 text-red-600" />
+              <p>
+                <strong>This report has already been dispatched.</strong> The student{dispatchEmails.length > 0 ? ` (and ${dispatchEmails.join(", ")})` : ""} may have already received the original notes by email. Saving here updates the in-app record only — the email already sent cannot be recalled or changed.
+              </p>
+            </div>
+          )}
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label htmlFor="edit-confidence-note">Confidence &amp; Overall Notes</Label>
