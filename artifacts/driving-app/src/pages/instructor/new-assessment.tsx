@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -158,6 +159,7 @@ export default function NewAssessment() {
   );
   const [focusAreas, setFocusAreas] = useState(() => initialDraft?.focusAreas ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [viewMode, setViewMode] = useViewMode();
   // Tracks whether we've already hydrated form state from an existing (resumed) assessment
   const [resumeHydrated, setResumeHydrated] = useState(false);
@@ -373,8 +375,36 @@ export default function NewAssessment() {
 
   const selectedStudent = students?.find(s => s.id.toString() === studentId);
 
+  const handleConfirmedCancel = () => {
+    draftClearedRef.current = true;
+    clearAssessmentDraft();
+    setLocation(resumeId ? `/instructor/assessments/${resumeId}` : "/instructor/students");
+  };
+
   return (
     <SidebarLayout>
+      {/* ── Cancel confirmation ───────────────────────────────────────────────── */}
+      <AlertDialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Discard this assessment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              All maneuver ratings, notes, and setup details entered so far will be permanently lost.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep working</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmedCancel}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Yes, discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* ── Setup Dialog ──────────────────────────────────────────────────────── */}
       <Dialog open={setupOpen} onOpenChange={setSetupOpen}>
         <DialogContent className="max-w-xl w-full p-0">
@@ -954,11 +984,7 @@ export default function NewAssessment() {
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-end gap-4 z-10">
           <Button
             variant="outline"
-            onClick={() => {
-              draftClearedRef.current = true;
-              clearAssessmentDraft();
-              setLocation(resumeId ? `/instructor/assessments/${resumeId}` : "/instructor/students");
-            }}
+            onClick={() => setCancelConfirmOpen(true)}
             className="h-16 text-base px-6"
           >
             Cancel
