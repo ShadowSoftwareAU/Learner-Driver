@@ -160,6 +160,7 @@ export default function NewAssessment() {
   const [focusAreas, setFocusAreas] = useState(() => initialDraft?.focusAreas ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useViewMode();
   // Tracks whether we've already hydrated form state from an existing (resumed) assessment
   const [resumeHydrated, setResumeHydrated] = useState(false);
@@ -404,6 +405,53 @@ export default function NewAssessment() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* ── Lesson Notes dialog (shown on Save) ──────────────────────────────── */}
+      <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+        <DialogContent className="max-w-lg w-full">
+          <DialogHeader>
+            <DialogTitle>Lesson Notes</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Add any final notes before saving. Both fields are optional.
+            </p>
+          </DialogHeader>
+          <div className="space-y-5 pt-2">
+            <div className="space-y-2">
+              <Label className="text-base">Overall Confidence &amp; Notes</Label>
+              <Textarea
+                placeholder="How did the student perform overall?"
+                value={confidenceNote}
+                onChange={e => setConfidenceNote(e.target.value)}
+                rows={4}
+                className="text-base resize-none"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-base">Focus Areas for Next Lesson</Label>
+              <Textarea
+                placeholder="What should be the priority next time?"
+                value={focusAreas}
+                onChange={e => setFocusAreas(e.target.value)}
+                rows={3}
+                className="text-base resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <Button variant="outline" onClick={() => setNotesDialogOpen(false)}>
+                Back
+              </Button>
+              <Button
+                onClick={() => { setNotesDialogOpen(false); handleSave(); }}
+                disabled={isSubmitting}
+                className="gap-2"
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {resumeId ? "Save & Return" : "Save Assessment"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Setup Dialog ──────────────────────────────────────────────────────── */}
       <Dialog open={setupOpen} onOpenChange={setSetupOpen}>
@@ -943,34 +991,6 @@ export default function NewAssessment() {
           ))
         )}
 
-        <Card>
-          <CardHeader className="p-6">
-            <CardTitle>Lesson Notes</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6 p-6 pt-0">
-            <div className="space-y-2">
-              <Label className="text-base">Overall Confidence & Notes</Label>
-              <Textarea
-                placeholder="How did the student perform overall?"
-                value={confidenceNote}
-                onChange={e => setConfidenceNote(e.target.value)}
-                rows={3}
-                className="text-base"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-base">Focus Areas for Next Lesson</Label>
-              <Textarea
-                placeholder="What should be the priority next time?"
-                value={focusAreas}
-                onChange={e => setFocusAreas(e.target.value)}
-                rows={2}
-                className="text-base"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
         {maneuvers && Object.keys(results).length > 0 && (
           <CategorySummary
             maneuvers={maneuvers}
@@ -990,11 +1010,11 @@ export default function NewAssessment() {
             Cancel
           </Button>
           <Button
-            onClick={handleSave}
+            onClick={() => setNotesDialogOpen(true)}
             disabled={isSubmitting || !setupDone}
             className="h-16 text-base px-6"
           >
-            {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+            <Save className="w-5 h-5 mr-2" />
             {resumeId ? "Save & Return" : "Save Assessment"}
           </Button>
         </div>

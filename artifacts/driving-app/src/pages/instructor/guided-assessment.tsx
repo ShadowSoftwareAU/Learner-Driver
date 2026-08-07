@@ -1,4 +1,5 @@
 import { useListManeuvers, useCreateAssessment, useSaveManeuverResults, useListStudents, useSubmitAssessment } from "@workspace/api-client-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StudentAvatar } from "@/components/StudentAvatar";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +96,7 @@ export default function GuidedAssessment() {
   const [confidenceNote, setConfidenceNote] = useState("");
   const [focusAreas, setFocusAreas] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useViewMode();
 
   // Guidance panel — expanded per-maneuver in the assess step
@@ -923,33 +925,52 @@ export default function GuidedAssessment() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="p-6">
-              <CardTitle>Lesson Notes</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6 p-6 pt-0">
-              <div className="space-y-2">
-                <Label className="text-base">Overall Confidence & Notes</Label>
-                <Textarea
-                  placeholder="How did the student perform overall?"
-                  value={confidenceNote}
-                  onChange={e => setConfidenceNote(e.target.value)}
-                  rows={3}
-                  className="text-base"
-                />
+          {/* Lesson Notes dialog */}
+          <Dialog open={notesDialogOpen} onOpenChange={setNotesDialogOpen}>
+            <DialogContent className="max-w-lg w-full">
+              <DialogHeader>
+                <DialogTitle>Lesson Notes</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add any final notes before saving. Both fields are optional.
+                </p>
+              </DialogHeader>
+              <div className="space-y-5 pt-2">
+                <div className="space-y-2">
+                  <Label className="text-base">Overall Confidence &amp; Notes</Label>
+                  <Textarea
+                    placeholder="How did the student perform overall?"
+                    value={confidenceNote}
+                    onChange={e => setConfidenceNote(e.target.value)}
+                    rows={4}
+                    className="text-base resize-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-base">Focus Areas for Next Lesson</Label>
+                  <Textarea
+                    placeholder="What should be the priority next time?"
+                    value={focusAreas}
+                    onChange={e => setFocusAreas(e.target.value)}
+                    rows={3}
+                    className="text-base resize-none"
+                  />
+                </div>
+                <div className="flex justify-end gap-3 pt-1">
+                  <Button variant="outline" onClick={() => setNotesDialogOpen(false)}>
+                    Back
+                  </Button>
+                  <Button
+                    onClick={() => { setNotesDialogOpen(false); handleSave(); }}
+                    disabled={isSubmitting}
+                    className="gap-2"
+                  >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Assessment
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label className="text-base">Focus Areas for Next Lesson</Label>
-                <Textarea
-                  placeholder="What should be the priority next time?"
-                  value={focusAreas}
-                  onChange={e => setFocusAreas(e.target.value)}
-                  rows={2}
-                  className="text-base"
-                />
-              </div>
-            </CardContent>
-          </Card>
+            </DialogContent>
+          </Dialog>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-border shadow-lg md:left-64 flex justify-between gap-4 z-10">
             <Button
@@ -959,8 +980,8 @@ export default function GuidedAssessment() {
             >
               <ArrowLeft className="w-5 h-5 mr-2" /> Back
             </Button>
-            <Button onClick={handleSave} disabled={isSubmitting} className="h-16 text-base px-6">
-              {isSubmitting ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Save className="w-5 h-5 mr-2" />}
+            <Button onClick={() => setNotesDialogOpen(true)} disabled={isSubmitting} className="h-16 text-base px-6">
+              <Save className="w-5 h-5 mr-2" />
               Save Assessment
             </Button>
           </div>
