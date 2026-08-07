@@ -93,6 +93,16 @@ export default function ViewAssessment() {
   const updateAssessment = useUpdateAssessment({
     mutation: {
       onSuccess: () => {
+        // Write directly into the cache so the card refreshes immediately —
+        // relying solely on invalidateQueries can race with ETag 304 responses
+        // and leave stale data on screen until the next manual refresh.
+        qc.setQueryData(
+          getGetAssessmentQueryKey(id),
+          (old: any) => old
+            ? { ...old, confidenceNote: editConfidenceNote, focusAreasNext: editFocusAreasNext }
+            : old,
+        );
+        // Background sync to pick up any server-side differences.
         qc.invalidateQueries({ queryKey: getGetAssessmentQueryKey(id) });
         setNotesEditOpen(false);
         toast({ title: "Notes updated", description: "Lesson notes have been saved." });
