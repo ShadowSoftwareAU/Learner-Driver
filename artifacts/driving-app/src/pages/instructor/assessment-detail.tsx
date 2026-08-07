@@ -204,6 +204,13 @@ export default function ViewAssessment() {
               {format(new Date(assessment.lessonDate), "PPP")} &bull; {assessment.durationMinutes} mins
               {assessment.studentName && <> &bull; {assessment.studentName}</>}
             </p>
+            {assessment.vehicleMake && assessment.vehicleModel && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                <Car className="w-3.5 h-3.5 shrink-0" />
+                {assessment.vehicleMake} {assessment.vehicleModel}
+                {assessment.vehicleRego && <> &bull; {assessment.vehicleRego}</>}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Badge

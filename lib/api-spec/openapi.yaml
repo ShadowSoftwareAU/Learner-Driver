@@ -4429,6 +4429,18 @@ components:
         lightingCondition:
           type: ["string", "null"]
           enum: [daylight, dawn, dusk, night]
+        vehicleId:
+          type: ["integer", "null"]
+          description: "ID of the vehicle used in this lesson"
+        vehicleMake:
+          type: ["string", "null"]
+          description: "Make of the vehicle used (resolved from instructor_vehicles)"
+        vehicleModel:
+          type: ["string", "null"]
+          description: "Model of the vehicle used (resolved from instructor_vehicles)"
+        vehicleRego:
+          type: ["string", "null"]
+          description: "Registration plate of the vehicle used"
         maneuverResults:
           type: array
           items:

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star, MapPin, Cloud, Sun } from "lucide-react";
+import { BookOpen, User, Calendar, Clock, CheckCircle2, AlertCircle, Mail, Star, MapPin, Cloud, Sun, Car } from "lucide-react";
 import AssessmentRouteMap from "@/components/AssessmentRouteMap";
 import { WeatherConditionLabel, LightingConditionLabel } from "@/lib/enums";
 
@@ -68,6 +68,9 @@ type ReportPreviewProps = {
     routePath?: Array<{ lat: number; lng: number; ts: number }> | null;
     weatherCondition?: string | null;
     lightingCondition?: string | null;
+    vehicleMake?: string | null;
+    vehicleModel?: string | null;
+    vehicleRego?: string | null;
   };
   /** Compact mode for inline rendering inside a Sheet — omits outer padding */
   compact?: boolean;
@@ -183,11 +186,19 @@ export function ReportPreview({ assessment, compact = false }: ReportPreviewProp
         )}
       </div>
 
-      {/* Conditions row — pedal control, weather, lighting */}
+      {/* Conditions row — pedal control, weather, lighting, vehicle */}
       <div className="flex flex-wrap gap-2">
         {assessment.pedalOperator && (
           <span className="text-xs bg-muted/50 rounded px-3 py-1.5 border border-border flex items-center gap-1.5">
             <strong>Pedal control:</strong> {PEDAL_LABEL[assessment.pedalOperator] ?? assessment.pedalOperator}
+          </span>
+        )}
+        {assessment.vehicleMake && assessment.vehicleModel && (
+          <span className="text-xs bg-slate-50 text-slate-800 rounded px-3 py-1.5 border border-slate-200 flex items-center gap-1.5">
+            <Car className="w-3.5 h-3.5 shrink-0" />
+            <strong>Vehicle:</strong>{" "}
+            {assessment.vehicleMake} {assessment.vehicleModel}
+            {assessment.vehicleRego && <> &bull; {assessment.vehicleRego}</>}
           </span>
         )}
         {assessment.weatherCondition && (

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { eq, desc, and, sql, isNotNull, or, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable, sessionFeedbackTable, usersTable, schoolInstructorsTable, handoverNotesTable } from "@workspace/db";
+import { db, assessmentsTable, maneuverResultsTable, maneuversTable, studentsTable, instructorsTable, sessionFeedbackTable, usersTable, schoolInstructorsTable, handoverNotesTable, instructorVehiclesTable } from "@workspace/db";
 import { requireAuth, getOrCreateUser } from "./users";
 import { logAudit } from "./audit";
 import { scanContent } from "../lib/contentFiltering/scanContent";
@@ -265,12 +265,24 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
   const [student] = await db.select({ fullName: studentsTable.fullName }).from(studentsTable).where(eq(studentsTable.id, a.studentId));
   const [instructor] = await db.select({ fullName: instructorsTable.fullName }).from(instructorsTable).where(eq(instructorsTable.id, a.instructorId));
 
+  let vehicle: { make: string; model: string; rego: string | null } | null = null;
+  if (a.vehicleId) {
+    const [v] = await db
+      .select({ make: instructorVehiclesTable.make, model: instructorVehiclesTable.model, rego: instructorVehiclesTable.rego })
+      .from(instructorVehiclesTable)
+      .where(eq(instructorVehiclesTable.id, a.vehicleId));
+    vehicle = v ?? null;
+  }
+
   await logAudit({ actorId: user.id, actorRole: user.role, action: "view_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
 
   res.json({
     ...formatAssessment(a),
     studentName: student?.fullName ?? null,
     instructorName: instructor?.fullName ?? null,
+    vehicleMake: vehicle?.make ?? null,
+    vehicleModel: vehicle?.model ?? null,
+    vehicleRego: vehicle?.rego ?? null,
     maneuverResults: results,
   });
 });

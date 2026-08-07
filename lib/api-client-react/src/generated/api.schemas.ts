@@ -1265,6 +1265,26 @@ export interface AssessmentDetail {
   weatherCondition?: AssessmentDetailWeatherCondition;
   /** @nullable */
   lightingCondition?: AssessmentDetailLightingCondition;
+  /**
+     * ID of the vehicle used in this lesson
+     * @nullable
+     */
+  vehicleId?: number | null;
+  /**
+     * Make of the vehicle used (resolved from instructor_vehicles)
+     * @nullable
+     */
+  vehicleMake?: string | null;
+  /**
+     * Model of the vehicle used (resolved from instructor_vehicles)
+     * @nullable
+     */
+  vehicleModel?: string | null;
+  /**
+     * Registration plate of the vehicle used
+     * @nullable
+     */
+  vehicleRego?: string | null;
   maneuverResults: ManeuverResult[];
   createdAt?: string;
 }

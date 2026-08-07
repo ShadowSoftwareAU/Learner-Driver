@@ -1220,6 +1220,10 @@ export const GetAssessmentResponse = zod.object({
   "preLessonBriefingAcknowledgedAt": zod.string().nullish(),
   "weatherCondition": zod.enum(['clear', 'partly_cloudy', 'overcast', 'light_rain', 'heavy_rain', 'foggy', 'windy']).nullish(),
   "lightingCondition": zod.enum(['daylight', 'dawn', 'dusk', 'night']).nullish(),
+  "vehicleId": zod.number().nullish().describe('ID of the vehicle used in this lesson'),
+  "vehicleMake": zod.string().nullish().describe('Make of the vehicle used (resolved from instructor_vehicles)'),
+  "vehicleModel": zod.string().nullish().describe('Model of the vehicle used (resolved from instructor_vehicles)'),
+  "vehicleRego": zod.string().nullish().describe('Registration plate of the vehicle used'),
   "maneuverResults": zod.array(zod.object({
   "id": zod.number(),
   "assessmentId": zod.number(),
