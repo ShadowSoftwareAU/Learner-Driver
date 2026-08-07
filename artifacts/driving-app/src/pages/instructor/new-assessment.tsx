@@ -188,8 +188,14 @@ export default function NewAssessment() {
     setPedalOperator((a.pedalOperator as PedalOperator) ?? "");
     setWeatherCondition((a.weatherCondition as WeatherCondition) ?? "");
     setLightingCondition((a.lightingCondition as LightingCondition) ?? "");
-    setConfidenceNote(a.confidenceNote ?? "");
-    setFocusAreas(a.focusAreasNext ?? "");
+    // Prefer draft state over DB state for in-progress notes.
+    // The draft is saved locally every 400 ms and represents the user's most
+    // recent work. If they typed notes, clicked Back, and the page remounted,
+    // the draft holds their notes while the DB still has the pre-back value.
+    // Only fall back to the DB value when the draft (and therefore current
+    // state) is empty.
+    setConfidenceNote(prev => prev !== "" ? prev : (a.confidenceNote ?? ""));
+    setFocusAreas(prev => prev !== "" ? prev : (a.focusAreasNext ?? ""));
     setFitnessConfirmed(true); // already confirmed when the assessment was originally created
     setVehicleId((a as any).vehicleId ?? null);
     setSetupDone(true);
@@ -232,7 +238,7 @@ export default function NewAssessment() {
   }, [
     assessmentType, studentId, date, duration, pedalOperator,
     fitnessConfirmed, weatherCondition, lightingCondition, vehicleId,
-    results, maneuverNotes, confidenceNote, focusAreas, setupDone,
+    results, maneuverNotes, maneuverLocations, confidenceNote, focusAreas, setupDone,
   ]);
 
   const groupedManeuvers = useMemo(() => {
@@ -317,8 +323,8 @@ export default function NewAssessment() {
         await updateAssessment.mutateAsync({
           id: resumeId,
           data: {
-            confidenceNote: confidenceNote || undefined,
-            focusAreasNext: focusAreas || undefined,
+            confidenceNote: confidenceNote !== "" ? confidenceNote : undefined,
+            focusAreasNext: focusAreas !== "" ? focusAreas : undefined,
             durationMinutes: parseInt(duration),
             pedalOperator: (pedalOperator || undefined) as any,
             weatherCondition: (weatherCondition || undefined) as any,
