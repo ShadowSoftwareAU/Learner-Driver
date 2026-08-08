@@ -44,8 +44,8 @@ router.post("/viewer-links/request", requireAuth, async (req: any, res): Promise
   const normalizedCode = code.trim().toUpperCase();
 
   // Find student with this viewer code
-  const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName })
-    .from(studentsTable).where(eq(studentsTable.id, assessment.studentId));
+  const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName, schoolId: studentsTable.schoolId })
+    .from(studentsTable).where(eq(studentsTable.viewerCode, normalizedCode));
 
   if (!student) {
     // Log failed attempt for security monitoring
@@ -193,15 +193,20 @@ router.get("/viewer/students/:id/dashboard", requireAuth, async (req: any, res):
   const [link] = await db.select().from(viewerLinksTable).where(
     and(
       eq(viewerLinksTable.viewerUserId, user.id),
-      eq(viewerLinksTable.studentId, assessment.studentId),
+      eq(viewerLinksTable.studentId, studentId),
       eq(viewerLinksTable.linkStatus, "active"),
     )
   );
   if (!link) { res.status(403).json({ error: "No active viewer link for this student" }); return; }
 
-  // Fetch student name
-  const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName })
-    .from(studentsTable).where(eq(studentsTable.id, assessment.studentId));
+  // Fetch student name and hours fields needed for QLD calculation
+  const [student] = await db.select({
+    id: studentsTable.id,
+    fullName: studentsTable.fullName,
+    instructorHours: studentsTable.instructorHours,
+    supervisedHours: studentsTable.supervisedHours,
+    state: studentsTable.state,
+  }).from(studentsTable).where(eq(studentsTable.id, studentId));
 
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
 
@@ -368,7 +373,7 @@ router.get("/viewer/students/:id/logbook/export", requireAuth, async (req: any, 
   const [link] = await db.select().from(viewerLinksTable).where(
     and(
       eq(viewerLinksTable.viewerUserId, user.id),
-      eq(viewerLinksTable.studentId, assessment.studentId),
+      eq(viewerLinksTable.studentId, studentId),
       eq(viewerLinksTable.linkStatus, "active"),
     )
   );
@@ -376,7 +381,7 @@ router.get("/viewer/students/:id/logbook/export", requireAuth, async (req: any, 
 
   // Fetch student name
   const [student] = await db.select({ id: studentsTable.id, fullName: studentsTable.fullName })
-    .from(studentsTable).where(eq(studentsTable.id, assessment.studentId));
+    .from(studentsTable).where(eq(studentsTable.id, studentId));
   if (!student) { res.status(404).json({ error: "Student not found" }); return; }
 
   const rows = await db.select({
@@ -442,7 +447,7 @@ router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, asyn
   const [link] = await db.select().from(viewerLinksTable).where(
     and(
       eq(viewerLinksTable.viewerUserId, user.id),
-      eq(viewerLinksTable.studentId, assessment.studentId),
+      eq(viewerLinksTable.studentId, studentId),
       eq(viewerLinksTable.linkStatus, "active"),
     )
   );
@@ -483,22 +488,28 @@ router.post("/viewer/students/:studentId/supervised-sessions", requireAuth, asyn
     return;
   }
 
-  // Get or create a supervisor record in the instructors table for this viewer user
-  // so the FK constraint on assessments.instructor_id is satisfied.
+  // Get supervisor record for this viewer — required to satisfy FK on assessments.instructor_id.
   let supervisorRecord = (await db.select().from(instructorsTable).where(eq(instructorsTable.userId, user.id)))[0];
-  if (!supervisorRecord) { res.status(404).json({ error: "Session not found" }); return; }
+  if (!supervisorRecord) { res.status(403).json({ error: "No supervisor record on file. Contact your instructor to be set up as a supervisor." }); return; }
 
-  const [session] = await db.select().from(assessmentsTable).where(
-    and(
-      eq(assessmentsTable.id, sessionId),
-      eq(assessmentsTable.studentId, studentId),
-      eq(assessmentsTable.instructorId, supervisorRecord.id),
-      eq(assessmentsTable.performedByRole as any, "supervised"),
-    )
-  );
-  if (!session) { res.status(404).json({ error: "Session not found or not deletable by you" }); return; }
+  // Insert the supervised session
+  const [session] = await db.insert(assessmentsTable).values({
+    studentId,
+    instructorId: supervisorRecord.id,
+    lessonDate,
+    durationMinutes,
+    pedalOperator,
+    performedByRole: "supervised",
+    weatherCondition: weatherCondition ?? null,
+    lightingCondition: lightingCondition ?? null,
+    confidenceNote: notes ?? null,
+    startCoordinates: startCoordinates ?? null,
+    endCoordinates: endCoordinates ?? null,
+    status: "completed",
+  }).returning();
+  if (!session) { res.status(500).json({ error: "Failed to create supervised session" }); return; }
 
-  // Deduct the hours from the student's totals before deleting
+  // Add hours to the student's totals
   const hours = session.durationMinutes / 60;
   await db.execute(sql`UPDATE students SET total_hours = total_hours + ${hours}, supervised_hours = supervised_hours + ${hours} WHERE id = ${studentId}`);
 
@@ -544,7 +555,7 @@ router.patch("/viewer/students/:studentId/supervised-sessions/:sessionId", requi
   const [link] = await db.select().from(viewerLinksTable).where(
     and(
       eq(viewerLinksTable.viewerUserId, user.id),
-      eq(viewerLinksTable.studentId, assessment.studentId),
+      eq(viewerLinksTable.studentId, studentId),
       eq(viewerLinksTable.linkStatus, "active"),
     )
   );
@@ -618,7 +629,7 @@ router.delete("/viewer/students/:studentId/supervised-sessions/:sessionId", requ
   const [link] = await db.select().from(viewerLinksTable).where(
     and(
       eq(viewerLinksTable.viewerUserId, user.id),
-      eq(viewerLinksTable.studentId, assessment.studentId),
+      eq(viewerLinksTable.studentId, studentId),
       eq(viewerLinksTable.linkStatus, "active"),
     )
   );

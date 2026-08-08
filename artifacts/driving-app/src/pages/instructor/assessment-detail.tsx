@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment, useEditAssessmentNotesOverride, useOverrideManeuverResultNote, useGetMe } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil, ShieldAlert } from "lucide-react";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
 import { AssessmentTileView } from "@/components/assessment/AssessmentTileView";
 import { getManeuverImage } from "@/lib/maneuver-images";
@@ -32,6 +31,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReportPreview } from "@/components/ReportPreview";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil, ShieldAlert, History } from "lucide-react";
 
 const COMPETENCY_CLASS: Record<string, string> = {
   mastered:      "bg-green-100 text-green-800 border-green-200",
@@ -160,12 +160,12 @@ export default function ViewAssessment() {
       .join("\n");
   }, [assessment]);
 
-  const finStatus = (assessment as any)?.finalizationStatus ?? "draft";
+  const finStatus = assessment?.finalizationStatus ?? "draft";
   const banner = FINALIZATION_BANNER[finStatus] ?? FINALIZATION_BANNER.draft;
-  const isInProgress = (assessment as any)?.status === "in_progress";
+  const isInProgress = assessment?.status === "in_progress";
 
   const dispatchEmails: string[] = useMemo(() => {
-    const raw = (assessment as any)?.reportDispatchedTo;
+    const raw = assessment?.reportDispatchedTo;
     if (!raw) return [];
     try { return JSON.parse(raw); } catch { return []; }
   }, [assessment]);
@@ -332,7 +332,34 @@ export default function ViewAssessment() {
           <Card className="col-span-full">
             <CardHeader className="bg-gray-50 border-b">
               <div className="flex items-center justify-between gap-3">
-                <CardTitle>Lesson Notes</CardTitle>
+                <div className="flex items-center gap-2 min-w-0">
+                  <CardTitle>Lesson Notes</CardTitle>
+                  {assessment.notesOverriddenAt && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-1 text-xs border-amber-300 bg-amber-50 text-amber-700 cursor-default select-none shrink-0"
+                          >
+                            <History className="w-3 h-3" />
+                            Edited after submission
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-xs text-sm">
+                          <p className="font-medium">Notes changed after submission</p>
+                          <p className="text-muted-foreground mt-0.5">
+                            {assessment.notesOverriddenByName
+                              ? `Changed by ${assessment.notesOverriddenByName}`
+                              : "Changed by an admin"}
+                            {" on "}
+                            {format(new Date(assessment.notesOverriddenAt), "d MMM yyyy 'at' HH:mm")}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 {finStatus === "draft" && (
                   <Button
                     variant="outline"

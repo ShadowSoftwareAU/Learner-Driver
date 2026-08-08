@@ -524,6 +524,21 @@ export interface Assessment {
      */
   reportDispatchedTo?: string | null;
   /**
+     * Timestamp when an admin last overrode the lesson notes after submission
+     * @nullable
+     */
+  notesOverriddenAt?: string | null;
+  /**
+     * ID of the admin user who last overrode the notes
+     * @nullable
+     */
+  notesOverriddenByUserId?: number | null;
+  /**
+     * Display name of the admin who last overrode the notes (resolved on the server, present on GET /assessments/:id)
+     * @nullable
+     */
+  notesOverriddenByName?: string | null;
+  /**
      * Weather at lesson start
      * @nullable
      */
@@ -1185,6 +1200,7 @@ export const AssessmentDetailStatus = {
   no_show: 'no_show',
 } as const;
 
+export type AssessmentDetailPerformedByRole = typeof AssessmentDetailPerformedByRole[keyof typeof AssessmentDetailPerformedByRole];
 export type AssessmentDetailPedalOperator = typeof AssessmentDetailPedalOperator[keyof typeof AssessmentDetailPedalOperator];
 
 
@@ -1194,6 +1210,7 @@ export const AssessmentDetailPedalOperator = {
   shared: 'shared',
 } as const;
 
+export type AssessmentDetailFinalizationStatus = typeof AssessmentDetailFinalizationStatus[keyof typeof AssessmentDetailFinalizationStatus];
 /**
  * @nullable
  */
@@ -1261,6 +1278,8 @@ export interface AssessmentDetail {
   lessonDate: string;
   durationMinutes: number;
   status: AssessmentDetailStatus;
+  performedByRole?: AssessmentDetailPerformedByRole;
+  assessmentType?: AssessmentDetailAssessmentType;
   pedalOperator: AssessmentDetailPedalOperator;
   /** @nullable */
   confidenceNote?: string | null;
@@ -1268,6 +1287,20 @@ export interface AssessmentDetail {
   focusAreasNext?: string | null;
   /** @nullable */
   preLessonBriefingAcknowledgedAt?: string | null;
+  /** @nullable */
+  preDriveFitnessConfirmedAt?: string | null;
+  finalizationStatus?: AssessmentDetailFinalizationStatus;
+  /** @nullable */
+  approvedAt?: string | null;
+  /** @nullable */
+  approvedByUserId?: number | null;
+  /** @nullable */
+  reportDispatchedAt?: string | null;
+  /**
+     * JSON array of email addresses the report was dispatched to
+     * @nullable
+     */
+  reportDispatchedTo?: string | null;
   /** @nullable */
   weatherCondition?: AssessmentDetailWeatherCondition;
   /** @nullable */
@@ -1292,6 +1325,21 @@ export interface AssessmentDetail {
      * @nullable
      */
   vehicleRego?: string | null;
+  /**
+     * Timestamp when an admin last overrode the lesson notes after submission
+     * @nullable
+     */
+  notesOverriddenAt?: string | null;
+  /**
+     * ID of the admin user who last overrode the notes
+     * @nullable
+     */
+  notesOverriddenByUserId?: number | null;
+  /**
+     * Display name of the admin who last overrode the notes (resolved server-side)
+     * @nullable
+     */
+  notesOverriddenByName?: string | null;
   maneuverResults: ManeuverResult[];
   createdAt?: string;
 }
@@ -3485,3 +3533,23 @@ export type InviteInstructorByEmailBody = {
   /** Frontend base URL used to construct the invite link */
   joinBaseUrl?: string;
 };
+
+export const AssessmentDetailAssessmentType = {
+  qsafe: 'qsafe',
+  qride: 'qride',
+  heavy_vehicle: 'heavy_vehicle',
+} as const;
+
+export const AssessmentDetailPerformedByRole = {
+  instructor: 'instructor',
+  supervised: 'supervised',
+} as const;
+
+export const AssessmentDetailFinalizationStatus = {
+  draft: 'draft',
+  pending_approval: 'pending_approval',
+  approved: 'approved',
+  dispatched: 'dispatched',
+} as const;
+
+export type AssessmentDetailAssessmentType = typeof AssessmentDetailAssessmentType[keyof typeof AssessmentDetailAssessmentType];

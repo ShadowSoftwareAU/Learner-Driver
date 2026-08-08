@@ -43,6 +43,9 @@ export const assessmentsTable = pgTable("assessments", {
   approvedByUserId: integer("approved_by_user_id"),
   reportDispatchedAt: timestamp("report_dispatched_at", { withTimezone: true }),
   reportDispatchedTo: text("report_dispatched_to"), // JSON array of email addresses
+  // Admin notes override tracking — set when an admin edits notes after submission
+  notesOverriddenAt: timestamp("notes_overridden_at", { withTimezone: true }),
+  notesOverriddenByUserId: integer("notes_overridden_by_user_id"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

@@ -274,6 +274,13 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
     vehicle = v ?? null;
   }
 
+  // Resolve the display name of whoever last overrode the notes (may differ from the logged-in user)
+  let notesOverriddenByName: string | null = null;
+  if (a.notesOverriddenByUserId) {
+    const [actor] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, a.notesOverriddenByUserId));
+    notesOverriddenByName = actor?.name ?? null;
+  }
+
   await logAudit({ actorId: user.id, actorRole: user.role, action: "view_assessment", resourceType: "assessment", resourceId: id, studentId: a.studentId }, req);
 
   res.json({
@@ -283,6 +290,7 @@ router.get("/assessments/:id", requireAuth, async (req: any, res): Promise<void>
     vehicleMake: vehicle?.make ?? null,
     vehicleModel: vehicle?.model ?? null,
     vehicleRego: vehicle?.rego ?? null,
+    notesOverriddenByName,
     maneuverResults: results,
   });
 });
@@ -677,6 +685,9 @@ router.post("/assessments/:id/edit-notes-override", requireAuth, async (req: any
   const updates: any = {};
   if (confidenceNote !== undefined) updates.confidenceNote = confidenceNote;
   if (focusAreasNext !== undefined) updates.focusAreasNext = focusAreasNext;
+  // Stamp who overrode the notes and when — surfaced as a badge on the detail page
+  updates.notesOverriddenAt = new Date();
+  updates.notesOverriddenByUserId = user.id;
 
   const [updated] = await db.update(assessmentsTable).set(updates).where(eq(assessmentsTable.id, id)).returning();
   if (!updated) { res.status(404).json({ error: "Not found" }); return; }
@@ -695,8 +706,12 @@ router.post("/assessments/:id/edit-notes-override", requireAuth, async (req: any
     },
   }, req);
 
+  // Resolve the actor name so the client can display it immediately without a refetch
+  const [overrideActor] = await db.select({ name: usersTable.name }).from(usersTable).where(eq(usersTable.id, user.id));
+
   res.json({
     ...formatAssessment(updated),
+    notesOverriddenByName: overrideActor?.name ?? null,
     // wasDispatched tells the UI that the student may have already received
     // the original notes by email, so it can show a stronger warning.
     wasDispatched: a.finalizationStatus === "dispatched",
@@ -819,6 +834,8 @@ function formatAssessment(a: any) {
     weatherCondition: a.weatherCondition ?? null,
     lightingCondition: a.lightingCondition ?? null,
     vehicleId: a.vehicleId ?? null,
+    notesOverriddenAt: a.notesOverriddenAt ?? null,
+    notesOverriddenByUserId: a.notesOverriddenByUserId ?? null,
     createdAt: a.createdAt,
   };
 }

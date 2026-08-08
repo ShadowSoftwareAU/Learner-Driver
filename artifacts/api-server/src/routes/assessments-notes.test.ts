@@ -61,6 +61,7 @@ vi.mock("@workspace/db", () => ({
   usersTable: {},
   schoolInstructorsTable: {},
   handoverNotesTable: {},
+  instructorVehiclesTable: {},
 }));
 
 vi.mock("drizzle-orm", () => ({
@@ -189,11 +190,13 @@ function makeAssessmentRow(overrides: Record<string, unknown> = {}) {
     finalizationStatus: "draft",
     approvedAt: null,
     approvedByUserId: null,
-    reportDispatchedAt: null,
-    reportDispatchedTo: null,
+    reportDispatchedAt: null as string | null,
+    reportDispatchedTo: null as string | null,
     weatherCondition: null,
     lightingCondition: null,
     vehicleId: null,
+    notesOverriddenAt: null as Date | null,
+    notesOverriddenByUserId: null as number | null,
     createdAt: new Date("2025-06-01T08:00:00Z"),
     ...overrides,
   };

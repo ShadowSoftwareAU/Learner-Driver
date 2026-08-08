@@ -4317,6 +4317,16 @@ components:
         reportDispatchedTo:
           type: ["string", "null"]
           description: JSON array of email addresses the report was dispatched to
+        # Admin notes override tracking
+        notesOverriddenAt:
+          type: ["string", "null"]
+          description: Timestamp when an admin last overrode the lesson notes after submission
+        notesOverriddenByUserId:
+          type: ["integer", "null"]
+          description: ID of the admin user who last overrode the notes
+        notesOverriddenByName:
+          type: ["string", "null"]
+          description: Display name of the admin who last overrode the notes (resolved on the server, present on GET /assessments/:id)
         # Lesson conditions recorded at session start
         weatherCondition:
           type: ["string", "null"]
@@ -4461,6 +4471,12 @@ components:
         status:
           type: string
           enum: [in_progress, completed, no_show]
+        performedByRole:
+          type: string
+          enum: [instructor, supervised]
+        assessmentType:
+          type: string
+          enum: [qsafe, qride, heavy_vehicle]
         pedalOperator:
           type: string
           enum: [student, instructor, shared]
@@ -4470,6 +4486,20 @@ components:
           type: ["string", "null"]
         preLessonBriefingAcknowledgedAt:
           type: ["string", "null"]
+        preDriveFitnessConfirmedAt:
+          type: ["string", "null"]
+        finalizationStatus:
+          type: string
+          enum: [draft, pending_approval, approved, dispatched]
+        approvedAt:
+          type: ["string", "null"]
+        approvedByUserId:
+          type: ["integer", "null"]
+        reportDispatchedAt:
+          type: ["string", "null"]
+        reportDispatchedTo:
+          type: ["string", "null"]
+          description: JSON array of email addresses the report was dispatched to
         weatherCondition:
           type: ["string", "null"]
           enum: [clear, partly_cloudy, overcast, light_rain, heavy_rain, foggy, windy]
@@ -4488,6 +4518,16 @@ components:
         vehicleRego:
           type: ["string", "null"]
           description: "Registration plate of the vehicle used"
+        # Admin notes override tracking — set when an admin edits notes after submission
+        notesOverriddenAt:
+          type: ["string", "null"]
+          description: Timestamp when an admin last overrode the lesson notes after submission
+        notesOverriddenByUserId:
+          type: ["integer", "null"]
+          description: ID of the admin user who last overrode the notes
+        notesOverriddenByName:
+          type: ["string", "null"]
+          description: Display name of the admin who last overrode the notes (resolved server-side)
         maneuverResults:
           type: array
           items:
