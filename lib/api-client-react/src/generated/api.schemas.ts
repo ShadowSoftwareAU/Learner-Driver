@@ -1057,6 +1057,13 @@ export interface Maneuver {
   masteryDefinition?: string | null;
 }
 
+export interface ManeuverResultNoteOverrideInput {
+  /**
+     * Corrected note for this maneuver result
+     * @maxLength 2000
+     */
+  notes: string;
+}
 export interface AssessmentNotesOverrideInput {
   /** Confidence and overall notes */
   confidenceNote?: string;
@@ -3478,4 +3485,3 @@ export type InviteInstructorByEmailBody = {
   /** Frontend base URL used to construct the invite link */
   joinBaseUrl?: string;
 };
-

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment, useEditAssessmentNotesOverride, useGetMe } from "@workspace/api-client-react";
+import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment, useEditAssessmentNotesOverride, useOverrideManeuverResultNote, useGetMe } from "@workspace/api-client-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil, ShieldAlert } from "lucide-react";
@@ -134,6 +134,23 @@ export default function ViewAssessment() {
   const [emailInput, setEmailInput] = useState("");
   const [emails, setEmails] = useState<string[]>([]);
   const [viewMode, setViewMode] = useViewMode();
+
+  // Maneuver note override state
+  const [maneuverNoteEditOpen, setManeuverNoteEditOpen] = useState(false);
+  const [editingResultId, setEditingResultId] = useState<number | null>(null);
+  const [editingResultName, setEditingResultName] = useState("");
+  const [editingResultNote, setEditingResultNote] = useState("");
+
+  const overrideManeuverNote = useOverrideManeuverResultNote({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetAssessmentQueryKey(id) });
+        setManeuverNoteEditOpen(false);
+        toast({ title: "Note updated", description: "Maneuver note updated via admin override. The audit trail has been preserved." });
+      },
+      onError: () => toast({ title: "Failed to update note", variant: "destructive" }),
+    },
+  });
 
   const combinedNotes = useMemo(() => {
     if (!assessment?.maneuverResults) return "";
@@ -392,16 +409,37 @@ export default function ViewAssessment() {
                   return acc;
                 }, {});
 
+                const openManeuverNoteEdit = (result: any) => {
+                  setEditingResultId(result.id);
+                  setEditingResultName(result.maneuverName ?? "Maneuver");
+                  setEditingResultNote(result.notes ?? "");
+                  setManeuverNoteEditOpen(true);
+                };
+
+                const canOverrideManeuverNotes = isAdmin && finStatus !== "draft";
+
                 const renderRow = (result: any) => (
                   <div className="p-3 sm:p-4">
                     <div className="flex justify-between items-center gap-2">
                       <span className="font-medium min-w-0 truncate">{result.maneuverName}</span>
-                      <Badge
-                        variant="outline"
-                        className={`shrink-0 ${COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}`}
-                      >
-                        {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
-                      </Badge>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge
+                          variant="outline"
+                          className={COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}
+                        >
+                          {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
+                        </Badge>
+                        {canOverrideManeuverNotes && (
+                          <button
+                            type="button"
+                            title="Edit note (admin override)"
+                            className="p-1 rounded text-amber-600 hover:bg-amber-50 transition-colors"
+                            onClick={() => openManeuverNoteEdit(result)}
+                          >
+                            <ShieldAlert className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     {result.notes && (
                       <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
@@ -420,14 +458,26 @@ export default function ViewAssessment() {
                   <div className="space-y-2">
                     {(assessment.maneuverResults as any[]).map((result: any) => (
                       <div key={result.id} className="p-3 border rounded-lg">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium">{result.maneuverName}</span>
-                          <Badge
-                            variant="outline"
-                            className={COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}
-                          >
-                            {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
-                          </Badge>
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="font-medium min-w-0 truncate">{result.maneuverName}</span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Badge
+                              variant="outline"
+                              className={COMPETENCY_CLASS[result.competencyLevel] ?? COMPETENCY_CLASS.not_attempted}
+                            >
+                              {({ not_attempted: "Not Attempted", attempted: "Developing", practiced: "Competent", mastered: "Consistent Skills" } as Record<string, string>)[result.competencyLevel] ?? result.competencyLevel.replace("_", " ")}
+                            </Badge>
+                            {canOverrideManeuverNotes && (
+                              <button
+                                type="button"
+                                title="Edit note (admin override)"
+                                className="p-1 rounded text-amber-600 hover:bg-amber-50 transition-colors"
+                                onClick={() => openManeuverNoteEdit(result)}
+                              >
+                                <ShieldAlert className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                         {result.notes && (
                           <div className="mt-2 flex items-start gap-2 text-sm text-muted-foreground">
@@ -539,6 +589,52 @@ export default function ViewAssessment() {
                 ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 : null}
               {notesOverrideMode ? "Save Override" : "Save Notes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Edit Maneuver Note Override Dialog ─────────────────────────────── */}
+      <Dialog open={maneuverNoteEditOpen} onOpenChange={setManeuverNoteEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+              Edit Maneuver Note (Admin Override)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0 text-amber-600" />
+            <p>
+              This assessment has already been submitted. Saving will update the note only — the approval status will not change. The override will be logged in the audit trail.
+            </p>
+          </div>
+          <div className="space-y-2 py-2">
+            <Label htmlFor="edit-maneuver-note">
+              Note for <span className="font-semibold">{editingResultName}</span>
+            </Label>
+            <Textarea
+              id="edit-maneuver-note"
+              rows={4}
+              placeholder="Corrected note for this maneuver…"
+              value={editingResultNote}
+              onChange={e => setEditingResultNote(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManeuverNoteEditOpen(false)}>Cancel</Button>
+            <Button
+              disabled={overrideManeuverNote.isPending || editingResultId === null}
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={() => {
+                if (editingResultId === null) return;
+                overrideManeuverNote.mutate({ id, resultId: editingResultId, data: { notes: editingResultNote } });
+              }}
+            >
+              {overrideManeuverNote.isPending
+                ? <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                : null}
+              Save Override
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -107,6 +107,7 @@ import type {
   ListNotificationsParams,
   Maneuver,
   ManeuverResult,
+  ManeuverResultNoteOverrideInput,
   ManeuverResultsBatch,
   ManeuverStat,
   MarkNoShowBody,
@@ -3225,6 +3226,80 @@ export const useSaveManeuverResults = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSaveManeuverResultsMutationOptions(options));
+    }
+
+export const getOverrideManeuverResultNoteUrl = (id: number,
+    resultId: number,) => {
+
+
+
+
+  return `/api/assessments/${id}/results/${resultId}/override`
+}
+
+/**
+ * @summary Admin override to correct a single maneuver result note on a submitted assessment
+ */
+export const overrideManeuverResultNote = async (id: number,
+    resultId: number,
+    maneuverResultNoteOverrideInput: ManeuverResultNoteOverrideInput, options?: RequestInit): Promise<ManeuverResult> => {
+
+  return customFetch<ManeuverResult>(getOverrideManeuverResultNoteUrl(id,resultId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      maneuverResultNoteOverrideInput,)
+  }
+);}
+
+
+
+
+export const getOverrideManeuverResultNoteMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideManeuverResultNote>>, TError,{id: number;resultId: number;data: BodyType<ManeuverResultNoteOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof overrideManeuverResultNote>>, TError,{id: number;resultId: number;data: BodyType<ManeuverResultNoteOverrideInput>}, TContext> => {
+
+const mutationKey = ['overrideManeuverResultNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof overrideManeuverResultNote>>, {id: number;resultId: number;data: BodyType<ManeuverResultNoteOverrideInput>}> = (props) => {
+          const {id,resultId,data} = props ?? {};
+
+          return  overrideManeuverResultNote(id,resultId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type OverrideManeuverResultNoteMutationResult = NonNullable<Awaited<ReturnType<typeof overrideManeuverResultNote>>>
+    export type OverrideManeuverResultNoteMutationBody = BodyType<ManeuverResultNoteOverrideInput>
+    export type OverrideManeuverResultNoteMutationError = ErrorType<void>
+
+    /**
+ * @summary Admin override to correct a single maneuver result note on a submitted assessment
+ */
+export const useOverrideManeuverResultNote = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof overrideManeuverResultNote>>, TError,{id: number;resultId: number;data: BodyType<ManeuverResultNoteOverrideInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof overrideManeuverResultNote>>,
+        TError,
+        {id: number;resultId: number;data: BodyType<ManeuverResultNoteOverrideInput>},
+        TContext
+      > => {
+      return useMutation(getOverrideManeuverResultNoteMutationOptions(options));
     }
 
 export const getGetManeuverHeatmapUrl = (params?: GetManeuverHeatmapParams,) => {

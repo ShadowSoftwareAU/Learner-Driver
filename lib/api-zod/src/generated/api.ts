@@ -37,7 +37,6 @@ export const GetMeResponse = zod.object({
 export const updateMeBodyNameMin = 2;
 
 
-
 export const UpdateMeBody = zod.object({
   "name": zod.string().min(updateMeBodyNameMin)
 })
@@ -1462,7 +1461,13 @@ export const SaveManeuverResultsResponseItem = zod.object({
 })
 export const SaveManeuverResultsResponse = zod.array(SaveManeuverResultsResponseItem)
 
-
+/**
+ * @summary Admin override to correct a single maneuver result note on a submitted assessment
+ */
+export const OverrideManeuverResultNoteParams = zod.object({
+  "id": zod.coerce.number(),
+  "resultId": zod.coerce.number()
+})
 /**
  * @summary Get maneuver location data for heatmap visualization
  */
@@ -2881,7 +2886,6 @@ export const GetViewerStudentDashboardParams = zod.object({
 export const getViewerStudentDashboardQueryPageDefault = 1;
 
 
-
 export const GetViewerStudentDashboardQueryParams = zod.object({
   "page": zod.coerce.number().min(1).default(getViewerStudentDashboardQueryPageDefault).describe('Page number for lesson history (1-based, 10 results per page)')
 })
@@ -3344,7 +3348,6 @@ export const submitToiletBodyNameMax = 100;
 export const submitToiletBodyNotesMax = 300;
 
 
-
 export const SubmitToiletBody = zod.object({
   "name": zod.string().min(1).max(submitToiletBodyNameMax),
   "lat": zod.number(),
@@ -3409,7 +3412,6 @@ export const getToiletSummaryResponseAvgCleanlinessMax = 5;
 export const getToiletSummaryResponseMyRatingOneCleanlinessMax = 5;
 
 
-
 export const GetToiletSummaryResponse = zod.object({
   "osmNodeId": zod.number(),
   "avgCleanliness": zod.number().min(1).max(getToiletSummaryResponseAvgCleanlinessMax).nullish(),
@@ -3433,7 +3435,6 @@ export const rateToiletBodyCleanlinessMax = 5;
 export const rateToiletBodyCommentMax = 200;
 
 
-
 export const RateToiletBody = zod.object({
   "cleanliness": zod.number().min(1).max(rateToiletBodyCleanlinessMax),
   "comment": zod.string().max(rateToiletBodyCommentMax).optional()
@@ -3442,7 +3443,6 @@ export const RateToiletBody = zod.object({
 export const rateToiletResponseAvgCleanlinessMax = 5;
 
 export const rateToiletResponseMyRatingOneCleanlinessMax = 5;
-
 
 
 export const RateToiletResponse = zod.object({
@@ -3472,7 +3472,6 @@ export const submitAssessmentFeedbackBodySafetyFocusRatingMax = 5;
 export const submitAssessmentFeedbackBodyLessonQualityRatingMax = 5;
 
 export const submitAssessmentFeedbackBodyCommentsMax = 2000;
-
 
 
 export const SubmitAssessmentFeedbackBody = zod.object({
@@ -3614,7 +3613,6 @@ export const ReviewHandoverNoteParams = zod.object({
 export const reviewHandoverNoteBodyReviewCommentMax = 2000;
 
 
-
 export const ReviewHandoverNoteBody = zod.object({
   "verdict": zod.enum(['approved', 'needs_improvement', 'flagged']),
   "reviewComment": zod.string().max(reviewHandoverNoteBodyReviewCommentMax).optional()
@@ -3655,7 +3653,6 @@ export const GetHandoverNoteReviewResponse = zod.object({
 export const getSchoolFeedbackSettingsResponseFeedbackReminderDaysMax = 30;
 
 
-
 export const GetSchoolFeedbackSettingsResponse = zod.object({
   "feedbackEnabled": zod.boolean().optional(),
   "feedbackReminderDays": zod.number().min(1).max(getSchoolFeedbackSettingsResponseFeedbackReminderDaysMax).optional(),
@@ -3670,7 +3667,6 @@ export const GetSchoolFeedbackSettingsResponse = zod.object({
 export const updateSchoolFeedbackSettingsBodyFeedbackReminderDaysMax = 30;
 
 
-
 export const UpdateSchoolFeedbackSettingsBody = zod.object({
   "feedbackEnabled": zod.boolean().optional(),
   "feedbackReminderDays": zod.number().min(1).max(updateSchoolFeedbackSettingsBodyFeedbackReminderDaysMax).optional(),
@@ -3679,7 +3675,6 @@ export const UpdateSchoolFeedbackSettingsBody = zod.object({
 })
 
 export const updateSchoolFeedbackSettingsResponseFeedbackReminderDaysMax = 30;
-
 
 
 export const UpdateSchoolFeedbackSettingsResponse = zod.object({
@@ -3871,7 +3866,6 @@ export const linkInstructorByCodeBodyLinkCodeMin = 6;
 export const linkInstructorByCodeBodyLinkCodeMax = 6;
 
 
-
 export const LinkInstructorByCodeBody = zod.object({
   "linkCode": zod.string().min(linkInstructorByCodeBodyLinkCodeMin).max(linkInstructorByCodeBodyLinkCodeMax)
 })
@@ -3927,3 +3921,20 @@ export const RevokeInstructorLinkParams = zod.object({
 })
 
 
+export const OverrideManeuverResultNoteResponse = zod.object({
+  "id": zod.number(),
+  "assessmentId": zod.number(),
+  "maneuverId": zod.number(),
+  "maneuverName": zod.string().nullish(),
+  "category": zod.string().nullish(),
+  "competencyLevel": zod.enum(['not_attempted', 'attempted', 'practiced', 'mastered']),
+  "notes": zod.string().nullish(),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish()
+})
+
+export const overrideManeuverResultNoteBodyNotesMax = 2000;
+
+export const OverrideManeuverResultNoteBody = zod.object({
+  "notes": zod.string().max(overrideManeuverResultNoteBodyNotesMax).describe('Corrected note for this maneuver result')
+})

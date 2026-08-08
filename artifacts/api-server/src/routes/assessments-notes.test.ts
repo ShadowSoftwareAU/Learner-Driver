@@ -178,8 +178,8 @@ function makeAssessmentRow(overrides: Record<string, unknown> = {}) {
     performedByRole: "instructor",
     assessmentType: "qsafe",
     pedalOperator: "student",
-    confidenceNote: null,
-    focusAreasNext: null,
+    confidenceNote: null as string | null,
+    focusAreasNext: null as string | null,
     routePath: null,
     startCoordinates: null,
     endCoordinates: null,
@@ -602,5 +602,246 @@ describe("Stateful round-trip: edit notes → fetch → ReportPreview data", () 
     expect(getRes.body.finalizationStatus).toBe("dispatched");
     expect(getRes.body.reportDispatchedTo).toBe('["parent@example.com"]');
     expect(getRes.body.reportDispatchedAt).toBe("2025-06-02T10:00:00Z");
+  });
+});
+
+// ─── PATCH /assessments/:id/results/:resultId/override ────────────────────────
+
+const ADMIN_USER = {
+  id: 2,
+  clerkId: "clerk_test_user",
+  email: "admin@example.com",
+  name: "Admin User",
+  role: "admin",
+  schoolId: 1,
+};
+
+const MANEUVER_RESULT_ROW = {
+  id: 77,
+  assessmentId: 55,
+  maneuverId: 5,
+  competencyLevel: "practiced",
+  notes: "Original note",
+  lat: null,
+  lng: null,
+};
+
+describe("PATCH /assessments/:id/results/:resultId/override — maneuver note override", () => {
+  beforeEach(() => {
+    // resetAllMocks (not clearAllMocks) is required here: clearAllMocks only clears call
+    // history but does NOT drain mockReturnValueOnce queues. Tests that exit early (e.g.
+    // body-parse 400 or content-scan 451) before the second db.select() call would
+    // otherwise leave a stale queue item that bleeds into the next test.
+    vi.resetAllMocks();
+    mockLogAudit.mockResolvedValue(undefined);
+    mockScanContent.mockResolvedValue({ shouldBlock: false });
+  });
+
+  function setupOverrideMocks(
+    assessmentRow: ReturnType<typeof makeAssessmentRow>,
+    resultRow: typeof MANEUVER_RESULT_ROW | null = MANEUVER_RESULT_ROW,
+    updatedRow: typeof MANEUVER_RESULT_ROW = MANEUVER_RESULT_ROW,
+  ) {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect
+      .mockReturnValueOnce(makeChain([assessmentRow]))               // select assessment
+      .mockReturnValueOnce(makeChain(resultRow ? [resultRow] : [])); // select maneuver result
+    mockDbUpdate.mockReturnValue(makeChain([updatedRow]));
+  }
+
+  // SCHOOL_ID to match ADMIN_USER.schoolId — all assessment fixtures in this block must use it
+  // so the school-scope guard does not short-circuit tests before their target condition fires.
+  const SCHOOL_ID = 1;
+
+  it("updates the note and returns the updated result row", async () => {
+    const corrected = "Corrected note after submission";
+    const updated = { ...MANEUVER_RESULT_ROW, notes: corrected };
+    setupOverrideMocks(
+      makeAssessmentRow({ finalizationStatus: "pending_approval", schoolId: SCHOOL_ID }),
+      MANEUVER_RESULT_ROW,
+      updated,
+    );
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: corrected });
+
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe(corrected);
+    expect(res.body.id).toBe(77);
+  });
+
+  it("returns 403 when the caller is not an admin", async () => {
+    mockGetOrCreateUser.mockResolvedValue(INSTRUCTOR_USER);
+    // Role check fires before any DB call
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "Attempted override" });
+
+    expect(res.status).toBe(403);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when the assessment is still in draft", async () => {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect.mockReturnValueOnce(makeChain([makeAssessmentRow({ finalizationStatus: "draft", schoolId: SCHOOL_ID })]));
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "Should be blocked" });
+
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/draft/i);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the assessment does not exist", async () => {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect.mockReturnValueOnce(makeChain([]));
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "Note" });
+
+    expect(res.status).toBe(404);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 404 when the maneuver result does not belong to the assessment", async () => {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect
+      .mockReturnValueOnce(makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: SCHOOL_ID })]))
+      .mockReturnValueOnce(makeChain([])); // no matching result
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "Note" });
+
+    expect(res.status).toBe(404);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when notes exceeds 2000 characters", async () => {
+    // Route exits at body-parse (step 5) — only the assessment select fires, not the result select.
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect.mockReturnValueOnce(makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: SCHOOL_ID })]));
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "X".repeat(2001) });
+
+    expect(res.status).toBe(400);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("blocks the override when content scan rejects the note", async () => {
+    // Route exits at content-scan (step 6) — result select has not yet fired.
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockScanContent.mockResolvedValue({ shouldBlock: true, moderationCaseId: 42 });
+    mockDbSelect.mockReturnValueOnce(makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: SCHOOL_ID })]));
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "Blocked content" });
+
+    expect(res.status).toBe(451);
+    expect(res.body.moderationCaseId).toBe(42);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("logs an audit entry with the previous and new note and does not change finalizationStatus", async () => {
+    const corrected = "Admin-corrected note";
+    const updated = { ...MANEUVER_RESULT_ROW, notes: corrected };
+    setupOverrideMocks(
+      makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: SCHOOL_ID }),
+      MANEUVER_RESULT_ROW,
+      updated,
+    );
+
+    await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: corrected });
+
+    expect(mockLogAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "edit_maneuver_note_override",
+        resourceType: "assessment",
+        resourceId: 55,
+        metadataJson: expect.objectContaining({
+          resultId: 77,
+          previousNote: "Original note",
+          newNote: corrected,
+          finalizationStatus: "dispatched",
+        }),
+      }),
+      expect.anything(),
+    );
+    // Only the maneuver result row should be updated — no assessment status change
+    expect(mockDbUpdate).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts override on a pending_approval assessment", async () => {
+    const corrected = "Fix during review";
+    const updated = { ...MANEUVER_RESULT_ROW, notes: corrected };
+    setupOverrideMocks(
+      makeAssessmentRow({ finalizationStatus: "pending_approval", schoolId: SCHOOL_ID }),
+      MANEUVER_RESULT_ROW,
+      updated,
+    );
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: corrected });
+
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe(corrected);
+  });
+
+  it("returns 403 when a school_admin tries to override an assessment from a different school", async () => {
+    // ADMIN_USER belongs to school 1; assessment belongs to school 2
+    const crossSchoolAdmin = { ...ADMIN_USER, role: "school_admin", schoolId: 1 };
+    mockGetOrCreateUser.mockResolvedValue(crossSchoolAdmin);
+    mockDbSelect.mockReturnValueOnce(
+      makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: 2 })]),
+    );
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: "Cross-school attempt" });
+
+    expect(res.status).toBe(403);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("allows super_admin to override an assessment from any school", async () => {
+    const superAdmin = { ...ADMIN_USER, role: "super_admin", schoolId: null };
+    mockGetOrCreateUser.mockResolvedValue(superAdmin);
+    const corrected = "Super-admin correction";
+    const updated = { ...MANEUVER_RESULT_ROW, notes: corrected };
+    mockDbSelect
+      .mockReturnValueOnce(makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: 99 })]))
+      .mockReturnValueOnce(makeChain([MANEUVER_RESULT_ROW]));
+    mockDbUpdate.mockReturnValue(makeChain([updated]));
+
+    const res = await request(makeApp())
+      .patch("/assessments/55/results/77/override")
+      .send({ notes: corrected });
+
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe(corrected);
+  });
+
+  it("does not call DB update when a non-numeric assessment id is supplied", async () => {
+    // parseInt("not-a-number", 10) = NaN — the query returns no rows (no assessment found)
+    // and no DB write should ever occur regardless of which error is returned.
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect.mockReturnValueOnce(makeChain([]));
+
+    const res = await request(makeApp())
+      .patch("/assessments/not-a-number/results/77/override")
+      .send({ notes: "Note" });
+
+    expect(res.status).not.toBe(200);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
   });
 });

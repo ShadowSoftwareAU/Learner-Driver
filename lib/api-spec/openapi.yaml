@@ -927,6 +927,44 @@ paths:
                 items:
                   $ref: "#/components/schemas/ManeuverResult"
 
+  /assessments/{id}/results/{resultId}/override:
+    patch:
+      operationId: overrideManeuverResultNote
+      tags: [assessments]
+      summary: Admin override to correct a single maneuver result note on a submitted assessment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: resultId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManeuverResultNoteOverrideInput"
+      responses:
+        "200":
+          description: Note updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManeuverResult"
+        "403":
+          description: Admin role required
+        "404":
+          description: Assessment or result not found
+        "409":
+          description: Assessment is still in draft — use the standard save results instead
+        "451":
+          description: Content blocked by moderation policy
+
   /assessments/heatmap:
     get:
       operationId: getManeuverHeatmap
@@ -4290,6 +4328,15 @@ components:
           description: "Lighting condition at lesson start"
         createdAt:
           type: string
+
+    ManeuverResultNoteOverrideInput:
+      type: object
+      required: [notes]
+      properties:
+        notes:
+          type: string
+          maxLength: 2000
+          description: Corrected note for this maneuver result
 
     AssessmentNotesOverrideInput:
       type: object

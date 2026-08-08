@@ -703,6 +703,91 @@ router.post("/assessments/:id/edit-notes-override", requireAuth, async (req: any
   });
 });
 
+// ─── Admin override: edit a single maneuver result note ──────────────────────
+
+router.patch("/assessments/:id/results/:resultId/override", requireAuth, async (req: any, res): Promise<void> => {
+  const assessmentId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const resultId = parseInt(Array.isArray(req.params.resultId) ? req.params.resultId[0] : req.params.resultId, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  // Admin-only path
+  if (user.role !== "admin" && user.role !== "school_admin" && user.role !== "super_admin") {
+    res.status(403).json({ error: "Only admin users can use the maneuver note override" });
+    return;
+  }
+
+  const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, assessmentId));
+  if (!a) { res.status(404).json({ error: "Assessment not found" }); return; }
+
+  // School-scope enforcement: school_admin and admin may only touch assessments in their own school.
+  // super_admin bypasses this check.
+  if (user.role !== "super_admin") {
+    if (!user.schoolId || a.schoolId !== user.schoolId) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  }
+
+  // Must be a submitted assessment — draft should go through the normal results route
+  if (a.finalizationStatus === "draft") {
+    res.status(409).json({ error: "Assessment is still in draft — use the standard save results instead" });
+    return;
+  }
+
+  const bodyParsed = z.object({
+    notes: z.string().max(2000),
+  }).safeParse(req.body);
+
+  if (!bodyParsed.success) {
+    res.status(400).json({ error: "Invalid request body", issues: bodyParsed.error.issues });
+    return;
+  }
+
+  const { notes } = bodyParsed.data;
+
+  // Content scan before saving
+  const scan = await scanContent({
+    text: notes,
+    contentType: "assessment_note",
+    contentId: assessmentId,
+    actorUserId: user.id,
+    studentId: a.studentId,
+    route: req.originalUrl,
+  });
+  if (scan.shouldBlock) {
+    res.status(451).json({ error: "Content blocked by moderation policy", moderationCaseId: scan.moderationCaseId });
+    return;
+  }
+
+  // Fetch the existing result to record the previous note in the audit trail
+  const [existing] = await db.select().from(maneuverResultsTable)
+    .where(and(eq(maneuverResultsTable.id, resultId), eq(maneuverResultsTable.assessmentId, assessmentId)));
+  if (!existing) { res.status(404).json({ error: "Maneuver result not found" }); return; }
+
+  const [updated] = await db.update(maneuverResultsTable)
+    .set({ notes })
+    .where(eq(maneuverResultsTable.id, resultId))
+    .returning();
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "edit_maneuver_note_override",
+    resourceType: "assessment",
+    resourceId: assessmentId,
+    studentId: a.studentId,
+    metadataJson: {
+      resultId,
+      maneuverId: existing.maneuverId,
+      previousNote: existing.notes,
+      newNote: notes,
+      finalizationStatus: a.finalizationStatus,
+    },
+  }, req);
+
+  res.json(updated);
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAssessment(a: any) {
