@@ -13,3 +13,4 @@
 - [Report dispatch recipients](report-dispatch-recipients.md) — non-account emails (guardian/school) need a separate sendExternalEmail() path, not the notificationsTable-backed sendEmail().
 - [Stripe with manual keys](stripe-manual-keys.md) — when user declines the connector and supplies STRIPE_SECRET_KEY/WEBHOOK_SECRET directly, use plain `stripe` SDK, not stripe-replit-sync; webhook route needs express.raw() before express.json().
 - [Vehicle management feature](vehicle-management.md) — full CRUD for instructor vehicles; self-resolving /instructor/my-vehicles routes; vehicleIds CSV on availability; calendar returns vehicle summaries per window; booking accepts vehicleId.
+- [Playwright LIFO routes](playwright-lifo-routes.md) — v1.62 uses unshift() so last-registered = first-matched; register catch-all FIRST, specifics LAST; use RegExp not glob strings for API routes.

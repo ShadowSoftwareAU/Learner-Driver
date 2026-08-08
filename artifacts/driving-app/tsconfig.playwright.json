@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["e2e/**/*", "playwright.config.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "moduleResolution": "node",
+    "types": ["node"],
+    "esModuleInterop": true
+  }
+}
