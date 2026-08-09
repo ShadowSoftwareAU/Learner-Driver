@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { useColors } from "@/hooks/useColors";
 
 const STATUS_STYLE: Record<string, { bg: string; text: string; label: string }> = {
@@ -73,6 +74,7 @@ type Filter = "upcoming" | "past" | "all";
 export default function InstructorBookingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("upcoming");
   const { data: bookings, isLoading, isError, refetch, isRefetching } = useListBookings();
 
@@ -98,7 +100,16 @@ export default function InstructorBookingsScreen() {
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={[s.header, { paddingTop: topPad + 8 }]}>
-        <Text style={[s.title, { color: colors.foreground }]}>Bookings</Text>
+        <View style={s.titleRow}>
+          <Text style={[s.title, { color: colors.foreground }]}>Bookings</Text>
+          <Pressable
+            style={[s.availBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push("/instructor/availability" as any)}
+          >
+            <Feather name="clock" size={14} color={colors.primary} />
+            <Text style={[s.availBtnText, { color: colors.primary }]}>Availability</Text>
+          </Pressable>
+        </View>
         <View style={s.filterRow}>
           {FILTERS.map((f) => (
             <Pressable
@@ -158,7 +169,18 @@ export default function InstructorBookingsScreen() {
 const s = StyleSheet.create({
   container: { flex: 1 },
   header: { paddingHorizontal: 20, paddingBottom: 12, gap: 10 },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontSize: 28, fontFamily: "Inter_700Bold" },
+  availBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  availBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
   filterRow: { flexDirection: "row", gap: 8 },
   filterBtn: {
     paddingHorizontal: 14,

@@ -89,6 +89,15 @@ function RootLayoutNav() {
           headerShadowVisible: false,
         }}
       />
+      <Stack.Screen
+        name="instructor/availability"
+        options={{
+          title: "Availability",
+          headerStyle: { backgroundColor: "#F8FAFC" },
+          headerTintColor: "#0F172A",
+          headerShadowVisible: false,
+        }}
+      />
     </Stack>
   );
 }
