@@ -7,9 +7,10 @@ import {
 } from "@workspace/api-client-react";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +24,11 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import {
+  clearAssessmentDraft,
+  loadAssessmentDraft,
+  saveAssessmentDraft,
+} from "@/hooks/useAssessmentDraft";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -87,6 +93,77 @@ export default function NewAssessmentScreen() {
   // ── Loading / error
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Draft persistence
+  // Load draft on first mount and prompt the instructor to resume or start fresh
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const draft = await loadAssessmentDraft();
+      if (!draft || cancelled) return;
+
+      const savedDate = new Date(draft.savedAt);
+      const dateStr = savedDate.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      });
+      const timeStr = savedDate.toLocaleTimeString(undefined, {
+        hour: "numeric",
+        minute: "2-digit",
+      });
+
+      Alert.alert(
+        "Resume draft?",
+        `You have an unfinished assessment from ${dateStr} at ${timeStr}. Would you like to pick up where you left off?`,
+        [
+          {
+            text: "Start fresh",
+            style: "destructive",
+            onPress: () => clearAssessmentDraft(),
+          },
+          {
+            text: "Resume",
+            onPress: () => {
+              setSelectedStudentId(draft.selectedStudentId);
+              setDate(draft.date);
+              setDuration(draft.duration);
+              setPedalOperator(draft.pedalOperator as any);
+              setWeatherCondition(draft.weatherCondition as any);
+              setResults(draft.results as any);
+              setConfidenceNote(draft.confidenceNote);
+              setFocusAreas(draft.focusAreas);
+            },
+          },
+        ],
+      );
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save draft whenever relevant state changes, but only once a student
+  // has been selected (avoids creating empty drafts on every screen open).
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!selectedStudentId) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(() => {
+      saveAssessmentDraft({
+        selectedStudentId,
+        date,
+        duration,
+        pedalOperator,
+        weatherCondition,
+        results,
+        confidenceNote,
+        focusAreas,
+      });
+    }, 800);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [selectedStudentId, date, duration, pedalOperator, weatherCondition, results, confidenceNote, focusAreas]);
 
   // ── API
   const { data: students, isLoading: studentsLoading } = useListStudents();
