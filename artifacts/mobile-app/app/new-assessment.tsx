@@ -11,6 +11,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -104,6 +105,23 @@ export default function NewAssessmentScreen() {
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
+  // ── Draft saved indicator
+  const draftSaveAnim = useRef(new Animated.Value(0)).current;
+  const draftSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showDraftSaved = () => {
+    if (draftSaveTimer.current) clearTimeout(draftSaveTimer.current);
+    Animated.sequence([
+      Animated.timing(draftSaveAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1800),
+      Animated.timing(draftSaveAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+    ]).start();
+    // Belt-and-suspenders: ensure it resets even if animation is interrupted
+    draftSaveTimer.current = setTimeout(() => {
+      draftSaveAnim.setValue(0);
+    }, 2600);
+  };
+
   // ── Draft persistence
   // Load draft on first mount and prompt the instructor to resume or start fresh
   useEffect(() => {
@@ -158,8 +176,8 @@ export default function NewAssessmentScreen() {
   useEffect(() => {
     if (!selectedStudentId) return;
     if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(() => {
-      saveAssessmentDraft({
+    autoSaveTimer.current = setTimeout(async () => {
+      await saveAssessmentDraft({
         selectedStudentId,
         date,
         duration,
@@ -169,10 +187,12 @@ export default function NewAssessmentScreen() {
         confidenceNote,
         focusAreas,
       });
+      showDraftSaved();
     }, 800);
     return () => {
       if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStudentId, date, duration, pedalOperator, weatherCondition, results, confidenceNote, focusAreas]);
 
   // ── API
@@ -285,6 +305,7 @@ export default function NewAssessmentScreen() {
             <Text style={[s.stepSub, { color: colors.mutedForeground }]}>
               Optional — add any notes before saving
             </Text>
+            <DraftSavedBadge anim={draftSaveAnim} />
           </View>
 
           {error ? <ErrorBanner message={error} /> : null}
@@ -357,6 +378,7 @@ export default function NewAssessmentScreen() {
               <Text style={[s.stepSub, { color: colors.mutedForeground }]}>
                 {ratedCount > 0 ? `${ratedCount} rated` : "Tap a level for each maneuver"}
               </Text>
+              <DraftSavedBadge anim={draftSaveAnim} />
             </View>
             {/* Tile / list toggle */}
             <View style={[s.viewToggle, { borderColor: colors.border, backgroundColor: colors.card }]}>
@@ -463,6 +485,7 @@ export default function NewAssessmentScreen() {
           <Text style={[s.stepSub, { color: colors.mutedForeground }]}>
             Step 1 of 3 — Lesson details
           </Text>
+          <DraftSavedBadge anim={draftSaveAnim} />
         </View>
 
         {error ? <ErrorBanner message={error} /> : null}
@@ -786,8 +809,14 @@ function ManeuverRow({
   );
 }
 
-// ─── ErrorBanner ─────────────────────────────────────────────────────────────
-
+function DraftSavedBadge({ anim }: { anim: Animated.Value }) {
+  return (
+    <Animated.View style={[s.draftBadge, { opacity: anim }]} pointerEvents="none">
+      <Feather name="check" size={12} color="#16A34A" />
+      <Text style={s.draftBadgeText}>Draft saved</Text>
+    </Animated.View>
+  );
+}
 function ErrorBanner({ message }: { message: string }) {
   return (
     <View style={s.errorBox}>
@@ -1016,6 +1045,19 @@ const s = StyleSheet.create({
     borderColor: "#FECACA",
   },
   errorText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: "#DC2626" },
+
+  // Draft saved badge
+  draftBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 6,
+  },
+  draftBadgeText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: "#16A34A",
+  },
 
   // Misc
   centered: { flex: 1, justifyContent: "center", alignItems: "center" },
