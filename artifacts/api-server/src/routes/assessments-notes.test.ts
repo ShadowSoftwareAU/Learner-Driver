@@ -848,3 +848,178 @@ describe("PATCH /assessments/:id/results/:resultId/override — maneuver note ov
     expect(mockDbUpdate).not.toHaveBeenCalled();
   });
 });
+
+// ─── POST /assessments/:id/resend-report ──────────────────────────────────────
+
+describe("POST /assessments/:id/resend-report", () => {
+  const SCHOOL_ID = 1;
+
+  const DISPATCHED_ASSESSMENT = makeAssessmentRow({
+    finalizationStatus: "dispatched",
+    schoolId: SCHOOL_ID,
+    reportDispatchedTo: JSON.stringify(["parent@example.com", "school@example.com"]),
+    reportDispatchedAt: "2025-06-01T10:00:00Z",
+    confidenceNote: "Student performed well.",
+    focusAreasNext: "Work on hill starts.",
+  });
+
+  const STUDENT_ROW_WITH_DATA = {
+    id: 20,
+    fullName: "Alex Learner",
+    email: "alex@example.com",
+    userId: 99,
+    schoolId: SCHOOL_ID,
+    guardianEmail: null,
+    pcycSchoolEmail: null,
+  };
+
+  const INSTRUCTOR_ROW_WITH_DATA = {
+    id: 10,
+    fullName: "Jane Instructor",
+    email: "instructor@example.com",
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockLogAudit.mockResolvedValue(undefined);
+    mockSendExternalEmail.mockResolvedValue({ delivered: true });
+  });
+
+  function setupResendMocks(
+    assessmentRow: ReturnType<typeof makeAssessmentRow>,
+    updatedRow: ReturnType<typeof makeAssessmentRow> = assessmentRow,
+  ) {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect
+      .mockReturnValueOnce(makeChain([assessmentRow]))         // select assessment
+      .mockReturnValueOnce(makeChain([STUDENT_ROW_WITH_DATA])) // select student
+      .mockReturnValueOnce(makeChain([INSTRUCTOR_ROW_WITH_DATA])) // select instructor
+      .mockReturnValueOnce(makeChain([]));                     // select latest handover note
+    mockDbUpdate.mockReturnValue(makeChain([updatedRow]));
+  }
+
+  it("resends to stored recipients and updates reportDispatchedAt", async () => {
+    setupResendMocks(DISPATCHED_ASSESSMENT);
+
+    const res = await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.recipients).toEqual(["parent@example.com", "school@example.com"]);
+    expect(mockDbUpdate).toHaveBeenCalledTimes(1);
+    expect(mockSendExternalEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it("emails include the current (overridden) notes, not original content", async () => {
+    const overriddenAssessment = makeAssessmentRow({
+      ...DISPATCHED_ASSESSMENT,
+      confidenceNote: "Admin-corrected note",
+      focusAreasNext: "Updated focus areas",
+    });
+    setupResendMocks(overriddenAssessment);
+
+    await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    const [, , bodyHtml] = mockSendExternalEmail.mock.calls[0];
+    expect(bodyHtml).toContain("Admin-corrected note");
+    expect(bodyHtml).toContain("Updated focus areas");
+    expect(bodyHtml).not.toContain("Student performed well.");
+  });
+
+  it("logs an audit entry with action resend_dispatched_report", async () => {
+    setupResendMocks(DISPATCHED_ASSESSMENT);
+
+    await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(mockLogAudit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: "resend_dispatched_report",
+        resourceType: "assessment",
+        resourceId: 55,
+        metadataJson: expect.objectContaining({
+          recipients: ["parent@example.com", "school@example.com"],
+        }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("returns 403 for non-admin roles", async () => {
+    mockGetOrCreateUser.mockResolvedValue(INSTRUCTOR_USER);
+    mockDbSelect.mockReturnValueOnce(makeChain([DISPATCHED_ASSESSMENT]));
+
+    const res = await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(res.status).toBe(403);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when assessment is not dispatched", async () => {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect.mockReturnValueOnce(
+      makeChain([makeAssessmentRow({ finalizationStatus: "pending_approval", schoolId: SCHOOL_ID })]),
+    );
+
+    const res = await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(res.status).toBe(409);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 422 when no recipients are recorded", async () => {
+    mockGetOrCreateUser.mockResolvedValue(ADMIN_USER);
+    mockDbSelect.mockReturnValueOnce(
+      makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: SCHOOL_ID, reportDispatchedTo: null })]),
+    );
+
+    const res = await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(res.status).toBe(422);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 when a school_admin tries to resend a report from a different school", async () => {
+    const crossSchoolAdmin = { ...ADMIN_USER, role: "school_admin", schoolId: 99 };
+    mockGetOrCreateUser.mockResolvedValue(crossSchoolAdmin);
+    mockDbSelect.mockReturnValueOnce(makeChain([DISPATCHED_ASSESSMENT])); // schoolId: 1 ≠ 99
+
+    const res = await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(res.status).toBe(403);
+    expect(mockDbUpdate).not.toHaveBeenCalled();
+  });
+
+  it("allows super_admin to resend a report from any school", async () => {
+    const superAdmin = { ...ADMIN_USER, role: "super_admin", schoolId: null };
+    mockGetOrCreateUser.mockResolvedValue(superAdmin);
+    mockDbSelect
+      .mockReturnValueOnce(makeChain([makeAssessmentRow({
+        finalizationStatus: "dispatched",
+        schoolId: 99,
+        reportDispatchedTo: JSON.stringify(["parent@example.com"]),
+      })]))
+      .mockReturnValueOnce(makeChain([STUDENT_ROW_WITH_DATA]))
+      .mockReturnValueOnce(makeChain([INSTRUCTOR_ROW_WITH_DATA]))
+      .mockReturnValueOnce(makeChain([]));
+    mockDbUpdate.mockReturnValue(makeChain([makeAssessmentRow({ finalizationStatus: "dispatched", schoolId: 99 })]));
+
+    const res = await request(makeApp())
+      .post("/assessments/55/resend-report")
+      .send();
+
+    expect(res.status).toBe(200);
+  });
+});

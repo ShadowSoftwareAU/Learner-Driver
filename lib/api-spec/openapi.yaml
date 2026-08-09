@@ -869,6 +869,33 @@ paths:
         "409":
           description: Assessment not in pending_approval state
 
+  /assessments/{id}/resend-report:
+    post:
+      operationId: resendAssessmentReport
+      tags: [assessments]
+      summary: Admin resend a dispatched assessment report to its original recipients
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Report resent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Assessment"
+        "403":
+          description: Admin role required
+        "404":
+          description: Not found
+        "409":
+          description: Assessment is not in dispatched state
+        "422":
+          description: No dispatch recipients recorded
+
   /assessments/{id}/edit-notes-override:
     post:
       operationId: editAssessmentNotesOverride

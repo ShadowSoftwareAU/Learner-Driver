@@ -803,6 +803,94 @@ router.patch("/assessments/:id/results/:resultId/override", requireAuth, async (
   res.json(updated);
 });
 
+// ─── Resend dispatched report ─────────────────────────────────────────────────
+
+router.post("/assessments/:id/resend-report", requireAuth, async (req: any, res): Promise<void> => {
+  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const user = await getOrCreateUser(req.clerkUserId, "");
+
+  // Admin-only action
+  if (user.role !== "admin" && user.role !== "school_admin" && user.role !== "super_admin") {
+    res.status(403).json({ error: "Only admin users can resend a dispatched report" });
+    return;
+  }
+
+  const [a] = await db.select().from(assessmentsTable).where(eq(assessmentsTable.id, id));
+  if (!a) { res.status(404).json({ error: "Not found" }); return; }
+
+  // School-scope enforcement — same rule as the maneuver override route
+  if (user.role !== "super_admin") {
+    if (!user.schoolId || a.schoolId !== user.schoolId) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+  }
+
+  if (a.finalizationStatus !== "dispatched") {
+    res.status(409).json({ error: "Report can only be resent when the assessment is in dispatched state", finalizationStatus: a.finalizationStatus });
+    return;
+  }
+
+  // Parse the stored recipients
+  let recipients: string[] = [];
+  try {
+    const raw = a.reportDispatchedTo;
+    if (raw) recipients = JSON.parse(raw as string);
+  } catch { /* leave empty */ }
+
+  if (recipients.length === 0) {
+    res.status(422).json({ error: "No dispatch recipients recorded for this assessment" });
+    return;
+  }
+
+  const now = new Date();
+
+  // Update the dispatched timestamp so the UI reflects the resend time
+  const [updated] = await db.update(assessmentsTable)
+    .set({ reportDispatchedAt: now })
+    .where(eq(assessmentsTable.id, id))
+    .returning();
+
+  await logAudit({
+    actorId: user.id,
+    actorRole: user.role,
+    action: "resend_dispatched_report",
+    resourceType: "assessment",
+    resourceId: id,
+    studentId: a.studentId,
+    metadataJson: { recipients, resentAt: now.toISOString() },
+  }, req);
+
+  // Re-send the same report email to all stored recipients
+  const [student] = await db.select().from(studentsTable).where(eq(studentsTable.id, a.studentId));
+  const [instructor] = await db.select().from(instructorsTable).where(eq(instructorsTable.id, a.instructorId));
+
+  if (student) {
+    const [latestHandoverNote] = await db.select().from(handoverNotesTable)
+      .where(and(eq(handoverNotesTable.studentId, a.studentId), eq(handoverNotesTable.contentStatus, "approved")))
+      .orderBy(desc(handoverNotesTable.createdAt))
+      .limit(1);
+
+    const subject = `Updated lesson report — ${student.fullName}`;
+    const lines = [
+      `An updated lesson assessment report is available for ${student.fullName}.`,
+      `Instructor: ${instructor?.fullName ?? "Unknown"}`,
+      `Date: ${a.lessonDate} · Duration: ${a.durationMinutes} minutes`,
+      a.confidenceNote ? `Instructor notes: ${a.confidenceNote}` : null,
+      a.focusAreasNext ? `Focus areas for next lesson: ${a.focusAreasNext}` : null,
+      latestHandoverNote ? `Handover note: ${latestHandoverNote.note}` : null,
+    ].filter(Boolean) as string[];
+
+    const bodyText = lines.join("\n\n");
+    const bodyHtml = `<div>${lines.map(l => `<p>${l.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</p>`).join("")}</div>`;
+
+    for (const email of recipients) {
+      sendExternalEmail(email, subject, bodyHtml, bodyText).catch(() => null);
+    }
+  }
+
+  res.json({ ...formatAssessment(updated), recipients });
+});
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatAssessment(a: any) {

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment, useEditAssessmentNotesOverride, useOverrideManeuverResultNote, useGetMe } from "@workspace/api-client-react";
+import { useGetAssessment, getGetAssessmentQueryKey, useApproveAssessment, useSubmitAssessment, useUpdateAssessment, useEditAssessmentNotesOverride, useOverrideManeuverResultNote, useGetMe, useResendAssessmentReport } from "@workspace/api-client-react";
+import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil, ShieldAlert, History } from "lucide-react";
 import { SidebarLayout } from "@/components/layout/SidebarLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ViewToggle, useViewMode } from "@/components/assessment/ViewToggle";
@@ -27,11 +28,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ReportPreview } from "@/components/ReportPreview";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-import { Loader2, ChevronLeft, CheckCircle2, MessageSquare, Eye, Send, AlertCircle, Mail, X, Plus, Car, Bike, Truck, Download, PenLine, Pencil, ShieldAlert, History } from "lucide-react";
 
 const COMPETENCY_CLASS: Record<string, string> = {
   mastered:      "bg-green-100 text-green-800 border-green-200",
@@ -125,8 +131,20 @@ export default function ViewAssessment() {
   const { data: me } = useGetMe({ query: { queryKey: ["/api/users/me"] } });
   const isAdmin = me?.role === "admin" || me?.role === "school_admin" || me?.role === "super_admin";
 
+  const resendReport = useResendAssessmentReport({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetAssessmentQueryKey(id) });
+        setResendOpen(false);
+        toast({ title: "Report resent", description: `Updated report emailed to ${dispatchEmails.join(", ")}.` });
+      },
+      onError: () => toast({ title: "Failed to resend report", variant: "destructive" }),
+    },
+  });
+
   const [previewOpen, setPreviewOpen] = useState(false);
   const [approveOpen, setApproveOpen] = useState(false);
+  const [resendOpen, setResendOpen] = useState(false);
   const [notesEditOpen, setNotesEditOpen] = useState(false);
   const [notesOverrideMode, setNotesOverrideMode] = useState(false);
   const [editConfidenceNote, setEditConfidenceNote] = useState("");
@@ -281,6 +299,17 @@ export default function ViewAssessment() {
             {finStatus === "pending_approval" && (
               <Button size="sm" className="gap-2" onClick={() => setApproveOpen(true)}>
                 <Send className="w-4 h-4" /> Approve & Dispatch
+              </Button>
+            )}
+            {/* Resend Report button — dispatched assessments, admins only */}
+            {finStatus === "dispatched" && isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setResendOpen(true)}
+              >
+                <Mail className="w-4 h-4" /> Resend Report
               </Button>
             )}
           </div>
@@ -539,6 +568,44 @@ export default function ViewAssessment() {
           )}
         </div>
       </div>
+
+      {/* ── Resend Report Confirmation Dialog ──────────────────────────────── */}
+      <Dialog open={resendOpen} onOpenChange={setResendOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-4 h-4 text-teal-600 shrink-0" />
+              Resend Assessment Report
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2 text-sm text-muted-foreground">
+            <p>
+              This will send an updated copy of the report to the original recipients:
+            </p>
+            {dispatchEmails.length > 0 ? (
+              <ul className="list-disc pl-5 space-y-1">
+                {dispatchEmails.map(e => <li key={e}>{e}</li>)}
+              </ul>
+            ) : (
+              <p className="italic">No recipients recorded.</p>
+            )}
+            <p>
+              The report will include the current notes — including any overrides applied since the original dispatch.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResendOpen(false)}>Cancel</Button>
+            <Button
+              disabled={resendReport.isPending || dispatchEmails.length === 0}
+              className="gap-2"
+              onClick={() => resendReport.mutate({ id })}
+            >
+              {resendReport.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+              Send Now
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Edit Lesson Notes Dialog ────────────────────────────────────────── */}
       <Dialog open={notesEditOpen} onOpenChange={setNotesEditOpen}>
