@@ -37,11 +37,17 @@ type CompetencyLevel = "not_attempted" | "attempted" | "practiced" | "mastered";
 type PedalOperator = "student" | "instructor" | "shared";
 type WeatherCondition = "clear" | "cloudy" | "rain" | "night" | "";
 
-const COMPETENCY_LEVELS: { value: CompetencyLevel; label: string; color: string; bg: string }[] = [
-  { value: "not_attempted", label: "—",     color: "#94A3B8", bg: "#F1F5F9" },
-  { value: "attempted",     label: "Tried", color: "#D97706", bg: "#FFF7ED" },
-  { value: "practiced",     label: "Good",  color: "#2563EB", bg: "#EFF6FF" },
-  { value: "mastered",      label: "✓",     color: "#16A34A", bg: "#F0FDF4" },
+const COMPETENCY_LEVELS: {
+  value: CompetencyLevel;
+  label: string;       // Full label for tile mode
+  shortLabel: string;  // Compact label for list mode
+  color: string;
+  bg: string;
+}[] = [
+  { value: "not_attempted", label: "Not Attempted",    shortLabel: "—",          color: "#94A3B8", bg: "#F1F5F9" },
+  { value: "attempted",     label: "Developing",       shortLabel: "Dev.",        color: "#D97706", bg: "#FFF7ED" },
+  { value: "practiced",     label: "Competent",        shortLabel: "Comp.",       color: "#2563EB", bg: "#EFF6FF" },
+  { value: "mastered",      label: "Consistent Skills",shortLabel: "Consistent",  color: "#16A34A", bg: "#F0FDF4" },
 ];
 
 const PEDAL_OPTIONS: { value: PedalOperator; label: string }[] = [
@@ -93,6 +99,10 @@ export default function NewAssessmentScreen() {
   // ── Loading / error
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Maneuver view mode + expansion (list mode)
+  const [viewMode, setViewMode] = useState<"list" | "tile">("list");
+  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // ── Draft persistence
   // Load draft on first mount and prompt the instructor to resume or start fresh
@@ -334,27 +344,50 @@ export default function NewAssessmentScreen() {
 
   // ─── STEP: MANEUVERS ─────────────────────────────────────────────────────
   if (step === "maneuvers") {
+    const ratedCount = Object.values(results).filter((l) => l !== "not_attempted").length;
+
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         {/* Fixed header */}
         <View style={[s.fixedHeader, { paddingTop: topPad + 8, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <View style={s.stepHeader}>
-            <Text style={[s.stepTitle, { color: colors.foreground }]}>Rate Maneuvers</Text>
-            <Text style={[s.stepSub, { color: colors.mutedForeground }]}>
-              Tap a level for each maneuver practised
-            </Text>
+          {/* Title row + view toggle */}
+          <View style={s.maneuverHeaderRow}>
+            <View>
+              <Text style={[s.stepTitle, { color: colors.foreground }]}>Rate Maneuvers</Text>
+              <Text style={[s.stepSub, { color: colors.mutedForeground }]}>
+                {ratedCount > 0 ? `${ratedCount} rated` : "Tap a level for each maneuver"}
+              </Text>
+            </View>
+            {/* Tile / list toggle */}
+            <View style={[s.viewToggle, { borderColor: colors.border, backgroundColor: colors.card }]}>
+              <Pressable
+                style={[s.viewToggleBtn, viewMode === "list" && { backgroundColor: colors.primary }]}
+                onPress={() => setViewMode("list")}
+              >
+                <Feather name="list" size={16} color={viewMode === "list" ? "#FFF" : colors.mutedForeground} />
+              </Pressable>
+              <Pressable
+                style={[s.viewToggleBtn, viewMode === "tile" && { backgroundColor: colors.primary }]}
+                onPress={() => setViewMode("tile")}
+              >
+                <Feather name="grid" size={16} color={viewMode === "tile" ? "#FFF" : colors.mutedForeground} />
+              </Pressable>
+            </View>
           </View>
-          {/* Legend */}
-          <View style={s.legend}>
-            {COMPETENCY_LEVELS.map((l) => (
-              <View key={l.value} style={s.legendItem}>
-                <View style={[s.legendDot, { backgroundColor: l.color }]} />
-                <Text style={[s.legendText, { color: colors.mutedForeground }]}>
-                  {l.label === "—" ? "Not done" : l.label}
-                </Text>
-              </View>
-            ))}
-          </View>
+
+          {/* Legend — only show in list mode */}
+          {viewMode === "list" && (
+            <View style={s.legend}>
+              {COMPETENCY_LEVELS.map((l) => (
+                <View key={l.value} style={s.legendItem}>
+                  <View style={[s.legendDot, { backgroundColor: l.color }]} />
+                  <Text style={[s.legendText, { color: colors.mutedForeground }]}>
+                    {l.shortLabel === "—" ? "Not done" : l.shortLabel}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         {maneuvLoading ? (
@@ -365,7 +398,10 @@ export default function NewAssessmentScreen() {
           <SectionList
             sections={maneuverSections}
             keyExtractor={(item: any) => String(item.id)}
-            contentContainerStyle={{ paddingBottom: botPad + 80 }}
+            contentContainerStyle={[
+              { paddingBottom: botPad + 80 },
+              viewMode === "tile" && { paddingHorizontal: 12, paddingTop: 4 },
+            ]}
             renderSectionHeader={({ section }) => (
               <View style={[s.sectionHeader, { backgroundColor: colors.background }]}>
                 <Text style={[s.sectionTitle, { color: colors.mutedForeground }]}>
@@ -379,11 +415,18 @@ export default function NewAssessmentScreen() {
                 level={results[item.id] ?? "not_attempted"}
                 onRate={(level) => rate(item.id, level)}
                 colors={colors}
+                viewMode={viewMode}
+                expanded={expandedId === item.id}
+                onToggleExpand={() => setExpandedId((prev) => (prev === item.id ? null : item.id))}
               />
             )}
-            ItemSeparatorComponent={() => (
-              <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 16 }} />
-            )}
+            ItemSeparatorComponent={() =>
+              viewMode === "list" ? (
+                <View style={{ height: 1, backgroundColor: colors.border, marginLeft: 16 }} />
+              ) : (
+                <View style={{ height: 10 }} />
+              )
+            }
           />
         )}
 
@@ -603,17 +646,100 @@ function ManeuverRow({
   level,
   onRate,
   colors,
+  viewMode,
+  expanded,
+  onToggleExpand,
 }: {
   maneuver: any;
   level: CompetencyLevel;
   onRate: (l: CompetencyLevel) => void;
   colors: ReturnType<typeof useColors>;
+  viewMode: "list" | "tile";
+  expanded: boolean;
+  onToggleExpand: () => void;
 }) {
+  const hasCriteria = !!(maneuver.complianceCriteria || maneuver.masteryDefinition);
+  const showMastery = level === "mastered" && !!maneuver.masteryDefinition;
+
+  // ── TILE VIEW ──────────────────────────────────────────────────────────────
+  if (viewMode === "tile") {
+    return (
+      <View style={[s.tileCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* Maneuver name */}
+        <Text style={[s.tileName, { color: colors.foreground }]}>{maneuver.name}</Text>
+
+        {/* 2×2 competency button grid */}
+        <View style={s.tileGrid}>
+          {COMPETENCY_LEVELS.map((cl) => {
+            const active = level === cl.value;
+            return (
+              <Pressable
+                key={cl.value}
+                style={[
+                  s.tileBtn,
+                  active
+                    ? { backgroundColor: cl.color, borderColor: cl.color }
+                    : { backgroundColor: cl.bg, borderColor: cl.color + "50" },
+                ]}
+                onPress={() => onRate(cl.value)}
+              >
+                {active && (
+                  <Feather name="check" size={13} color="#FFF" style={{ marginBottom: 2 }} />
+                )}
+                <Text
+                  style={[
+                    s.tileBtnText,
+                    { color: active ? "#FFF" : cl.color },
+                  ]}
+                >
+                  {cl.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {/* QSafe compliance criteria panel — always visible if present */}
+        {maneuver.complianceCriteria ? (
+          <View style={s.criteriaPanel}>
+            <Text style={s.criteriaPanelTitle}>QSAFE Compliance Criteria</Text>
+            <Text style={s.criteriaPanelText}>{maneuver.complianceCriteria}</Text>
+          </View>
+        ) : null}
+
+        {/* Mastery definition — only visible once "Consistent Skills" is selected */}
+        {showMastery ? (
+          <View style={[s.criteriaPanel, s.masteryPanel]}>
+            <Text style={[s.criteriaPanelTitle, { color: "#15803D" }]}>Competency Definition</Text>
+            <Text style={[s.criteriaPanelText, { color: "#166534" }]}>{maneuver.masteryDefinition}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  // ── LIST VIEW ──────────────────────────────────────────────────────────────
   return (
     <View style={[s.maneuverRow, { backgroundColor: colors.card }]}>
-      <Text style={[s.maneuverName, { color: colors.foreground }]} numberOfLines={1}>
-        {maneuver.name}
-      </Text>
+      {/* Name row + expand toggle */}
+      <Pressable
+        style={s.maneuverNameRow}
+        onPress={hasCriteria ? onToggleExpand : undefined}
+        disabled={!hasCriteria}
+      >
+        <Text style={[s.maneuverName, { color: colors.foreground, flex: 1 }]}>
+          {maneuver.name}
+        </Text>
+        {hasCriteria && (
+          <Feather
+            name={expanded ? "chevron-up" : "chevron-down"}
+            size={16}
+            color={colors.mutedForeground}
+          />
+        )}
+      </Pressable>
+
+      {/* Compact 4-button row */}
       <View style={s.competencyBtns}>
         {COMPETENCY_LEVELS.map((cl) => {
           const active = level === cl.value;
@@ -629,17 +755,33 @@ function ManeuverRow({
               onPress={() => onRate(cl.value)}
             >
               <Text
-                style={[
-                  s.competencyBtnText,
-                  { color: active ? "#FFF" : cl.color },
-                ]}
+                style={[s.competencyBtnText, { color: active ? "#FFF" : cl.color }]}
+                numberOfLines={1}
               >
-                {cl.label}
+                {cl.shortLabel}
               </Text>
             </Pressable>
           );
         })}
       </View>
+
+      {/* Expandable criteria — shown when tapped */}
+      {expanded && (
+        <View style={s.expandedCriteria}>
+          {maneuver.complianceCriteria ? (
+            <View style={s.criteriaPanel}>
+              <Text style={s.criteriaPanelTitle}>QSAFE Compliance Criteria</Text>
+              <Text style={s.criteriaPanelText}>{maneuver.complianceCriteria}</Text>
+            </View>
+          ) : null}
+          {maneuver.masteryDefinition ? (
+            <View style={[s.criteriaPanel, s.masteryPanel, { marginTop: 6 }]}>
+              <Text style={[s.criteriaPanelTitle, { color: "#15803D" }]}>Competency Definition</Text>
+              <Text style={[s.criteriaPanelText, { color: "#166534" }]}>{maneuver.masteryDefinition}</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
     </View>
   );
 }
@@ -760,25 +902,97 @@ const s = StyleSheet.create({
 
   // Maneuver list
   fixedHeader: { paddingHorizontal: 16, paddingBottom: 10, borderBottomWidth: 1 },
-  legend: { flexDirection: "row", gap: 14, marginTop: 8 },
+  maneuverHeaderRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
+  viewToggle: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderRadius: 10,
+    overflow: "hidden",
+    alignSelf: "flex-start",
+    marginTop: 2,
+  },
+  viewToggleBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legend: { flexDirection: "row", gap: 14, marginTop: 10, flexWrap: "wrap" },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendText: { fontSize: 11, fontFamily: "Inter_400Regular" },
   sectionHeader: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6 },
   sectionTitle: { fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 0.8 },
+
+  // List mode row
   maneuverRow: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
+  maneuverNameRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   maneuverName: { fontSize: 14, fontFamily: "Inter_500Medium" },
-  competencyBtns: { flexDirection: "row", gap: 6 },
+  competencyBtns: { flexDirection: "row", gap: 5 },
   competencyBtn: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 7,
+    paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
     minWidth: 0,
   },
-  competencyBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+  competencyBtnText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+
+  // Expandable criteria (list mode)
+  expandedCriteria: { gap: 6, marginTop: 4 },
+
+  // Criteria panels (shared list + tile)
+  criteriaPanel: {
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    padding: 10,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  masteryPanel: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#BBF7D0",
+  },
+  criteriaPanelTitle: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: "#1D4ED8",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  criteriaPanelText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#1E40AF",
+    lineHeight: 18,
+  },
+
+  // Tile mode card
+  tileCard: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 12,
+  },
+  tileName: { fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  tileGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  tileBtn: {
+    width: "47%",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    gap: 2,
+  },
+  tileBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" },
 
   // Bottom nav
   bottomNav: {
