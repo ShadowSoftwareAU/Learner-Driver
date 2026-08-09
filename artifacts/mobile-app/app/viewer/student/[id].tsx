@@ -98,7 +98,7 @@ export default function ViewerStudentDetailScreen() {
   const studentId = parseInt(id, 10);
   const [showLogModal, setShowLogModal] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useGetViewerStudentDashboard(studentId, {
+  const { data, isLoading, isError, refetch } = useGetViewerStudentDashboard(studentId, undefined, {
     query: {
       enabled: !isNaN(studentId),
       queryKey: getGetViewerStudentDashboardQueryKey(studentId),

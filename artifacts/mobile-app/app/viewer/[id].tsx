@@ -70,7 +70,7 @@ export default function ViewerStudentDetailScreen() {
     isLoading,
     isError,
     refetch,
-  } = useGetViewerStudentDashboard(studentId, {
+  } = useGetViewerStudentDashboard(studentId, undefined, {
     query: {
       enabled: !!studentId,
       queryKey: getGetViewerStudentDashboardQueryKey(studentId),

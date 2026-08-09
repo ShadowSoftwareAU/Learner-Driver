@@ -31,9 +31,15 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person.circle", selected: "person.circle.fill" }} />
         <Label>Profile</Label>
       </NativeTabs.Trigger>
+      {/* Hidden routes — reachable via navigation but absent from the tab bar */}
+      <NativeTabs.Trigger name="verifications" hidden />
+      <NativeTabs.Trigger name="audit" hidden />
+      <NativeTabs.Trigger name="staff" hidden />
     </NativeTabs>
   );
 }
+
+// verifications, audit, and staff appear in both layouts as hidden screens.
 
 function ClassicTabLayout() {
   const colors = useColors();
@@ -104,6 +110,10 @@ function ClassicTabLayout() {
             isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={22} color={color} />,
         }}
       />
+      {/* Hidden screens — reachable via navigation but not shown in the tab bar */}
+      <Tabs.Screen name="verifications" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="audit" options={{ href: null, headerShown: false }} />
+      <Tabs.Screen name="staff" options={{ href: null, headerShown: false }} />
     </Tabs>
   );
 }

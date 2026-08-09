@@ -1,5 +1,6 @@
-import { useGetAdminDashboard } from "@workspace/api-client-react";
+import { useGetAdminDashboard, useGetMe } from "@workspace/api-client-react";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -45,10 +46,81 @@ const card = StyleSheet.create({
   label: { fontSize: 12, fontFamily: "Inter_400Regular" },
 });
 
+const QUICK_LINKS = [
+  { icon: "shield", label: "Verifications", subtitle: "Expiring documents", route: "/(admin)/verifications", accent: "#DC2626" },
+  { icon: "clipboard", label: "Audit Log", subtitle: "Recent activity trail", route: "/(admin)/audit", accent: "#7C3AED" },
+  { icon: "users", label: "Staff", subtitle: "Admin team & invites", route: "/(admin)/staff", accent: "#2563EB" },
+] as const;
+
+function QuickLink({
+  item,
+  colors,
+  onPress,
+}: {
+  item: (typeof QUICK_LINKS)[number];
+  colors: ReturnType<typeof useColors>;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        ql.container,
+        { backgroundColor: colors.card, borderColor: colors.border, opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      <View style={[ql.iconBox, { backgroundColor: item.accent + "20" }]}>
+        <Feather name={item.icon as any} size={20} color={item.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[ql.label, { color: colors.foreground }]}>{item.label}</Text>
+        <Text style={[ql.subtitle, { color: colors.mutedForeground }]}>{item.subtitle}</Text>
+      </View>
+      <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+    </Pressable>
+  );
+}
+
+const ql = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+  },
+  iconBox: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
+  label: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+});
+
 export default function AdminOverviewScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { data: dash, isLoading, isError, refetch, isRefetching } = useGetAdminDashboard();
+  const { data: me } = useGetMe();
+
+  const role = (me as any)?.role ?? "";
+  const adminSubRole = (me as any)?.adminSubRole ?? "";
+
+  // Gate each link to the roles the backing API actually allows
+  const visibleLinks = QUICK_LINKS.filter((link) => {
+    if (link.route === "/(admin)/verifications") {
+      // requireAdmin: admin | super_admin only
+      return role === "admin" || role === "super_admin";
+    }
+    if (link.route === "/(admin)/audit") {
+      // isSchoolAdmin: admin | school_admin | super_admin
+      return role === "admin" || role === "school_admin" || role === "super_admin";
+    }
+    if (link.route === "/(admin)/staff") {
+      // isOwnerOrManager: admin + (owner | manager) subRole
+      return role === "admin" && (adminSubRole === "owner" || adminSubRole === "manager");
+    }
+    return true;
+  });
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const d = dash as any;
@@ -83,7 +155,7 @@ export default function AdminOverviewScreen() {
             <StatCard icon="shield" label="Pending Verif." value={d?.pendingVerifications ?? d?.pendingVerificationCount ?? "—"} accent="#DC2626" colors={colors} />
           </View>
 
-          {/* Recent activity placeholder */}
+          {/* Recent activity */}
           {d?.recentActivity?.length > 0 ? (
             <>
               <Text style={[s.sectionTitle, { color: colors.foreground }]}>Recent Activity</Text>
@@ -99,6 +171,21 @@ export default function AdminOverviewScreen() {
                     ) : null}
                   </View>
                 </View>
+              ))}
+            </>
+          ) : null}
+
+          {/* More screens */}
+          {visibleLinks.length > 0 ? (
+            <>
+              <Text style={[s.sectionTitle, { color: colors.foreground }]}>More</Text>
+              {visibleLinks.map((link) => (
+                <QuickLink
+                  key={link.route}
+                  item={link}
+                  colors={colors}
+                  onPress={() => router.push(link.route as any)}
+                />
               ))}
             </>
           ) : null}

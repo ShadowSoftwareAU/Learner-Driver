@@ -22,7 +22,7 @@ export default function Index() {
     const role = user.role;
     if (role === "instructor") {
       router.replace("/(tabs)");
-    } else if (role === "school_admin" || role === "super_admin") {
+    } else if (role === "school_admin" || role === "super_admin" || role === "admin") {
       router.replace("/(admin)" as any);
     } else if (role === "student") {
       router.replace("/(student)");
