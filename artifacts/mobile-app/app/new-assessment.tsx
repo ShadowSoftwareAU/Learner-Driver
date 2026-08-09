@@ -14,6 +14,7 @@ import {
   Animated,
   FlatList,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -30,6 +31,9 @@ import {
   loadAssessmentDraft,
   saveAssessmentDraft,
 } from "@/hooks/useAssessmentDraft";
+import { useRouteRecording } from "@/hooks/useRouteRecording";
+import { RouteMapWebView } from "@/components/RouteMapWebView";
+import type { ManeuverPin } from "@/components/RouteMapWebView";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -104,6 +108,16 @@ export default function NewAssessmentScreen() {
   // ── Maneuver view mode + expansion (list mode)
   const [viewMode, setViewMode] = useState<"list" | "tile">("list");
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // ── GPS route recording
+  const { status: gpsStatus, routePoints, startRecording, stopRecording, captureCurrentPosition } =
+    useRouteRecording();
+  /** Per-maneuver GPS snapshot taken at the moment of rating */
+  const [maneuverPositions, setManeuverPositions] = useState<Record<number, { lat: number; lng: number }>>({});
+  /** Route path frozen when the instructor moves to the notes step */
+  const [frozenRoute, setFrozenRoute] = useState<{ lat: number; lng: number; ts: number }[]>([]);
+  /** Controls the full-screen route map modal */
+  const [showMap, setShowMap] = useState(false);
 
   // ── Draft saved indicator
   const draftSaveAnim = useRef(new Animated.Value(0)).current;
@@ -230,9 +244,23 @@ export default function NewAssessmentScreen() {
     return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
   }, [maneuvers]);
 
-  // ── Rate a maneuver (cycles through levels)
+  // ── Rate a maneuver and snapshot GPS position for that maneuver
   const rate = (maneuverId: number, level: CompetencyLevel) => {
     setResults((prev) => ({ ...prev, [maneuverId]: level }));
+    // Capture current position for the maneuver pin (only when actually rated)
+    if (level !== "not_attempted") {
+      const pos = captureCurrentPosition();
+      if (pos) {
+        setManeuverPositions((prev) => ({ ...prev, [maneuverId]: pos }));
+      }
+    } else {
+      // Rating cleared back to not-attempted — remove any existing pin
+      setManeuverPositions((prev) => {
+        const next = { ...prev };
+        delete next[maneuverId];
+        return next;
+      });
+    }
   };
 
   // ── Save
@@ -241,7 +269,7 @@ export default function NewAssessmentScreen() {
     setSaving(true);
     setError(null);
     try {
-      // 1. Create assessment
+      // 1. Create assessment — include the recorded route path
       const assessment = await createAssessment.mutateAsync({
         data: {
           studentId: selectedStudentId,
@@ -250,21 +278,28 @@ export default function NewAssessmentScreen() {
           pedalOperator: pedalOperator as any,
           weatherCondition: (weatherCondition || undefined) as any,
           assessmentType: "qsafe" as any,
-        },
+          // Include GPS route if any points were recorded
+          routePath: frozenRoute.length > 0 ? frozenRoute : null,
+        } as any,
       });
 
       const id = (assessment as any).id as number;
 
-      // 2. Save rated maneuver results
+      // 2. Save rated maneuver results — include GPS pin for each one
       const rated = Object.entries(results)
         .filter(([, level]) => level !== "not_attempted")
-        .map(([maneuverId, competencyLevel]) => ({
-          maneuverId: parseInt(maneuverId, 10),
-          competencyLevel: competencyLevel as any,
-        }));
+        .map(([maneuverId, competencyLevel]) => {
+          const mid = parseInt(maneuverId, 10);
+          const pin = maneuverPositions[mid];
+          return {
+            maneuverId: mid,
+            competencyLevel: competencyLevel as any,
+            ...(pin ? { lat: pin.lat, lng: pin.lng } : {}),
+          };
+        });
 
       if (rated.length > 0) {
-        await saveManeuverResults.mutateAsync({ id, data: { results: rated } });
+        await saveManeuverResults.mutateAsync({ id, data: { results: rated as any } });
       }
 
       // 3. Save notes if entered
@@ -278,6 +313,7 @@ export default function NewAssessmentScreen() {
         });
       }
 
+      await clearAssessmentDraft();
       router.replace("/(tabs)/assessments");
     } catch (err) {
       setError(clerkErr(err, "Failed to save assessment. Please try again."));
@@ -288,9 +324,51 @@ export default function NewAssessmentScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = (Platform.OS === "web" ? 34 : insets.bottom) + 16;
 
+  // ── Build maneuver pins for the map (from rated results + captured positions)
+  const maneuverPins: ManeuverPin[] = useMemo(() => {
+    return Object.entries(maneuverPositions).map(([midStr, pos]) => {
+      const mid = parseInt(midStr, 10);
+      const level = results[mid] ?? "not_attempted";
+      const cl = COMPETENCY_LEVELS.find((c) => c.value === level);
+      const maneuver = (maneuvers as any[])?.find((m: any) => m.id === mid);
+      return {
+        id: mid,
+        name: maneuver?.name ?? `Maneuver ${mid}`,
+        lat: pos.lat,
+        lng: pos.lng,
+        color: cl?.color ?? "#94A3B8",
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maneuverPositions, results, maneuvers]);
+
   // ─── STEP: NOTES ─────────────────────────────────────────────────────────
   if (step === "notes") {
     return (
+      <>
+      {/* Full-screen route map modal */}
+      <Modal
+        visible={showMap}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowMap(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: colors.background }}>
+          {/* Modal header */}
+          <View style={[s.mapModalHeader, { borderBottomColor: colors.border, backgroundColor: colors.background, paddingTop: insets.top + 12 }]}>
+            <Text style={[s.mapModalTitle, { color: colors.foreground }]}>Route Map</Text>
+            <Pressable onPress={() => setShowMap(false)} hitSlop={12}>
+              <Feather name="x" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
+          <RouteMapWebView
+            routePoints={frozenRoute}
+            maneuverPins={maneuverPins}
+            style={{ flex: 1 }}
+          />
+        </View>
+      </Modal>
+
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: colors.background }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -309,6 +387,31 @@ export default function NewAssessmentScreen() {
           </View>
 
           {error ? <ErrorBanner message={error} /> : null}
+
+          {/* Route summary card */}
+          {(frozenRoute.length > 0 || Object.keys(maneuverPositions).length > 0) && (
+            <Pressable
+              style={[s.routeCard, { backgroundColor: colors.card, borderColor: "#3B82F6" }]}
+              onPress={() => setShowMap(true)}
+            >
+              <View style={s.routeCardLeft}>
+                <Feather name="map-pin" size={18} color="#3B82F6" />
+                <View>
+                  <Text style={[s.routeCardTitle, { color: colors.foreground }]}>Route Recorded</Text>
+                  <Text style={[s.routeCardSub, { color: colors.mutedForeground }]}>
+                    {frozenRoute.length} GPS point{frozenRoute.length !== 1 ? "s" : ""}
+                    {Object.keys(maneuverPositions).length > 0
+                      ? ` · ${Object.keys(maneuverPositions).length} maneuver pin${Object.keys(maneuverPositions).length !== 1 ? "s" : ""}`
+                      : ""}
+                  </Text>
+                </View>
+              </View>
+              <View style={s.routeCardRight}>
+                <Text style={s.routeCardBtn}>View Map</Text>
+                <Feather name="chevron-right" size={16} color="#3B82F6" />
+              </View>
+            </Pressable>
+          )}
 
           <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[s.label, { color: colors.foreground }]}>Confidence &amp; Overall Notes</Text>
@@ -360,6 +463,7 @@ export default function NewAssessmentScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      </>
     );
   }
 
@@ -378,6 +482,32 @@ export default function NewAssessmentScreen() {
               <Text style={[s.stepSub, { color: colors.mutedForeground }]}>
                 {ratedCount > 0 ? `${ratedCount} rated` : "Tap a level for each maneuver"}
               </Text>
+              {/* GPS recording indicator */}
+              <View style={s.gpsRow}>
+                <View
+                  style={[
+                    s.gpsDot,
+                    {
+                      backgroundColor:
+                        gpsStatus === "active" ? "#16A34A"
+                        : gpsStatus === "requesting" ? "#F59E0B"
+                        : gpsStatus === "denied" || gpsStatus === "unavailable" ? "#EF4444"
+                        : "#94A3B8",
+                    },
+                  ]}
+                />
+                <Text style={[s.gpsText, { color: colors.mutedForeground }]}>
+                  {gpsStatus === "active"
+                    ? `GPS recording · ${routePoints.length} pt${routePoints.length !== 1 ? "s" : ""}`
+                    : gpsStatus === "requesting"
+                    ? "Acquiring GPS…"
+                    : gpsStatus === "denied"
+                    ? "GPS permission denied"
+                    : gpsStatus === "unavailable"
+                    ? "GPS unavailable"
+                    : "GPS not started"}
+                </Text>
+              </View>
               <DraftSavedBadge anim={draftSaveAnim} />
             </View>
             {/* Tile / list toggle */}
@@ -460,7 +590,12 @@ export default function NewAssessmentScreen() {
           </Pressable>
           <Pressable
             style={[s.primaryBtn, { backgroundColor: colors.primary }]}
-            onPress={() => setStep("notes")}
+            onPress={() => {
+              // Stop recording and freeze the route before moving to the notes step
+              const finalRoute = stopRecording();
+              setFrozenRoute(finalRoute);
+              setStep("notes");
+            }}
           >
             <Text style={s.primaryBtnText}>Notes & Save</Text>
             <Feather name="arrow-right" size={16} color="#FFF" />
@@ -645,13 +780,18 @@ export default function NewAssessmentScreen() {
           </View>
         </View>
 
-        {/* Next button */}
+        {/* Next button — starts GPS recording when entering maneuvers */}
         <Pressable
           style={[
             s.primaryBtn,
             { backgroundColor: colors.primary, opacity: !selectedStudentId ? 0.45 : 1, alignSelf: "stretch" },
           ]}
-          onPress={() => setStep("maneuvers")}
+          onPress={() => {
+            setStep("maneuvers");
+            // Start recording in the background — non-blocking, errors are silently
+            // swallowed inside the hook (sets status to "denied" or "unavailable").
+            startRecording();
+          }}
           disabled={!selectedStudentId}
         >
           <Text style={s.primaryBtnText}>Rate Maneuvers</Text>
@@ -1022,6 +1162,39 @@ const s = StyleSheet.create({
     gap: 2,
   },
   tileBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", textAlign: "center" },
+
+  // GPS recording indicator
+  gpsRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 4 },
+  gpsDot: { width: 7, height: 7, borderRadius: 4 },
+  gpsText: { fontSize: 11, fontFamily: "Inter_400Regular" },
+
+  // Route preview card (notes step)
+  routeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 12,
+    borderWidth: 1.5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  routeCardLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  routeCardRight: { flexDirection: "row", alignItems: "center", gap: 4 },
+  routeCardTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  routeCardSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 1 },
+  routeCardBtn: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: "#3B82F6" },
+
+  // Full-screen map modal
+  mapModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+  },
+  mapModalTitle: { fontSize: 17, fontFamily: "Inter_600SemiBold" },
 
   // Bottom nav
   bottomNav: {
