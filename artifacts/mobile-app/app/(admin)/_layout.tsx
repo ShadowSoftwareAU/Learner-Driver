@@ -6,27 +6,26 @@ import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
-
 import { useColors } from "@/hooks/useColors";
 
 function NativeTabLayout() {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>Progress</Label>
+        <Icon sf={{ default: "square.grid.2x2", selected: "square.grid.2x2.fill" }} />
+        <Label>Overview</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="assessments">
-        <Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
-        <Label>Assessments</Label>
+      <NativeTabs.Trigger name="students">
+        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
+        <Label>Students</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="instructors">
+        <Icon sf={{ default: "graduationcap", selected: "graduationcap.fill" }} />
+        <Label>Instructors</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="bookings">
         <Icon sf={{ default: "calendar", selected: "calendar" }} />
-        <Label>Lessons</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="search">
-        <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
-        <Label>Find</Label>
+        <Label>Bookings</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person.circle", selected: "person.circle.fill" }} />
@@ -59,64 +58,42 @@ function ClassicTabLayout() {
         },
         tabBarBackground: () =>
           isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
+            <BlurView intensity={100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
           ) : isWeb ? (
-            <View
-              style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
-            />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]} />
           ) : null,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          title: "Progress",
+          title: "Overview",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="chart.bar" tintColor={color} size={24} />
-            ) : (
-              <Feather name="bar-chart-2" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="square.grid.2x2" tintColor={color} size={22} /> : <Feather name="grid" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="assessments"
+        name="students"
         options={{
-          title: "Assessments",
+          title: "Students",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="doc.text" tintColor={color} size={24} />
-            ) : (
-              <Feather name="file-text" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.2" tintColor={color} size={22} /> : <Feather name="users" size={22} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="instructors"
+        options={{
+          title: "Instructors",
+          tabBarIcon: ({ color }) =>
+            isIOS ? <SymbolView name="graduationcap" tintColor={color} size={22} /> : <Feather name="award" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
-          title: "Lessons",
+          title: "Bookings",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="calendar" tintColor={color} size={24} />
-            ) : (
-              <Feather name="calendar" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: "Find",
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="magnifyingglass" tintColor={color} size={24} />
-            ) : (
-              <Feather name="search" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="calendar" tintColor={color} size={22} /> : <Feather name="calendar" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -124,20 +101,14 @@ function ClassicTabLayout() {
         options={{
           title: "Profile",
           tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.circle" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
+            isIOS ? <SymbolView name="person.circle" tintColor={color} size={22} /> : <Feather name="user" size={22} color={color} />,
         }}
       />
     </Tabs>
   );
 }
 
-export default function StudentTabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
+export default function AdminTabLayout() {
+  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
   return <ClassicTabLayout />;
 }

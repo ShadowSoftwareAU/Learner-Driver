@@ -20,8 +20,10 @@ export default function Index() {
     if (isLoading || !user) return;
 
     const role = user.role;
-    if (role === "instructor" || role === "school_admin" || role === "super_admin") {
+    if (role === "instructor") {
       router.replace("/(tabs)");
+    } else if (role === "school_admin" || role === "super_admin") {
+      router.replace("/(admin)" as any);
     } else if (role === "student") {
       router.replace("/(student)");
     } else if (role === "viewer") {

@@ -1,4 +1,6 @@
 import { useListAssessments } from "@workspace/api-client-react";
+import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import React from "react";
 import {
   ActivityIndicator,
@@ -11,13 +13,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { AssessmentCard } from "@/components/AssessmentCard";
 
 export default function AssessmentsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { data: assessments, isLoading, isError, refetch, isRefetching } = useListAssessments();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -76,6 +78,16 @@ export default function AssessmentsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         />
       )}
+
+      {/* FAB — new assessment */}
+      <Pressable
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: (Platform.OS === "web" ? 34 : insets.bottom) + 80 }]}
+        onPress={() => router.push("/new-assessment")}
+        accessibilityLabel="New assessment"
+        accessibilityRole="button"
+      >
+        <Feather name="plus" size={24} color="#FFF" />
+      </Pressable>
     </View>
   );
 }
@@ -96,4 +108,18 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center" },
   retryButton: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
   retryText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
 });
