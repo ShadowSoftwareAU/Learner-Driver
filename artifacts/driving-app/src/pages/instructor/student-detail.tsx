@@ -54,6 +54,8 @@ export default function InstructorStudentDetail() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
+  const [activeTab, setActiveTab] = useState("progress");
+
   const [editOpen, setEditOpen] = useState(false);
   const [editFullName, setEditFullName] = useState("");
   const [editPhone, setEditPhone] = useState("");
@@ -238,13 +240,20 @@ export default function InstructorStudentDetail() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className="cursor-pointer hover:border-primary/50 hover:shadow-sm transition-all"
+            onClick={() => {
+              setActiveTab("history");
+              document.getElementById("student-tabs")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }}
+          >
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">Assessments</CardTitle>
               <Calendar className="w-4 h-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{assessments?.length || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">View history →</p>
             </CardContent>
           </Card>
         </div>
@@ -375,7 +384,7 @@ export default function InstructorStudentDetail() {
           </CardContent>
         </Card>
 
-        <Tabs defaultValue="progress" className="w-full">
+        <Tabs id="student-tabs" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start border-b rounded-none h-auto p-0 bg-transparent">
             <TabsTrigger value="progress" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">Skill Progress</TabsTrigger>
             <TabsTrigger value="lesson-plan" className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2">
