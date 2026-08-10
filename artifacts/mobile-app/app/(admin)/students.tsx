@@ -30,7 +30,7 @@ export default function AdminStudentsScreen() {
     const q = search.toLowerCase();
     if (!q) return students as any[];
     return (students as any[]).filter((s) =>
-      (s.firstName + " " + s.lastName).toLowerCase().includes(q) ||
+      (s.fullName ?? (s.firstName + " " + s.lastName)).toLowerCase().includes(q) ||
       s.email?.toLowerCase().includes(q),
     );
   }, [students, search]);
@@ -99,6 +99,14 @@ export default function AdminStudentsScreen() {
           }
         />
       )}
+
+      {/* Add student FAB */}
+      <Pressable
+        style={[s.fab, { backgroundColor: colors.primary, bottom: (Platform.OS === "web" ? 34 : insets.bottom) + 24 }]}
+        onPress={() => router.push("/new-student")}
+      >
+        <Feather name="user-plus" size={20} color="#FFF" />
+      </Pressable>
     </View>
   );
 }
@@ -124,4 +132,18 @@ const s = StyleSheet.create({
   emptyText: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center" },
   retryBtn: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
   retryText: { color: "#FFF", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
 });

@@ -72,6 +72,15 @@ function RootLayoutNav() {
         }}
       />
       <Stack.Screen
+        name="new-student"
+        options={{
+          title: "New Student",
+          headerStyle: { backgroundColor: "#F8FAFC" },
+          headerTintColor: "#0F172A",
+          headerShadowVisible: false,
+        }}
+      />
+      <Stack.Screen
         name="viewer/student/[id]"
         options={{
           title: "Student",

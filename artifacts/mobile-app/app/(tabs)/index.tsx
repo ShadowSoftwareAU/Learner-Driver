@@ -22,6 +22,7 @@ export default function StudentsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
+  const botPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const { data: students, isLoading, isError, refetch, isRefetching } = useListStudents();
 
@@ -109,6 +110,14 @@ export default function StudentsScreen() {
           ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         />
       )}
+
+      {/* Add student FAB */}
+      <Pressable
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: botPad + 24 }]}
+        onPress={() => router.push("/new-student")}
+      >
+        <Feather name="user-plus" size={20} color="#FFF" />
+      </Pressable>
     </View>
   );
 }
@@ -146,4 +155,18 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15, fontFamily: "Inter_400Regular", textAlign: "center" },
   retryButton: { borderRadius: 10, paddingHorizontal: 20, paddingVertical: 10 },
   retryText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+  },
 });
